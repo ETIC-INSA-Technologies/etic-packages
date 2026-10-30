@@ -30,6 +30,6 @@ jobs:
       - run: npm test
       - run: npm run build
       # Le contenu exact de ce qui serait publié, visible dans le journal.
-      - run: npm pack --dry-run
+      - run: npm pack --dry-run --workspaces
       # Seules les dépendances livrées aux applications comptent (le CLI shadcn est en dev).
       - run: npm audit --omit=dev --audit-level=high
