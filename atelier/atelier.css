@@ -1,0 +1,5 @@
+/* Ce que fait une application qui utilise @etic/ui, avec les sources locales. */
+@import "tailwindcss";
+@import "../src/styles.css";
+@source "../src";
+@source "./";
