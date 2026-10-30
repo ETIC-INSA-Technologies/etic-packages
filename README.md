@@ -1,11 +1,12 @@
 # etic-packages
 
-Paquets npm publics communs aux applications ETIC (ETIC Members, ETIC Docs, Intervenant,
+Paquets publics communs aux applications ETIC (ETIC Members, ETIC Docs, Intervenant,
 Browser).
 
-| Paquet                                   | Dossier       | Rôle                                                     |
-| ---------------------------------------- | ------------- | -------------------------------------------------------- |
-| [`@etic-insa/ui`](packages/ui/README.md) | `packages/ui` | composants React, sur shadcn et Base UI, et thème commun |
+| Paquet                                                          | Dossier         | Rôle                                                     |
+| --------------------------------------------------------------- | --------------- | -------------------------------------------------------- |
+| [`@etic-insa/ui`](packages/ui/README.md)                        | `packages/ui`   | composants React, sur shadcn et Base UI, et thème commun |
+| [`@etic-insa/auth` + `etic-insa-auth`](packages/auth/README.md) | `packages/auth` | connexion à ETIC Members : React (npm) et FastAPI (PyPI) |
 
 ## Développer
 
@@ -20,8 +21,8 @@ npm test
 npm run build
 ```
 
-Les commandes propres à un paquet (atelier de l'UI…) se lancent depuis son dossier ; voir son
-README.
+Les commandes propres à un paquet (atelier de l'UI, côté Python de l'auth avec uv…) se
+lancent depuis son dossier ; voir son README.
 
 ## Publier
 
@@ -34,7 +35,8 @@ Les versions sont calculées par [Changesets](https://changesets.dev) et publié
    dans `.changeset/`.
 2. Une fois sur `main`, le workflow ouvre ou met à jour la PR « Versions des paquets » (numéros
    de version et `CHANGELOG.md`).
-3. Fusionner cette PR publie les nouvelles versions sur npm, avec leur provenance.
+3. Fusionner cette PR publie les nouvelles versions sur npm, avec leur provenance, et
+   `etic-insa-auth` sur PyPI quand le numéro de `@etic-insa/auth` y est nouveau.
 
 **Préversion** pour tester une modification sur un serveur avant de la publier : onglet
 _Actions_ → _Publication_ → _Run workflow_ sur la branche voulue. Les paquets qui ont un
@@ -48,6 +50,11 @@ une application qui demande `npm i @etic-insa/ui@preview` les reçoit.
 - **GitHub, environnement `npm`** : _Settings_ → _Environments_ → _New environment_ `npm` →
   _Required reviewers_ : un ou deux mainteneurs. Toute publication, préversion comprise, attend
   alors leur approbation dans l'onglet _Actions_.
+- **GitHub, environnement `pypi`** : idem, pour la publication du côté Python de l'auth.
+- **PyPI, `etic-insa-auth`** : sur pypi.org, compte de l'organisation (double
+  authentification) → _Your projects_ → _Publishing_ → _Add a new pending publisher_ :
+  projet `etic-insa-auth`, propriétaire `etic-insa-tech`, dépôt `etic-packages`, workflow
+  `publication.yml`, environnement `pypi`. Le projet est créé à la première publication.
 - **npm, pour chaque paquet** : _Settings_ du paquet sur npmjs.com → _Trusted publishing_ →
   GitHub Actions ; organisation `etic-insa-tech`, dépôt `etic-packages`, workflow
   `publication.yml`, **environnement `npm`** (npm refuse alors toute publication qui n'est pas
@@ -63,7 +70,7 @@ une application qui demande `npm i @etic-insa/ui@preview` les reçoit.
 
   ```sh
   npm ci && npm run build
-  npm publish --workspace packages/ui --provenance=false
+  npm publish --workspace packages/<dossier> --provenance=false
   ```
 
   (la provenance n'est possible que depuis la CI), puis configurer l'éditeur de confiance comme

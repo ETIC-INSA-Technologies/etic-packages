@@ -12,6 +12,10 @@ name: Publication
 # - installation, tests et build tournent dans un job SANS droit ; seul un job minimal, qui
 #   n'exécute aucun script de dépendance (`--ignore-scripts`), reçoit le jeton OIDC et publie
 #   les archives déjà empaquetées.
+#
+# Le côté serveur de `@etic-insa/auth` est un paquet Python, `etic-insa-auth`, au même numéro
+# de version (lu dans packages/auth/package.json) : publié sur PyPI de la même façon (trusted
+# publishing, environnement `pypi` sous approbation) quand ce numéro n'y est pas encore.
 
 on:
   push:
@@ -109,6 +113,70 @@ jobs:
         with:
           pack-dir-artifact-id: ${{ needs.paquets.outputs.archives }}
           push-git-tags: true
+
+  pypi-paquet:
+    name: Python — vérifier et construire
+    needs: mode
+    if: needs.mode.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      a-publier: ${{ steps.version.outputs.a-publier }}
+    defaults:
+      run:
+        working-directory: packages/auth
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      # À publier : un numéro qui n'est pas encore sur PyPI (0.0.0, la version de travail
+      # d'avant la première PR « Versions des paquets », ne l'est jamais). Toute autre
+      # réponse de PyPI qu'un 200 ou un 404 arrête le workflow plutôt que de sauter la
+      # publication sans le dire.
+      - id: version
+        name: Version déjà sur PyPI ?
+        run: |
+          version=$(node -p "require('./package.json').version")
+          statut=$(curl -s -o /dev/null -w '%{http_code}' "https://pypi.org/pypi/etic-insa-auth/$version/json")
+          case "$statut" in
+            200) ;;
+            404) [ "$version" = "0.0.0" ] || echo "a-publier=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::PyPI répond $statut pour etic-insa-auth $version."; exit 1 ;;
+          esac
+      # Mêmes contrôles que le job Python de ci.yml.
+      - if: steps.version.outputs.a-publier == 'true'
+        run: |
+          uv sync --locked
+          uv run ruff format --check python
+          uv run ruff check python
+          uv run pytest -q
+          uv build
+          uv export --frozen --no-dev --no-emit-project --all-extras -o "$RUNNER_TEMP/exigences.txt"
+          uv run pip-audit --strict --disable-pip -r "$RUNNER_TEMP/exigences.txt"
+      - if: steps.version.outputs.a-publier == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: pypi
+          path: packages/auth/dist/*
+          retention-days: 1
+
+  pypi-publier:
+    name: Publier sur PyPI
+    # Après npm seulement : une publication npm refusée ou en échec n'en laisse pas partir
+    # la moitié Python, les deux côtés gardent le même numéro.
+    needs: [pypi-paquet, publier]
+    if: needs.pypi-paquet.outputs.a-publier == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # trusted publishing
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: pypi
+          path: dist
+      # Épinglée par commit : ce job détient le jeton OIDC de PyPI.
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
 
   preversion-paquets:
     name: Préversion — vérifier et empaqueter

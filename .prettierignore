@@ -5,3 +5,8 @@ pnpm-lock.yaml
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+packages/auth/python
+packages/auth/.venv
+packages/auth/uv.lock
+packages/auth/.pytest_cache
+packages/auth/.ruff_cache
