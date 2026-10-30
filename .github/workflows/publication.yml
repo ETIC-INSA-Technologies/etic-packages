@@ -1,0 +1,174 @@
+name: Publication
+
+# Sur main : s'il reste des changesets, ouvre (ou met à jour) la PR « Versions des paquets » ;
+# une fois cette PR fusionnée, publie sur npm les versions qu'elle a calculées.
+# À la demande (bouton « Run workflow ») : publie une préversion, sous l'étiquette npm
+# `preview`, des paquets qui ont un changeset en attente — jamais installée par défaut.
+#
+# Sécurité de la publication :
+# - sans jeton npm (trusted publishing) : npm vérifie l'identité OIDC de ce workflow, déclaré
+#   comme éditeur de confiance de chaque paquet, avec l'environnement GitHub `npm` ;
+# - l'environnement `npm` exige l'approbation d'un mainteneur : rien ne part sans accord ;
+# - installation, tests et build tournent dans un job SANS droit ; seul un job minimal, qui
+#   n'exécute aucun script de dépendance (`--ignore-scripts`), reçoit le jeton OIDC et publie
+#   les archives déjà empaquetées.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # Les préversions (workflow_dispatch) n'attendent ni n'annulent une publication (push).
+  group: publication-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  mode:
+    name: Versionner ou publier ?
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      mode: ${{ steps.mode.outputs.mode }}
+      plan: ${{ steps.mode.outputs.publish-plan-artifact-id }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - id: mode
+        uses: changesets/action/select-mode@v2.1.2
+
+  version:
+    name: PR « Versions des paquets »
+    needs: mode
+    if: needs.mode.outputs.mode == 'version'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: changesets/action/version@v2.1.2
+        with:
+          commit-message: Versions des paquets
+          pr-title: Versions des paquets
+
+  paquets:
+    name: Vérifier et empaqueter
+    needs: mode
+    if: needs.mode.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      archives: ${{ steps.pack.outputs.pack-dir-artifact-id }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - id: pack
+        uses: changesets/action/pack@v2.1.2
+        with:
+          publish-plan-artifact-id: ${{ needs.mode.outputs.plan }}
+
+  publier:
+    name: Publier sur npm
+    needs: paquets
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: write # étiquettes git des versions publiées
+      id-token: write # trusted publishing
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: changesets/action/publish@v2.1.2
+        with:
+          pack-dir-artifact-id: ${{ needs.paquets.outputs.archives }}
+          push-git-tags: true
+
+  preversion-paquets:
+    name: Préversion — vérifier et empaqueter
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      # Version 0.0.0-preview-<date> calculée sur place, jamais commitée.
+      - run: npx changeset version --snapshot preview
+      - run: npm run build
+      # Seuls les paquets passés en préversion partent. Sans changeset en attente, `changeset
+      # version` ne change rien : publier quand même mettrait la VRAIE version sous
+      # l'étiquette preview et en grillerait le numéro pour toujours.
+      - name: Empaqueter les préversions
+        run: |
+          mkdir preversions
+          for dossier in packages/*/; do
+            version=$(node -p "require('./${dossier}package.json').version")
+            case "$version" in
+              *-preview-*) npm pack --workspace "$dossier" --pack-destination preversions ;;
+            esac
+          done
+          if ! ls preversions/*.tgz > /dev/null 2>&1; then
+            echo "::error::Aucun changeset en attente sur cette branche : rien à publier en préversion."
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: preversions
+          path: preversions/*.tgz
+          retention-days: 1
+
+  preversion-publier:
+    name: Préversion — publier sur npm
+    needs: preversion-paquets
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # trusted publishing
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@v8
+        with:
+          name: preversions
+          path: preversions
+      - run: |
+          for archive in preversions/*.tgz; do
+            npm publish "$archive" --tag preview
+          done
