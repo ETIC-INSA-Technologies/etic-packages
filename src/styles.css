@@ -1,10 +1,22 @@
 /*
- * Thème et styles communs de @etic/ui. L'application l'importe après Tailwind :
+ * Thème et styles communs de @etic-insa/ui. L'application l'importe après Tailwind :
  *   @import "tailwindcss";
- *   @import "@etic/ui/styles.css";
+ *   @import "@etic-insa/ui/styles.css";
  * et déclare un @source vers les composants de la bibliothèque.
  * Au build, scripts/build-css.mjs remplace l'import de shadcn/tailwind.css par
  * son contenu : le CLI shadcn reste une dépendance de développement.
+ *
+ * La bibliothèque fournit tout le thème sauf la couleur d'accent. Chaque
+ * application remplit, après cet import, en clair (:root) et en sombre (.dark),
+ * le contrat de quatre variables :
+ *   --primary             aplats : bouton principal, sélection
+ *   --primary-foreground  texte posé SUR --primary
+ *   --primary-text        l'accent employé comme texte ou lien, sur le fond
+ *                         ou sur --muted : au moins 4,5:1 sur les deux
+ *   --ring                anneau de focus
+ * Sans contrat, l'accent est le gris foncé de Nova. La barre latérale suit
+ * l'accent : ses variables --sidebar-primary* et --sidebar-ring en dérivent.
+ * Le thème sombre s'active par la classe « dark » sur un ancêtre (<html>).
  */
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
@@ -35,6 +47,9 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-primary-text: var(--primary-text);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -65,8 +80,11 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
+  /* Contrat d'accent : valeurs par défaut, remplacées par l'application. */
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
+  --primary-text: oklch(0.205 0 0);
+  --ring: oklch(0.708 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -74,9 +92,11 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  /* Texte sur le fond, sur --muted et sur leur teinte à 20 % : ≥ 4,5:1. */
+  --success: #15703f;
+  --warning: #8a5300;
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -85,12 +105,12 @@
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: var(--ring);
 }
 
 .dark {
@@ -102,6 +122,8 @@
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
+  --primary-text: oklch(0.922 0 0);
+  --ring: oklch(0.556 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -109,9 +131,10 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --success: #6fd7a7;
+  --warning: #f0b25f;
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -119,12 +142,12 @@
   --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: var(--ring);
 }
 
 @layer base {

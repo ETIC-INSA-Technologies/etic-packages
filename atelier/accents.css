@@ -1,0 +1,61 @@
+/*
+ * Exemples de contrats d'accent, aux couleurs des applications ETIC, pour voir
+ * les composants avec un vrai accent dans l'atelier. Ce n'est pas la référence
+ * des applications : chacune déclare ses couleurs dans son propre CSS.
+ * src/theme.test.ts vérifie que ces exemples tiennent le contrat : garder une
+ * valeur hexadécimale par ligne.
+ */
+
+:root[data-accent="members"] {
+  --primary: #2f5fdb;
+  --primary-foreground: #ffffff;
+  --primary-text: #2f5fdb;
+  --ring: #2f5fdb;
+}
+:root[data-accent="members"].dark {
+  --primary: #6d92f2;
+  --primary-foreground: #0e1116;
+  --primary-text: #6d92f2;
+  --ring: #6d92f2;
+}
+
+/* Orange HubSpot : trop clair pour du texte blanc ou pour servir de texte. */
+:root[data-accent="docs"] {
+  --primary: #ff7a59;
+  --primary-foreground: #1a1d23;
+  --primary-text: #c2410c;
+  --ring: #c2410c;
+}
+:root[data-accent="docs"].dark {
+  --primary: #ff7a59;
+  --primary-foreground: #1a1d23;
+  --primary-text: #ff9b80;
+  --ring: #ff7a59;
+}
+
+/* Jaune : teinte provisoire, à confirmer par l'équipe d'Intervenant. */
+:root[data-accent="intervenant"] {
+  --primary: #f2c230;
+  --primary-foreground: #1a1d23;
+  --primary-text: #8a6a00;
+  --ring: #8a6a00;
+}
+:root[data-accent="intervenant"].dark {
+  --primary: #f2c230;
+  --primary-foreground: #1a1d23;
+  --primary-text: #f2c230;
+  --ring: #f2c230;
+}
+
+:root[data-accent="browser"] {
+  --primary: #9cc98c;
+  --primary-foreground: #1a1d23;
+  --primary-text: #3f7a30;
+  --ring: #3f7a30;
+}
+:root[data-accent="browser"].dark {
+  --primary: #9cc98c;
+  --primary-foreground: #1a1d23;
+  --primary-text: #9cc98c;
+  --ring: #9cc98c;
+}

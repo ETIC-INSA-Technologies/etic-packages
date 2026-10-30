@@ -1,4 +1,4 @@
-# @etic/ui
+# @etic-insa/ui
 
 Bibliothèque de composants React des applications ETIC (ETIC Members, ETIC Docs…), construite
 sur [shadcn/ui](https://ui.shadcn.com) (style Nova, couleur de base Neutral) et
@@ -7,7 +7,7 @@ sur [shadcn/ui](https://ui.shadcn.com) (style Nova, couleur de base Neutral) et
 ## Utiliser la bibliothèque dans une application
 
 ```sh
-npm i @etic/ui
+npm i @etic-insa/ui
 ```
 
 Prérequis : React 19 et Tailwind CSS 4 (`tailwindcss` et `@tailwindcss/vite`).
@@ -15,24 +15,57 @@ Prérequis : React 19 et Tailwind CSS 4 (`tailwindcss` et `@tailwindcss/vite`).
 ```css
 /* CSS principal de l'application */
 @import "tailwindcss";
-@import "@etic/ui/styles.css";
+@import "@etic-insa/ui/styles.css";
 /* Tailwind doit lire les classes des composants ; chemin relatif à ce fichier */
-@source "../node_modules/@etic/ui/dist";
+@source "../node_modules/@etic-insa/ui/dist";
 
-/* Couleur d'accent de l'application, dans les deux thèmes : une règle :root
-   placée après l'import s'applique aussi en sombre, où la bibliothèque prévoit
-   un --primary-foreground foncé. */
-:root,
-.dark {
+/* Couleur d'accent de l'application : les quatre variables, en clair ET en sombre. */
+:root {
   --primary: #2f5fdb;
   --primary-foreground: #ffffff;
+  --primary-text: #2f5fdb;
+  --ring: #2f5fdb;
+}
+.dark {
+  --primary: #6d92f2;
+  --primary-foreground: #0e1116;
+  --primary-text: #6d92f2;
+  --ring: #6d92f2;
 }
 ```
 
-Le contrat complet de la couleur d'accent (accent en texte, anneau de focus) est encore à poser.
+### Thème et couleur d'accent
+
+La bibliothèque fournit tout le thème (neutres, rayons, police, couleurs `destructive`, `success`
+et `warning`, clair et sombre) sauf la couleur d'accent. Chaque application remplit, après
+l'import de `styles.css`, en `:root` et en `.dark`, quatre variables :
+
+| Variable               | Rôle                                 | Exigence                         |
+| ---------------------- | ------------------------------------ | -------------------------------- |
+| `--primary`            | aplats : bouton principal, sélection | —                                |
+| `--primary-foreground` | texte posé sur `--primary`           | ≥ 4,5:1 sur `--primary`          |
+| `--primary-text`       | l'accent employé comme texte ou lien | ≥ 4,5:1 sur le fond et `--muted` |
+| `--ring`               | anneau de focus                      | ≥ 3:1 sur le fond et `--muted`   |
+
+Un accent clair (orange, jaune, vert pâle) ne supporte ni texte blanc ni rôle de texte : il prend
+un `--primary-foreground` foncé et un `--primary-text` plus sombre que lui.
+
+Les couleurs appartiennent à chaque application : la bibliothèque n'en livre aucune et ne
+connaît pas les applications. [`atelier/accents.css`](atelier/accents.css) contient seulement
+des exemples, aux couleurs des applications ETIC, pour voir les composants avec un vrai accent
+dans l'atelier ; `npm test` vérifie que ces exemples tiennent les exigences ci-dessus. Il n'est
+pas publié et n'est pas la référence d'une application.
+
+Dans les classes, l'accent comme texte s'écrit `text-primary-text`, jamais `text-primary`. Les
+composants shadcn d'origine (`src/components/ui/`) emploient parfois `text-primary` (variante
+`link` du bouton) : leurs enveloppes ETIC devront le corriger. **Limite actuelle** : le `Button`
+exporté est encore celui de shadcn ; avec un accent clair (Docs, Intervenant, Browser), sa
+variante `link` est illisible en thème clair. Ne pas l'employer avant son enveloppe.
+
+Le thème sombre s'active par la classe `dark` sur `<html>`.
 
 ```tsx
-import { Button } from "@etic/ui"
+import { Button } from "@etic-insa/ui"
 
 export function Export() {
   return (
@@ -55,7 +88,7 @@ export default defineConfig(({ command }) => ({
     command === "serve"
       ? {
           alias: {
-            "@etic/ui": path.resolve(__dirname, "../etic-ui/src"),
+            "@etic-insa/ui": path.resolve(__dirname, "../etic-ui/src"),
             // les composants s'importent entre eux par « @etic-ui/… »
             "@etic-ui": path.resolve(__dirname, "../etic-ui/src"),
           },
