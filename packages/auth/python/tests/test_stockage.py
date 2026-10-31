@@ -133,6 +133,14 @@ def test_config_refuse_les_reglages_faibles() -> None:
         config_test(secret_session=bytes(range(32)).hex())
     with pytest.raises(ValueError, match="secret_application"):
         config_test(secret_application="")
+    with pytest.raises(ValueError, match="exige HTTPS"):
+        config_test(cookie_https=False, nom_cookie="__Host-session")
+
+
+def test_config_nom_cookie() -> None:
+    assert config_test(cookie_https=True).nom_cookie == "__Host-etic_session"
+    assert config_test(cookie_https=False).nom_cookie == "etic_session"
+    assert config_test(cookie_https=True, nom_cookie="__Host-app").nom_cookie == "__Host-app"
 
 
 def test_config_depuis_env() -> None:

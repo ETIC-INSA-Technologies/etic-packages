@@ -24,6 +24,14 @@ OCTETS_CLE_CHIFFREMENT: Final = 32
 #: Longueur minimale du secret qui signe le cookie de session.
 LONGUEUR_MIN_SECRET_SESSION: Final = 32
 
+#: Nom du cookie de session en HTTPS. Le préfixe `__Host-` oblige le navigateur à ne l'accepter
+#: que `Secure`, en `Path=/` et sans `Domain` : un autre sous-domaine d'etic-insa.com ne peut ni
+#: le poser ni l'écraser (sinon il y glisserait sa propre session signée, et la victime
+#: travaillerait sur le compte de l'attaquant).
+NOM_COOKIE_HTTPS: Final = "__Host-etic_session"
+#: Nom du cookie sans HTTPS (développement local), où un cookie préfixé serait rejeté.
+NOM_COOKIE_HTTP: Final = "etic_session"
+
 
 def lire_cle_chiffrement(valeur: str) -> bytes:
     """32 octets depuis leur hexadécimal (`openssl rand -hex 32`) ; `ValueError` sinon.
@@ -76,7 +84,9 @@ class ConfigSSO:
     prefixe_routes: str = "/api/v1/auth"
     #: Page de connexion du front : destination d'un échec du SSO (`?erreur=<code>`).
     chemin_page_connexion: str = "/login"
-    nom_cookie: str = "etic_session"
+    #: Vide : `NOM_COOKIE_HTTPS` si `cookie_https`, sinon `NOM_COOKIE_HTTP`. Un nom choisi en
+    #: HTTPS gagne à garder le préfixe `__Host-`.
+    nom_cookie: str = ""
     #: `False` seulement en développement local, en HTTP.
     cookie_https: bool = True
     #: Durée maximale d'une session, sans rapport avec les 30 jours du jeton de
@@ -103,6 +113,13 @@ class ConfigSSO:
     def __post_init__(self) -> None:
         for nom in ("url_members", "url_authorize", "url_application"):
             object.__setattr__(self, nom, _sans_slash_final(getattr(self, nom)))
+        if not self.nom_cookie:
+            object.__setattr__(
+                self, "nom_cookie", NOM_COOKIE_HTTPS if self.cookie_https else NOM_COOKIE_HTTP
+            )
+        elif not self.cookie_https and self.nom_cookie.startswith(("__Host-", "__Secure-")):
+            # Le navigateur rejetterait ce cookie sans `Secure` : plus aucune connexion.
+            raise ValueError("ConfigSSO : un nom_cookie préfixé __Host- ou __Secure- exige HTTPS")
         manquants = [
             nom
             for nom in (

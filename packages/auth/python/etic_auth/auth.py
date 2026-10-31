@@ -157,6 +157,7 @@ class AuthEtic:
             nom_application=config.nom_application,
         )
         # Posé après le contrôle d'origine, il l'enveloppe : la session est lue avant lui.
+        # Jamais de `domain` ni d'autre `path` que `/` : le cookie `__Host-` serait rejeté.
         app.add_middleware(
             SessionMiddleware,
             secret_key=config.secret_session,

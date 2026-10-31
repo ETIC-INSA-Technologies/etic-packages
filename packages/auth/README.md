@@ -63,7 +63,8 @@ Lecture = Annotated[Principal, Depends(auth.exiger("intervenant.read"))]
 def missions(principal: Lecture): …
 ```
 
-`installer` pose le cookie de session (signé, `httpOnly`, `SameSite=Lax`), le contrôle
+`installer` pose le cookie de session (`__Host-etic_session`, signé, `httpOnly`, `SameSite=Lax` ;
+le préfixe `__Host-` empêche un autre sous-domaine de le poser à sa place), le contrôle
 d'origine des écritures (anti-CSRF entre sous-domaines d'etic-insa.com), le gestionnaire
 d'erreurs et les routes :
 
@@ -100,7 +101,8 @@ Dans ETIC Members, l'URL de retour à enregistrer est `ETIC_APP_URL` suivie de
 Réglages utiles : `statuts_admis` (par défaut les seuls membres `active` ; ajouter `"alumni"`
 pour accueillir les anciens), `implications` (permissions impliquées), `duree_session`
 (12 h), `chemins_sans_cookie` (webhooks exemptés du contrôle d'origine), `cookie_https=False`
-en développement local seulement.
+en développement local seulement (le cookie s'appelle alors `etic_session` : sans HTTPS, le
+navigateur refuserait un cookie `__Host-`).
 
 Sessions : `StockageSQLAlchemy` (une table, voir ci-dessus) ou `StockageMemoire` (tests, ou un
 seul processus qui accepte de déconnecter tout le monde au redémarrage). Le verrou de

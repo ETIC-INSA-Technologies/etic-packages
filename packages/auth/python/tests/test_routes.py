@@ -321,3 +321,27 @@ def test_chemin_exempte_par_segment(faux: FauxMembers) -> None:
         se_connecter(client, faux)
         refus = client.post("/api/v1/auth/logout-tout", headers=etranger)
         assert refus.status_code == 403
+
+
+def test_cookie_host_en_https(faux: FauxMembers) -> None:
+    """En HTTPS, le cookie est `__Host-` : aucun autre sous-domaine ne peut le poser."""
+    auth = creer_auth(faux, cookie_https=True)
+    with TestClient(creer_app(auth), base_url=URL_APPLICATION, follow_redirects=False) as client:
+        aller = client.get("/api/v1/auth/login")
+        attributs = [a.strip().lower() for a in aller.headers["set-cookie"].split(";")]
+        assert attributs[0].startswith("__host-etic_session=")
+        assert "secure" in attributs and "httponly" in attributs and "path=/" in attributs
+        assert not any(a.startswith("domain=") for a in attributs)
+
+        se_connecter(client, faux)
+        assert client.get("/api/v1/lecture").status_code == 200
+        # Le contrôle d'origine suit le même nom que la session.
+        chemin, corps = "/api/v1/auth/preferences", {"theme": "light"}
+        etranger = {"Origin": "https://vitrine.example.org"}
+        assert client.patch(chemin, json=corps, headers=etranger).status_code == 403
+
+        # L'ancien nom, posé par un autre sous-domaine, n'ouvre rien.
+        valeur = client.cookies["__Host-etic_session"]
+        client.cookies.clear()
+        client.cookies.set("etic_session", valeur)
+        assert client.get("/api/v1/lecture").status_code == 401
