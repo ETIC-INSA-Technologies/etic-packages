@@ -128,7 +128,7 @@ jobs:
         working-directory: packages/auth
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       # À publier : un numéro qui n'est pas encore sur PyPI (0.0.0, la version de travail
       # d'avant la première PR « Versions des paquets », ne l'est jamais). Toute autre
       # réponse de PyPI qu'un 200 ou un 404 arrête le workflow plutôt que de sauter la
