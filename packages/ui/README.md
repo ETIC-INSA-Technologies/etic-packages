@@ -58,7 +58,7 @@ pas publié et n'est pas la référence d'une application.
 
 Dans les classes, l'accent comme texte s'écrit `text-primary-text`, jamais `text-primary`. Les
 composants shadcn d'origine (`src/components/ui/`) emploient parfois `text-primary` (variante
-`link` du bouton) : leurs enveloppes ETIC devront le corriger. **Limite actuelle** : le `Button`
+`link` du bouton) : à corriger, dans le composant ou dans une enveloppe ETIC. **Limite actuelle** : le `Button`
 exporté est encore celui de shadcn ; avec un accent clair (Docs, Intervenant, Browser), sa
 variante `link` est illisible en thème clair. Ne pas l'employer avant son enveloppe.
 
@@ -75,6 +75,55 @@ export function Export() {
   )
 }
 ```
+
+### Coquille d'application
+
+`AppShell` pose la mise en page commune : barre latérale de shadcn (marque, rubriques, menu du
+compte, thème), repliable en colonne d'icônes sur ordinateur (rail ou Ctrl+B, état gardé dans le
+cookie `sidebar_state` de shadcn), qui devient un tiroir ouvert par une barre du haut sous
+1 025 px (téléphones et tablettes). Il ne connaît ni le routeur ni l'authentification : l'application donne les liens et
+leur état actif, le compte et le thème, et son composant de lien.
+
+```tsx
+import { AppShell } from "@etic-insa/ui"
+import { Link, Outlet, useLocation } from "react-router-dom"
+import { UsersIcon } from "lucide-react"
+
+const LienRouteur = ({ href, ...props }: React.ComponentProps<"a">) => (
+  <Link to={href!} {...props} />
+)
+
+export function MiseEnPage() {
+  const { pathname } = useLocation()
+  return (
+    <AppShell
+      application={{ nom: "ETIC Docs", logo: <img src={logo} alt="" /> }}
+      sections={[
+        {
+          titre: "Études",
+          liens: [
+            {
+              libelle: "Études",
+              href: "/etudes",
+              icone: UsersIcon,
+              actif: pathname.startsWith("/etudes"),
+            },
+          ],
+        },
+      ]}
+      compte={{ nom: "Ada Lovelace", initiales: "AL", seDeconnecter }}
+      theme={{ valeur: theme, changer: changerTheme }}
+      lien={LienRouteur}
+    >
+      <Outlet />
+    </AppShell>
+  )
+}
+```
+
+`changer` peut renvoyer une promesse : rejetée, elle affiche « Thème non enregistré ». La
+déconnexion est toujours confirmée. La coquille fournit l'élément `<main>` : les pages n'en
+ajoutent pas. `ThemeMenu` existe aussi seul (page de connexion…).
 
 ### Développer contre les sources locales
 
@@ -112,7 +161,7 @@ d'`etic-packages` installe tous les paquets.
 
 ```sh
 # depuis packages/ui
-npm run dev        # atelier : tous les composants, touche « d » pour le thème sombre
+npm run dev        # atelier : tous les composants, thème au pied de la barre latérale
 npm test           # vitest
 npm run typecheck
 npm run lint
@@ -122,9 +171,16 @@ npm run build      # dist/ : un module par composant, types, styles.css
 
 ### Organisation
 
-- `src/components/ui/` : composants shadcn **intacts**, tels que le CLI les installe
-  (`npx shadcn add <composant>`). On n'y modifie rien, pour que
-  `npx shadcn add <composant> --diff` puis `--overwrite` suivent shadcn sans rien perdre.
+- `src/components/ui/` et `src/hooks/` : composants shadcn, copiés par le CLI
+  (`npx shadcn add <composant>`). Ce code est le nôtre et se modifie comme le reste. Chaque
+  modification est listée ci-dessous, pour pouvoir la réappliquer si l'on reprend un jour la
+  version de shadcn (`npx shadcn add <composant> --diff`, puis `--overwrite`) ;
+  `src/ecarts-shadcn.test.ts` échoue si elle a disparu :
+  - seuil mobile à 1 024 px compris au lieu de 768 px : `hooks/use-mobile.ts` (réécrit avec
+    `useSyncExternalStore`, juste dès le premier rendu) et les variantes `md:` de
+    `components/ui/sidebar.tsx`, devenues `min-[1025px]:` ;
+  - textes en français, lus par les lecteurs d'écran : `sidebar.tsx` (« Menu »,
+    « Afficher ou masquer le menu »), `sheet.tsx` (« Fermer »).
 - `src/components/etic/` : composants ETIC qui importent ceux de `ui/` et ajoutent
   comportement, composition ou variantes.
 - `src/index.ts` : tout ce qu'une application peut importer. Un composant non exporté ici

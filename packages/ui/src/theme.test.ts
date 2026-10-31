@@ -15,7 +15,7 @@ const CLAIR = { fond: "#ffffff", muted: "#f5f5f5" }
 const SOMBRE = { fond: "#0a0a0a", muted: "#262626", card: "#171717" }
 const TEXTE = 4.5
 // Anneau de focus : Nova trace une bordure pleine en --ring, entourée d'un
-// halo à 50 % (décor, dans ui/ que l'on ne modifie pas). L'indicateur est la
+// halo à 50 % (décor). L'indicateur est la
 // bordure : c'est elle qui doit atteindre 3:1.
 const NON_TEXTE = 3
 const CONTRAT = ["primary", "primary-foreground", "primary-text", "ring"]
