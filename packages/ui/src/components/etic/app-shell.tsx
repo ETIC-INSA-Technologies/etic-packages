@@ -1,11 +1,17 @@
 import {
+  useId,
   useState,
   type ComponentProps,
   type ComponentType,
   type ReactNode,
 } from "react"
 import { cn } from "cn"
-import { ChevronsUpDownIcon, LogOutIcon, type LucideIcon } from "lucide-react"
+import {
+  ChevronsUpDownIcon,
+  LogOutIcon,
+  PanelLeftIcon,
+  type LucideIcon,
+} from "lucide-react"
 
 import {
   AlertDialog,
@@ -52,6 +58,7 @@ import {
   ThemeMenu,
   type ThemeMenuProps,
 } from "@etic-ui/components/etic/theme-menu"
+import { TooltipButton } from "@etic-ui/components/etic/tooltip-button"
 
 /** Lien du routeur de l'application (react-router, TanStack Router…), qui
  *  reçoit `href` comme un `<a>`. Par défaut, un `<a>` : rechargement complet. */
@@ -76,7 +83,7 @@ export type AppShellEntreeCompte = {
   libelle: string
   icone?: LucideIcon
 } & (
-  { href: string; onSelect?: never } | { onSelect: () => void; href?: never }
+  { href: string; onChoisir?: never } | { onChoisir: () => void; href?: never }
 )
 
 export interface AppShellCompte {
@@ -92,7 +99,7 @@ export interface AppShellCompte {
   /** Entrées du menu du compte, avant « Se déconnecter ». */
   entrees?: AppShellEntreeCompte[]
   /** Appelé après confirmation. */
-  seDeconnecter: () => void
+  onSeDeconnecter: () => void
 }
 
 export interface AppShellProps {
@@ -106,7 +113,7 @@ export interface AppShellProps {
   }
   sections: AppShellSection[]
   compte?: AppShellCompte
-  theme?: Pick<ThemeMenuProps, "valeur" | "changer">
+  theme?: Pick<ThemeMenuProps, "valeur" | "onValeurChange">
   lien?: AppShellLienComposant
   /** Au-dessus du contenu, sur toute sa largeur (bandeau d'erreur…). */
   bandeau?: ReactNode
@@ -119,6 +126,9 @@ export interface AppShellProps {
  * sous 1 025 px, ouvert par une barre du haut. Le tiroir se referme quand on
  * suit un de ses liens. Ne connaît ni le routeur ni l'authentification : l'application
  * fournit les liens, l'état actif, le compte et le thème.
+ *
+ * Un lien « Aller au contenu », visible au focus, ouvre la tabulation : il
+ * saute la navigation et met le focus sur le `<main>`.
  */
 export function AppShell({
   application,
@@ -129,12 +139,27 @@ export function AppShell({
   bandeau,
   children,
 }: AppShellProps) {
+  const idContenu = useId()
   return (
     <TooltipProvider>
+      <a
+        href={`#${idContenu}`}
+        data-slot="app-shell-skip-link"
+        onClick={(event) => {
+          // Le focus, pas seulement le défilement ; et pas de `#…` ajouté à
+          // l'adresse, que le routeur de l'application lirait.
+          event.preventDefault()
+          document.getElementById(idContenu)?.focus()
+        }}
+        className="sr-only rounded-md bg-background px-3 py-2 text-sm font-medium shadow-md ring-3 ring-ring/50 outline-none focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50"
+      >
+        Aller au contenu
+      </a>
       <SidebarProvider defaultOpen={!colonneRepliee()}>
         <Colonne>
-          <SidebarHeader>
+          <SidebarHeader className="flex-row items-center group-data-[collapsible=icon]:flex-col">
             <Marque application={application} Lien={Lien} />
+            <BoutonRepli />
           </SidebarHeader>
           <SidebarContent>
             <Navigation sections={sections} Lien={Lien} />
@@ -152,7 +177,11 @@ export function AppShell({
             </SidebarFooter>
           ) : null}
         </Colonne>
-        <SidebarInset className="min-w-0">
+        <SidebarInset
+          id={idContenu}
+          tabIndex={-1}
+          className="min-w-0 outline-none"
+        >
           <BarreMobile application={application} Lien={Lien} />
           {bandeau}
           {children}
@@ -175,8 +204,33 @@ function colonneRepliee() {
 const FERME_TIROIR = "data-ferme-tiroir"
 
 /**
+ * Sur ordinateur, le bouton visible qui replie ou déplie la colonne (le rail
+ * de shadcn n'est ni visible ni atteignable au clavier, et Ctrl+B ne se
+ * devine pas). Sur mobile, la barre du haut s'en charge.
+ */
+function BoutonRepli() {
+  const { isMobile, open, toggleSidebar } = useSidebar()
+  if (isMobile) return null
+  const libelle = open ? "Replier le menu" : "Déplier le menu"
+  return (
+    <TooltipButton
+      variant="ghost"
+      size="icon-sm"
+      aria-label={libelle}
+      infobulle={`${libelle} (Ctrl+B)`}
+      aria-keyshortcuts="Control+B Meta+B"
+      data-slot="app-shell-collapse"
+      className="shrink-0"
+      onClick={toggleSidebar}
+    >
+      <PanelLeftIcon />
+    </TooltipButton>
+  )
+}
+
+/**
  * La barre latérale. Sur ordinateur, elle se replie en colonne d'icônes
- * (rail, ou Ctrl+B), comme dans shadcn. Sur mobile, le tiroir se referme dès
+ * (bouton de l'en-tête, rail, ou Ctrl+B hors d'un champ de saisie). Sur mobile, le tiroir se referme dès
  * qu'on suit un de ses liens dans la page, ou une entrée marquée
  * `data-ferme-tiroir` : un seul écouteur, qui reçoit aussi les clics des
  * menus ouverts depuis le tiroir (React fait remonter les évènements des
@@ -225,7 +279,7 @@ function Marque({
   Lien,
 }: Pick<AppShellProps, "application"> & { Lien: AppShellLienComposant }) {
   return (
-    <SidebarMenu>
+    <SidebarMenu className="min-w-0 flex-1">
       <SidebarMenuItem>
         <SidebarMenuButton
           size="lg"
@@ -273,7 +327,9 @@ function Navigation({
                       }
                     >
                       {Icone ? <Icone /> : null}
-                      <span>{libelle}</span>
+                      {/* Tronqué s'il est trop long : `title` le donne en
+                          entier au survol, barre dépliée. */}
+                      <span title={libelle}>{libelle}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )
@@ -331,11 +387,11 @@ function MenuCompte({
                 <>
                   <DropdownMenuGroup>
                     {compte.entrees.map(
-                      ({ libelle, icone: Icone, href, onSelect }, i) => (
+                      ({ libelle, icone: Icone, href, onChoisir }, i) => (
                         <DropdownMenuItem
                           key={i}
                           render={href ? <Lien href={href} /> : undefined}
-                          onClick={onSelect}
+                          onClick={onChoisir}
                           {...{ [FERME_TIROIR]: true }}
                         >
                           {Icone ? <Icone /> : null}
@@ -361,7 +417,7 @@ function MenuCompte({
           <AlertDialogHeader>
             <AlertDialogTitle>Se déconnecter</AlertDialogTitle>
             <AlertDialogDescription>
-              Voulez-vous vraiment vous déconnecter ?
+              Voulez-vous vraiment vous déconnecter&#8239;?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -369,7 +425,7 @@ function MenuCompte({
             <AlertDialogAction
               onClick={() => {
                 setConfirmer(false)
-                compte.seDeconnecter()
+                compte.onSeDeconnecter()
               }}
             >
               Se déconnecter
@@ -390,7 +446,12 @@ function BarreMobile({
   const { isMobile, openMobile } = useSidebar()
   if (!isMobile) return null
   return (
-    <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-2">
+    // Sa hauteur (h-12) est reprise par le `scroll-padding-top` de styles.css :
+    // une ancre ne passe pas sous la barre collante.
+    <header
+      data-slot="app-shell-mobile-bar"
+      className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-2"
+    >
       <SidebarTrigger
         aria-label="Ouvrir le menu"
         aria-expanded={openMobile}

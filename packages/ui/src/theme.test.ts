@@ -83,7 +83,7 @@ function lisible(texte: string, fond: string, seuil: number, quoi: string) {
 describe("couleurs sémantiques", () => {
   const css = lire("src/styles.css")
 
-  it.each(["success", "warning"])("%s se lit en clair", (nom) => {
+  it.each(["success", "warning", "info"])("%s se lit en clair", (nom) => {
     const couleur = variables(css, ":root").valeur(nom)
     for (const fond of [
       CLAIR.fond,
@@ -94,7 +94,7 @@ describe("couleurs sémantiques", () => {
     }
   })
 
-  it.each(["success", "warning"])("%s se lit en sombre", (nom) => {
+  it.each(["success", "warning", "info"])("%s se lit en sombre", (nom) => {
     const couleur = variables(css, ".dark").valeur(nom)
     for (const fond of [
       SOMBRE.fond,
@@ -103,6 +103,54 @@ describe("couleurs sémantiques", () => {
       teinte(couleur, SOMBRE.fond, 0.2),
     ]) {
       lisible(couleur, fond, TEXTE, nom)
+    }
+  })
+
+  // Variantes d'Alert (bg-card) : le titre dans la couleur, la description
+  // dans la couleur à 90 % (text-x/90), posée sur la carte.
+  it.each(["destructive", "warning", "info", "success"])(
+    "Alert %s : la description à 90 % se lit sur la carte",
+    (nom) => {
+      const clair = variables(css, ":root").valeur(nom)
+      lisible(teinte(clair, CLAIR.fond, 0.9), CLAIR.fond, TEXTE, nom)
+      const sombre = variables(css, ".dark").valeur(nom)
+      lisible(teinte(sombre, SOMBRE.card, 0.9), SOMBRE.card, TEXTE, nom)
+    }
+  )
+
+  // Variante destructive en teinte (bouton, badge, StatusBadge) : texte
+  // --destructive sur bg-destructive/10 (20 % en sombre), posée sur le fond,
+  // une carte ou un pied de dialogue (bg-muted/50 sur la carte).
+  it("destructive se lit sur sa teinte, en clair", () => {
+    const couleur = variables(css, ":root").valeur("destructive")
+    const pied = teinte(CLAIR.muted, CLAIR.fond, 0.5)
+    for (const fond of [CLAIR.fond, CLAIR.muted]) {
+      lisible(couleur, fond, TEXTE, "destructive")
+    }
+    for (const fond of [CLAIR.fond, CLAIR.muted, pied]) {
+      lisible(couleur, teinte(couleur, fond, 0.1), TEXTE, "destructive teinté")
+    }
+  })
+
+  it("destructive se lit sur sa teinte, en sombre", () => {
+    const couleur = variables(css, ".dark").valeur("destructive")
+    const pied = teinte(SOMBRE.muted, SOMBRE.card, 0.5)
+    for (const fond of [SOMBRE.fond, SOMBRE.card, SOMBRE.muted]) {
+      lisible(couleur, fond, TEXTE, "destructive")
+      lisible(couleur, teinte(couleur, fond, 0.2), TEXTE, "destructive teinté")
+    }
+    lisible(couleur, teinte(couleur, pied, 0.2), TEXTE, "destructive teinté")
+  })
+
+  // Texte secondaire, y compris sur --muted (initiales d'Avatar, Kbd).
+  it("muted-foreground se lit sur le fond et sur --muted", () => {
+    const clair = variables(css, ":root").valeur("muted-foreground")
+    for (const fond of [CLAIR.fond, CLAIR.muted]) {
+      lisible(clair, fond, TEXTE, "muted-foreground, clair")
+    }
+    const sombre = variables(css, ".dark").valeur("muted-foreground")
+    for (const fond of [SOMBRE.fond, SOMBRE.card, SOMBRE.muted]) {
+      lisible(sombre, fond, TEXTE, "muted-foreground, sombre")
     }
   })
 })

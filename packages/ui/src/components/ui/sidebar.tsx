@@ -29,6 +29,8 @@ const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
+const CHAMP_EDITABLE =
+  'input, textarea, select, [contenteditable]:not([contenteditable="false"])'
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
@@ -94,6 +96,10 @@ function SidebarProvider({
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // ETIC : pas dans un champ de saisie, où Ctrl+B met en gras (éditeur
+      // riche) ; voir le README, écarts à shadcn.
+      const cible = event.target instanceof Element ? event.target : null
+      if (cible?.closest(CHAMP_EDITABLE)) return
       if (
         event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
         (event.metaKey || event.ctrlKey)

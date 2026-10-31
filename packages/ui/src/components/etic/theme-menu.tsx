@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { cn } from "cn"
 import { MonitorIcon, MoonIcon, SunIcon, type LucideIcon } from "lucide-react"
 
@@ -29,13 +29,21 @@ const OPTIONS: Record<ThemePreference, { libelle: string; Icone: LucideIcon }> =
     dark: { libelle: "Sombre", Icone: MoonIcon },
   }
 
+/** Durée d'affichage de « Thème non enregistré ». */
+const DUREE_ECHEC = 5000
+
+/** « Thème : » avec une espace insécable avant les deux-points. */
+const PREFIXE = "Thème : "
+
 export interface ThemeMenuProps {
   valeur: ThemePreference
   /** Enregistre le choix. Une promesse rejetée affiche « Thème non
-   *  enregistré » sous le bouton. */
-  changer: (theme: ThemePreference) => void | Promise<unknown>
+   *  enregistré » sous le bouton, quelques secondes. */
+  onValeurChange: (theme: ThemePreference) => void | Promise<unknown>
   /** Côté où s'ouvre le menu. */
   side?: "top" | "bottom"
+  /** Classes du bouton (l'enveloppe qui positionne le message d'échec n'en
+   *  reçoit pas). */
   className?: string
 }
 
@@ -48,7 +56,7 @@ export interface ThemeMenuProps {
  */
 export function ThemeMenu({
   valeur,
-  changer,
+  onValeurChange,
   side = "bottom",
   className,
 }: ThemeMenuProps) {
@@ -56,14 +64,21 @@ export function ThemeMenu({
   // Numéro du dernier choix : l'échec d'un choix déjà remplacé ne s'affiche pas.
   const dernierChoix = useRef(0)
   const { Icone: IconeActuelle } = OPTIONS[valeur]
-  const libelle = `Thème : ${OPTIONS[valeur].libelle}`
+  const libelle = PREFIXE + OPTIONS[valeur].libelle
+
+  // Le message est posé par-dessus la page : il ne reste pas indéfiniment.
+  useEffect(() => {
+    if (!echec) return
+    const minuterie = setTimeout(() => setEchec(false), DUREE_ECHEC)
+    return () => clearTimeout(minuterie)
+  }, [echec])
 
   const choisir = (theme: ThemePreference) => {
     setEchec(false)
     if (theme === valeur) return
     const numero = ++dernierChoix.current
     Promise.resolve()
-      .then(() => changer(theme))
+      .then(() => onValeurChange(theme))
       .catch(() => {
         if (numero === dernierChoix.current) setEchec(true)
       })

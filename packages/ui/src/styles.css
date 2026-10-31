@@ -49,6 +49,7 @@
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-info: var(--info);
   --color-primary-text: var(--primary-text);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -88,13 +89,19 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  /* Plus foncés que Nova (oklch(0.556 0 0), oklch(0.577 0.245 27.325)) :
+     ≥ 4,5:1 sur --muted (initiales d'Avatar, Kbd) et, pour --destructive,
+     sur sa teinte à 10 % (bouton et badge destructive). Vérifié par
+     src/theme.test.ts, d'où l'hexadécimal. */
+  --muted-foreground: #6b6b6b;
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: #c10007;
   /* Texte sur le fond, sur --muted et sur leur teinte à 20 % : ≥ 4,5:1. */
   --success: #15703f;
   --warning: #8a5300;
+  /* Information (Alert info) : même exigence. */
+  --info: #1f5aa8;
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --chart-1: oklch(0.87 0 0);
@@ -127,12 +134,16 @@
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  /* --muted-foreground : la valeur de Nova, en hexadécimal pour le test.
+     --destructive plus clair que Nova (oklch(0.704 0.191 22.216)) : ≥ 4,5:1
+     sur sa teinte à 20 %, y compris dans un pied de dialogue (bg-muted/50). */
+  --muted-foreground: #a1a1a1;
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --destructive: #ff8a8a;
   --success: #6fd7a7;
   --warning: #f0b25f;
+  --info: #7cb4f5;
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --chart-1: oklch(0.87 0 0);
@@ -159,5 +170,29 @@
   }
   html {
     @apply font-sans;
+  }
+  /* Coquille sur mobile : la barre du haut (h-12) colle au haut de l'écran ;
+     une ancre ou un élément qu'on fait défiler jusqu'à lui s'arrête dessous,
+     pas derrière. La barre n'existe que sous le seuil mobile. */
+  html:has([data-slot="app-shell-mobile-bar"]) {
+    scroll-padding-top: calc(var(--spacing) * 12 + var(--spacing) * 2);
+  }
+  /* Mouvement réduit (réglage du système) : ni animation ni transition —
+     pulsation des squelettes, zoom des dialogues et des menus, glissement du
+     tiroir, repli de la barre latérale. La durée quasi nulle, plutôt que
+     « none », laisse Base UI recevoir la fin des animations qu'il attend
+     pour démonter un dialogue. Seule la roue de chargement tourne encore :
+     elle dit qu'on attend. */
+  @media (prefers-reduced-motion: reduce) {
+    *:not([data-slot="spinner"]),
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      animation-delay: 0s !important;
+      transition-duration: 0.01ms !important;
+      transition-delay: 0s !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
