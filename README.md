@@ -53,10 +53,10 @@ une application qui demande `npm i @etic-insa/ui@preview` les reçoit.
 - **GitHub, environnement `pypi`** : idem, pour la publication du côté Python de l'auth.
 - **PyPI, `etic-insa-auth`** : sur pypi.org, compte de l'organisation (double
   authentification) → _Your projects_ → _Publishing_ → _Add a new pending publisher_ :
-  projet `etic-insa-auth`, propriétaire `etic-insa-tech`, dépôt `etic-packages`, workflow
+  projet `etic-insa-auth`, propriétaire `ETIC-INSA-Technologies`, dépôt `etic-packages`, workflow
   `publication.yml`, environnement `pypi`. Le projet est créé à la première publication.
 - **npm, pour chaque paquet** : _Settings_ du paquet sur npmjs.com → _Trusted publishing_ →
-  GitHub Actions ; organisation `etic-insa-tech`, dépôt `etic-packages`, workflow
+  GitHub Actions ; organisation `ETIC-INSA-Technologies`, dépôt `etic-packages`, workflow
   `publication.yml`, **environnement `npm`** (npm refuse alors toute publication qui n'est pas
   passée par l'approbation) ; dans les actions autorisées, **cocher `npm publish`** (sinon
   seule une publication mise en attente, `npm stage publish`, est permise). Une configuration

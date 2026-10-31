@@ -27,7 +27,7 @@ dependencies = [
 sqlalchemy = ["sqlalchemy>=2.0.40,<3"]
 
 [project.urls]
-Source = "https://github.com/etic-insa-tech/etic-packages/tree/main/packages/auth"
+Source = "https://github.com/ETIC-INSA-Technologies/etic-packages/tree/main/packages/auth"
 
 [dependency-groups]
 dev = [
