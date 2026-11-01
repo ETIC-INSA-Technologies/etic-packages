@@ -19,6 +19,7 @@ import {
   attributsDuGroupe,
   useFormField,
 } from "@etic-ui/components/etic/form-field-context"
+import { TONS, type StatusTon } from "@etic-ui/lib/ton"
 
 export interface SegmentedControlOption<T extends string> {
   valeur: T
@@ -26,8 +27,11 @@ export interface SegmentedControlOption<T extends string> {
   /** Infobulle ; nom accessible du segment quand son libellé est une icône
    *  seule (élément sans texte, `<BanIcon />`). */
   infobulle?: string
-  /** Classes du segment (couleur propre au segment choisi, par exemple
-   *  `aria-pressed:bg-success/15`). */
+  /** Couleur du segment choisi (fond, texte et liseré), par exemple celle de
+   *  l'état que produit le choix ; « neutral » (par défaut) : le fond gris
+   *  du ToggleGroup. */
+  ton?: StatusTon
+  /** Classes du segment. */
   className?: string
 }
 
@@ -110,6 +114,8 @@ export function SegmentedControl<T extends string>({
             // segment choisi prend aussi un liseré intérieur (≥ 3:1).
             className={cn(
               "aria-pressed:text-foreground aria-pressed:inset-ring aria-pressed:inset-ring-foreground/50",
+              // Avec un ton, sa couleur : le liseré garde ≥ 3:1 sur le fond.
+              TONS[option.ton ?? "neutral"].segmentChoisi,
               option.className
             )}
             // Le nom accessible contient le libellé visible : l'infobulle ne

@@ -177,7 +177,9 @@ chargement d'une image) et, au besoin, son composant de lien (`lien`, comme pour
 | `QueryErrorBanner`                                                       | Le bandeau d'erreur de `QueryBoundary`, seul (`requete` : `isError`, `error`, `isFetching`, `refetch`), pour une page qui place elle-même ses données ; rien tant que la requête n'a pas échoué. Accepte `titre`, `description`, `className` d'`ErrorBanner`.                                                                                                                                                           |
 | `Disclosure`, `DisclosureTrigger`                                        | Section repliable à chevron tournant, fermée par défaut : `titre`, `compteur` en pastille, `variante` `lien` (en ligne), `discret` (fantôme estompé) ou `carte` (bloc encadré), `defautOuvert` ou `ouvert` / `onOuvertChange`. `DisclosureTrigger` seul pour un `Collapsible` composé à la main.                                                                                                                        |
 | `CenteredScreen`                                                         | Écran hors de la coquille (connexion, page introuvable, vérification de session) : le `<main>` de la page, contenu centré sur toute la hauteur, fond estompé.                                                                                                                                                                                                                                                           |
-| `StatTile`, `StatusBadge`                                                | Chiffre clé d'un résumé ; badge d'état à pastille. `ton` (type `StatusTon`) : `neutral`, `success`, `warning`, `destructive`.                                                                                                                                                                                                                                                                                           |
+| `StatTile`, `StatGrid`, `StatusBadge`                                    | Chiffre clé d'un résumé ; rangée de tuiles (colonnes de `largeurMin` au moins, 190 px par défaut, une seule sur téléphone) ; badge d'état à pastille. `ton` (type `StatusTon`) : `neutral`, `info`, `success`, `warning`, `destructive` ; il colore aussi `Progress` (8 px avec `size="lg"`), le segment choisi d'un `SegmentedControl` et un `IconToggle` actif.                                                       |
+| `RemovableBadge`, `ExplainedBadge`                                       | Badge de 28 px (`size="lg"`, aussi pour les badges sans croix de la même liste) terminé par une croix « Retirer » (`onRetirer`, `libelleRetirer`, `enCours`, `verrou`) ; badge dont l'`explication` s'ouvre au survol et au focus et se lit après lui (`render` : un autre porteur, `<time>` par exemple).                                                                                                              |
+| `SaveBar`                                                                | Pied d'un formulaire de page : « Enregistrer » (soumet le formulaire, ou `onEnregistrer`), occupé mais focalisable pendant `enCours` ; « Annuler » avec `onAnnuler` ; statut annoncé : « Enregistré » (`enregistre`), « Modifications non enregistrées » (`modifie`). `collante` : barre collée en bas d'un long formulaire.                                                                                            |
 | `CopyButton`, `DeleteButton`, `IconToggle`                               | Copie avec retour « Copié ! », ou « Copie impossible » si le navigateur refuse (`onCopie`, `onEchec`) ; corbeille qui ouvre une confirmation ; bouton à icône qui pose ou retire un marqueur (`Toggle`, `aria-pressed`, `onActifChange`, `enCours` occupé sans perdre le focus ; actif, en couleur de son `ton`, `warning` par défaut). Tous ont une infobulle, et `verrou` pour dire pourquoi l'action est impossible. |
 | `TooltipButton`                                                          | `Button` avec infobulle et état `verrou` (désactivé mais focalisable, la raison en infobulle) : la règle pour tout bouton à icône seule, que l'infobulle nomme (`aria-label`, sauf nom donné). `destructif` : gris, rouge au survol seulement (corbeille, retrait dans une liste).                                                                                                                                      |
 | `ButtonLink`                                                             | Lien à l'allure de bouton (`variant`, `size` de `Button`), annoncé comme un lien ; `lien` : le composant de lien du routeur de l'application, comme pour `AppShell` (`<a>` par défaut).                                                                                                                                                                                                                                 |
@@ -328,7 +330,8 @@ obligatoire, invalide }`, ou `null` hors d'un `FormField`. `RequiredMark` existe
   focalisé, indisponible, et l'envoi est annoncé. `FileUploadButton` relaie les props de
   `Button` (`id`, `aria-*` : il fonctionne dans un `FormField`).
 - `SegmentedControl` : choix exclusif en boutons joints (`ToggleGroup`), sans désélection ;
-  le segment choisi prend, en plus du fond `bg-muted`, un liseré intérieur. L'`infobulle`
+  le segment choisi prend, en plus du fond `bg-muted`, un liseré intérieur, ou la couleur
+  du `ton` de son option (celle de l'état que produit le choix). L'`infobulle`
   d'une option nomme un segment à icône seule, sans masquer un libellé texte.
 - `CheckboxList` : plusieurs valeurs parmi une liste de cases (`CheckboxGroup` de Base UI) ;
   la `description` d'une option est reliée à sa case.
@@ -730,7 +733,12 @@ npm run build      # dist/ : un module par composant, types, styles.css
     qui pose largeur, hauteur et taille des initiales (36 % du diamètre), reprise par
     `AvatarFallback` (`group-data-diametre/avatar:text-[length:inherit]`) ;
   - `SidebarTrigger` de `sidebar.tsx` : `libelle`, le nom lu du bouton (« Afficher ou masquer
-    le menu » par défaut), au lieu d'un `aria-label` qui masquerait ce texte.
+    le menu » par défaut), au lieu d'un `aria-label` qui masquerait ce texte ;
+  - `badge.tsx` : variante `info` (sur le modèle de `success`) et taille `size="lg"` (28 px,
+    la hauteur d'un badge qui porte un bouton « Retirer ») ;
+  - `progress.tsx` : `ton` (piste à 15 % et remplissage de la couleur, `StatusTon`, classes
+    dans `lib/ton.ts`) et `size="lg"` (piste de 8 px au lieu de 4), au lieu de recolorer la
+    piste et le remplissage par sélecteurs `[data-slot=…]`.
 
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 

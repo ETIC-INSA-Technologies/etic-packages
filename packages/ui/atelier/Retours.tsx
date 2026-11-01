@@ -17,6 +17,7 @@ import {
   AlertTitle,
   AuthAvatar,
   AuthImage,
+  Badge,
   Button,
   Checkbox,
   ConfirmDialog,
@@ -28,6 +29,7 @@ import {
   EmptyState,
   ErrorBanner,
   ErrorBoundary,
+  ExplainedBadge,
   Field,
   FieldLabel,
   FormDialog,
@@ -36,12 +38,18 @@ import {
   Label,
   Loading,
   PageHeader,
+  Progress,
+  ProgressLabel,
+  ProgressValue,
   QueryBoundary,
+  RemovableBadge,
+  SaveBar,
   SectionCard,
   SkeletonCard,
   SkeletonPage,
   SkeletonTable,
   Slider,
+  StatGrid,
   StatTile,
   StatusBadge,
   TooltipButton,
@@ -242,6 +250,97 @@ function DemoBascule() {
         verrou="Indispensable à l'application : marqueur permanent"
       />
     </div>
+  )
+}
+
+function DemoBadges() {
+  const [groupes, setGroupes] = useState(["Bureau", "Trésorerie", "Pôle info"])
+  const [enCours, setEnCours] = useState<string | null>(null)
+  return (
+    <ul className="flex flex-wrap gap-2" aria-label="Groupes du membre">
+      {groupes.map((groupe) => (
+        <li key={groupe}>
+          <RemovableBadge
+            libelleRetirer={`Retirer le groupe ${groupe}`}
+            enCours={enCours === groupe}
+            onRetirer={async () => {
+              setEnCours(groupe)
+              await attendre(false)
+              setGroupes((g) => g.filter((x) => x !== groupe))
+              setEnCours(null)
+            }}
+          >
+            {groupe}
+          </RemovableBadge>
+        </li>
+      ))}
+      <li>
+        <RemovableBadge
+          libelleRetirer="Retirer *"
+          verrou="Le joker du superadministrateur est indétachable"
+          onRetirer={() => {}}
+          className="font-mono"
+        >
+          *
+        </RemovableBadge>
+      </li>
+      <li>
+        <ExplainedBadge explication="Groupe imposé par le poste « Trésorier » : il ne peut pas être retiré manuellement.">
+          <Badge variant="outline" size="lg">
+            Comptabilité
+            <LockIcon className="text-muted-foreground" aria-hidden />
+          </Badge>
+        </ExplainedBadge>
+      </li>
+    </ul>
+  )
+}
+
+function DemoSaveBar() {
+  const [nom, setNom] = useState("Ada")
+  const [enregistreSous, setEnregistreSous] = useState("Ada")
+  const [enCours, setEnCours] = useState(false)
+  const [enregistre, setEnregistre] = useState(false)
+  const modifie = nom !== enregistreSous
+  const envoyer = async () => {
+    setEnCours(true)
+    await attendre(false)
+    setEnregistreSous(nom)
+    setEnCours(false)
+    setEnregistre(true)
+  }
+  return (
+    <form
+      className="flex max-w-md flex-col gap-4"
+      onSubmit={(e) => {
+        e.preventDefault()
+        void envoyer()
+      }}
+    >
+      <Field>
+        <FieldLabel htmlFor="demo-save-bar-nom">Prénom</FieldLabel>
+        <Input
+          id="demo-save-bar-nom"
+          value={nom}
+          onChange={(e) => setNom(e.target.value)}
+        />
+      </Field>
+      <SaveBar
+        enCours={enCours}
+        desactive={!modifie || !nom.trim()}
+        enregistre={enregistre}
+        modifie={modifie}
+        onAnnuler={modifie ? () => setNom(enregistreSous) : undefined}
+      />
+      <SaveBar
+        collante
+        modifie={modifie}
+        enCours={enCours}
+        desactive={!modifie || !nom.trim()}
+        enregistre={enregistre}
+        onEnregistrer={() => void envoyer()}
+      />
+    </form>
   )
 }
 
@@ -541,11 +640,17 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
     },
     {
       id: "stat-tile",
-      titre: "StatTile, StatusBadge",
+      titre: "StatTile, StatGrid, StatusBadge",
       rendu: () => (
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatGrid aria-label="Résumé du serveur">
             <StatTile libelle="Membres actifs" valeur={128} />
+            <StatTile
+              libelle="Mises à jour"
+              valeur={3}
+              ton="info"
+              indication="Disponibles"
+            />
             <StatTile
               libelle="Sauvegardes"
               valeur="À jour"
@@ -564,15 +669,57 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
               ton="destructive"
               indication="Depuis le 2 octobre"
             />
-          </div>
+          </StatGrid>
           <div className="flex flex-wrap gap-2">
             <StatusBadge>Alumni</StatusBadge>
+            <StatusBadge ton="info">Mis à jour</StatusBadge>
             <StatusBadge ton="success">Actif</StatusBadge>
             <StatusBadge ton="warning">En attente</StatusBadge>
             <StatusBadge ton="destructive">Désactivé</StatusBadge>
           </div>
         </div>
       ),
+    },
+    {
+      id: "jauges",
+      titre: "Progress : tons et épaisseur",
+      rendu: () => (
+        <div className="flex max-w-md flex-col gap-4">
+          {(
+            [
+              ["Mémoire", 42, "neutral"],
+              ["Disque", 84, "warning"],
+              ["Fichiers", 97, "destructive"],
+              ["Import", 60, "info"],
+              ["Sauvegarde", 100, "success"],
+            ] as const
+          ).map(([libelle, valeur, ton]) => (
+            <Progress
+              key={libelle}
+              value={valeur}
+              ton={ton}
+              size="lg"
+              className="gap-1.5"
+            >
+              <ProgressLabel>{libelle}</ProgressLabel>
+              <ProgressValue />
+            </Progress>
+          ))}
+          <Progress value={30}>
+            <ProgressLabel>Fine, par défaut</ProgressLabel>
+          </Progress>
+        </div>
+      ),
+    },
+    {
+      id: "badges",
+      titre: "RemovableBadge, ExplainedBadge",
+      rendu: () => <DemoBadges />,
+    },
+    {
+      id: "save-bar",
+      titre: "SaveBar",
+      rendu: () => <DemoSaveBar />,
     },
     {
       id: "boutons",

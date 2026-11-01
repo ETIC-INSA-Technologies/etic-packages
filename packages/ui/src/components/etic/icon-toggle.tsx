@@ -9,19 +9,7 @@ import {
   TooltipTrigger,
 } from "@etic-ui/components/ui/tooltip"
 import { useRaisonVerrou } from "@etic-ui/components/etic/tooltip-button"
-import type { StatusTon } from "@etic-ui/components/etic/status-badge"
-
-/** Couleur du bouton actif, selon le ton (survol compris : le Toggle passe
- *  sinon en texte normal). */
-const TONS_ACTIFS: Record<StatusTon, string> = {
-  neutral: "aria-pressed:text-foreground",
-  success:
-    "aria-pressed:bg-success/10 aria-pressed:text-success aria-pressed:hover:bg-success/15 aria-pressed:hover:text-success dark:aria-pressed:bg-success/20 dark:aria-pressed:hover:bg-success/25",
-  warning:
-    "aria-pressed:bg-warning/10 aria-pressed:text-warning aria-pressed:hover:bg-warning/15 aria-pressed:hover:text-warning dark:aria-pressed:bg-warning/20 dark:aria-pressed:hover:bg-warning/25",
-  destructive:
-    "aria-pressed:bg-destructive/10 aria-pressed:text-destructive aria-pressed:hover:bg-destructive/15 aria-pressed:hover:text-destructive dark:aria-pressed:bg-destructive/20 dark:aria-pressed:hover:bg-destructive/25",
-}
+import { TONS, type StatusTon } from "@etic-ui/lib/ton"
 
 export interface IconToggleProps extends Omit<
   ComponentProps<typeof Toggle>,
@@ -99,7 +87,9 @@ export function IconToggle({
                 // Inactif, en gris comme les icônes d'action voisines : seul
                 // l'état actif attire l'œil.
                 "text-muted-foreground",
-                TONS_ACTIFS[ton],
+                // Couleur du bouton actif, survol compris (le Toggle passe
+                // sinon en texte normal).
+                TONS[ton].basculeActive,
                 verrou && "cursor-not-allowed opacity-50",
                 enCours && "cursor-progress opacity-50",
                 className

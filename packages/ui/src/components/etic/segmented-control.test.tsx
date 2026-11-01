@@ -84,6 +84,34 @@ describe("SegmentedControl", () => {
     )
   })
 
+  it("ton : le segment choisi prend la couleur de l'état qu'il produit", () => {
+    render(
+      <SegmentedControl
+        aria-label="Décision"
+        valeur="changer"
+        onValeurChange={vi.fn()}
+        options={[
+          { valeur: "garder", libelle: "Conserver", ton: "success" },
+          { valeur: "changer", libelle: "Changer", ton: "info" },
+          { valeur: "depart", libelle: "Départ" },
+        ]}
+      />
+    )
+    expect(screen.getByRole("button", { name: "Changer" })).toHaveClass(
+      "aria-pressed:bg-info/15",
+      "aria-pressed:text-info",
+      "aria-pressed:inset-ring-info/60",
+      "dark:aria-pressed:bg-info/25"
+    )
+    expect(screen.getByRole("button", { name: "Conserver" })).toHaveClass(
+      "aria-pressed:text-success"
+    )
+    // Sans ton : le fond gris et le liseré sombre du ToggleGroup.
+    const depart = screen.getByRole("button", { name: "Départ" })
+    expect(depart).toHaveClass("aria-pressed:inset-ring-foreground/50")
+    expect(depart.className).not.toMatch(/aria-pressed:text-(info|success)/)
+  })
+
   it("disabled désactive tous les segments", async () => {
     const user = userEvent.setup()
     const surChangement = vi.fn()

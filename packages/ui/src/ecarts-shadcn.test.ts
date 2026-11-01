@@ -117,6 +117,16 @@ describe("écarts avec shadcn", () => {
     expect(badge).toMatch(/warning:\s*"bg-warning\/10 text-warning/)
   })
 
+  it("badge : variante info, et taille lg (28 px) des badges retirables", () => {
+    const badge = lire("components/ui/badge.tsx")
+    expect(badge).toMatch(/info:\s*"bg-info\/10 text-info/)
+    expect(badge).toMatch(/lg:\s*"h-7"/)
+  })
+
+  it("progress : piste de 8 px en size lg (le ton est testé dans status.test.tsx)", () => {
+    expect(lire("components/ui/progress.tsx")).toMatch(/lg:\s*"h-2"/)
+  })
+
   it("alert : variantes warning, info et success, sur le modèle de destructive", () => {
     const alert = lire("components/ui/alert.tsx")
     for (const nom of ["warning", "info", "success"]) {

@@ -3,12 +3,32 @@
 import { Progress as ProgressPrimitive } from "@base-ui/react/progress"
 import { cn } from "cn"
 
+import { TONS, type StatusTon } from "@etic-ui/lib/ton"
+
+// Écart avec shadcn : `ton` et `size` (voir ecarts-shadcn.test.ts), pour
+// qu'une jauge d'occupation change de couleur et d'épaisseur sans viser ses
+// parties par sélecteurs `[data-slot=…]`. « neutral » garde l'accent de
+// shadcn.
+const TAILLES = { default: "", lg: "h-2" } as const
+
+type ProgressProps = ProgressPrimitive.Root.Props & {
+  /** Couleur de la piste et du remplissage : « warning » au-delà d'un seuil
+   *  d'alerte, « destructive » quand c'est plein. « neutral » (par défaut) :
+   *  l'accent. */
+  ton?: StatusTon
+  /** Épaisseur de la piste : 4 px par défaut, comme shadcn ; « lg » (8 px)
+   *  pour une jauge qui se lit seule. */
+  size?: keyof typeof TAILLES
+}
+
 function Progress({
   className,
   children,
   value,
+  ton = "neutral",
+  size = "default",
   ...props
-}: ProgressPrimitive.Root.Props) {
+}: ProgressProps) {
   return (
     <ProgressPrimitive.Root
       value={value}
@@ -17,8 +37,8 @@ function Progress({
       {...props}
     >
       {children}
-      <ProgressTrack>
-        <ProgressIndicator />
+      <ProgressTrack className={cn(TONS[ton].piste, TAILLES[size])}>
+        <ProgressIndicator className={TONS[ton].remplissage} />
       </ProgressTrack>
     </ProgressPrimitive.Root>
   )
@@ -75,6 +95,7 @@ function ProgressValue({ className, ...props }: ProgressPrimitive.Value.Props) {
 
 export {
   Progress,
+  type ProgressProps,
   ProgressTrack,
   ProgressIndicator,
   ProgressLabel,

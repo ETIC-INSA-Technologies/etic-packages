@@ -203,6 +203,7 @@ export {
 } from "./components/ui/popover"
 export {
   Progress,
+  type ProgressProps,
   ProgressIndicator,
   ProgressLabel,
   ProgressTrack,
@@ -401,10 +402,24 @@ export {
 } from "./components/etic/section-card"
 export { StatTile, type StatTileProps } from "./components/etic/stat-tile"
 export {
+  type LongueurCss,
+  StatGrid,
+  type StatGridProps,
+} from "./components/etic/stat-grid"
+export {
   StatusBadge,
   type StatusBadgeProps,
   type StatusTon,
 } from "./components/etic/status-badge"
+export {
+  RemovableBadge,
+  type RemovableBadgeProps,
+} from "./components/etic/removable-badge"
+export {
+  ExplainedBadge,
+  type ExplainedBadgeProps,
+} from "./components/etic/explained-badge"
+export { SaveBar, type SaveBarProps } from "./components/etic/save-bar"
 export {
   TooltipButton,
   type TooltipButtonProps,

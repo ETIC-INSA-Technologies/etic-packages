@@ -7,17 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@etic-ui/components/ui/card"
-import {
-  PASTILLES,
-  type StatusTon,
-} from "@etic-ui/components/etic/status-badge"
-
-const TEXTES: Record<StatusTon, string> = {
-  neutral: "",
-  success: "text-success",
-  warning: "text-warning",
-  destructive: "text-destructive",
-}
+import { TONS, type StatusTon } from "@etic-ui/lib/ton"
 
 export interface StatTileProps {
   libelle: string
@@ -50,13 +40,13 @@ export function StatTile({
           data-ton={ton}
           className={cn(
             "flex items-center gap-2 text-2xl font-semibold tabular-nums group-data-[size=sm]/card:text-2xl",
-            TEXTES[ton]
+            TONS[ton].texte
           )}
         >
           {ton !== "neutral" ? (
             <span
               aria-hidden
-              className={cn("size-2 shrink-0 rounded-full", PASTILLES[ton])}
+              className={cn("size-2 shrink-0 rounded-full", TONS[ton].pastille)}
             />
           ) : null}
           <span className="min-w-0 break-words">{valeur}</span>

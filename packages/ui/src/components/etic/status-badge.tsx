@@ -2,24 +2,10 @@ import type { ComponentProps } from "react"
 import { cn } from "cn"
 
 import { Badge } from "@etic-ui/components/ui/badge"
+import { TONS, type StatusTon } from "@etic-ui/lib/ton"
 
-/** Ce que dit un état : bon, à surveiller, en échec, ou rien de particulier. */
-export type StatusTon = "neutral" | "success" | "warning" | "destructive"
-
-const VARIANTES = {
-  neutral: "secondary",
-  success: "success",
-  warning: "warning",
-  destructive: "destructive",
-} as const satisfies Record<StatusTon, ComponentProps<typeof Badge>["variant"]>
-
-/** Couleur de la pastille, par ton. */
-export const PASTILLES: Record<StatusTon, string> = {
-  neutral: "bg-muted-foreground",
-  success: "bg-success",
-  warning: "bg-warning",
-  destructive: "bg-destructive",
-}
+// Le type vit dans lib/ton ; réexporté ici, où il était défini jusqu'en 0.2.
+export type { StatusTon }
 
 export interface StatusBadgeProps extends Omit<
   ComponentProps<typeof Badge>,
@@ -42,14 +28,14 @@ export function StatusBadge({
 }: StatusBadgeProps) {
   return (
     <Badge
-      variant={VARIANTES[ton]}
+      variant={TONS[ton].badge}
       data-ton={ton}
       className={className}
       {...props}
     >
       <span
         aria-hidden
-        className={cn("size-1.5 shrink-0 rounded-full", PASTILLES[ton])}
+        className={cn("size-1.5 shrink-0 rounded-full", TONS[ton].pastille)}
       />
       {children}
     </Badge>
