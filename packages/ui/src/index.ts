@@ -316,9 +316,15 @@ export {
   AuthImage,
   type AuthImageCharger,
   type AuthImageProps,
+  type AuthObjectUrlEtat,
   useAuthObjectUrl,
+  useAuthObjectUrlEtat,
 } from "./components/etic/auth-image"
 export { ButtonLink, type ButtonLinkProps } from "./components/etic/button-link"
+export {
+  CenteredScreen,
+  type CenteredScreenProps,
+} from "./components/etic/centered-screen"
 export {
   ConfirmDialog,
   type ConfirmDialogProps,
@@ -336,6 +342,14 @@ export {
   DetailList,
   type DetailListProps,
 } from "./components/etic/detail-list"
+export {
+  Disclosure,
+  type DisclosureProps,
+  type DisclosureTaille,
+  DisclosureTrigger,
+  type DisclosureTriggerProps,
+  type DisclosureVariante,
+} from "./components/etic/disclosure"
 export { EmptyState, type EmptyStateProps } from "./components/etic/empty-state"
 export {
   ErrorBanner,
@@ -375,9 +389,13 @@ export {
   type PageContainerProps,
 } from "./components/etic/page-container"
 export {
+  erreurIntrouvable,
   QueryBoundary,
   type QueryBoundaryProps,
   type QueryBoundaryRequete,
+  QueryErrorBanner,
+  type QueryErrorBannerProps,
+  type QueryErrorBannerRequete,
 } from "./components/etic/query-boundary"
 export {
   SectionCard,

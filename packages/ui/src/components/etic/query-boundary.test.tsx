@@ -10,8 +10,10 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   EmptyState,
+  erreurIntrouvable,
   Loading,
   QueryBoundary,
+  QueryErrorBanner,
   type QueryBoundaryRequete,
 } from "@etic-ui/index"
 
@@ -243,6 +245,127 @@ describe("QueryBoundary", () => {
     await userEvent.click(screen.getByRole("button", { name: "Réessayer" }))
     await waitFor(() =>
       expect(screen.getByText("Bureau, Trésorerie")).toBeInTheDocument()
+    )
+  })
+
+  describe("introuvable", () => {
+    const erreur404 = Object.assign(new Error("Introuvable"), { status: 404 })
+    const erreur500 = Object.assign(new Error("Panne"), { status: 500 })
+
+    it("affiche « introuvable » pour un 404, sans bandeau ni « Réessayer »", () => {
+      render(
+        <QueryBoundary
+          requete={requete({
+            isError: true,
+            error: erreur404,
+            refetch: () => {},
+          })}
+          introuvable="Groupe introuvable."
+        >
+          {() => "données"}
+        </QueryBoundary>
+      )
+      expect(screen.getByText("Groupe introuvable.")).toBeInTheDocument()
+      expect(screen.queryByRole("alert")).toBeNull()
+      expect(screen.queryByRole("button", { name: "Réessayer" })).toBeNull()
+    })
+
+    it("rend tel quel un nœud (avec un lien de retour…)", () => {
+      render(
+        <QueryBoundary
+          requete={requete({ isError: true, error: erreur404 })}
+          introuvable={<a href="/groupes">Retour aux groupes</a>}
+        >
+          {() => "données"}
+        </QueryBoundary>
+      )
+      expect(
+        screen.getByRole("link", { name: "Retour aux groupes" })
+      ).toBeInTheDocument()
+    })
+
+    it("n'annonce jamais une panne comme « introuvable »", () => {
+      render(
+        <QueryBoundary
+          requete={requete({
+            isError: true,
+            error: erreur500,
+            refetch: () => {},
+          })}
+          introuvable="Groupe introuvable."
+        >
+          {() => "données"}
+        </QueryBoundary>
+      )
+      expect(screen.getByRole("alert")).toHaveTextContent("Panne")
+      expect(screen.getByRole("button", { name: "Réessayer" })).toBeVisible()
+      expect(screen.queryByText("Groupe introuvable.")).toBeNull()
+    })
+
+    it("sans `introuvable`, un 404 reste une erreur ; `estIntrouvable` est personnalisable", () => {
+      const { rerender } = render(
+        <QueryBoundary requete={requete({ isError: true, error: erreur404 })}>
+          {() => "données"}
+        </QueryBoundary>
+      )
+      expect(screen.getByRole("alert")).toHaveTextContent("Introuvable")
+
+      rerender(
+        <QueryBoundary
+          requete={requete({ isError: true, error: { code: "ABSENT" } })}
+          introuvable="Absent."
+          estIntrouvable={(e) => (e as { code?: string }).code === "ABSENT"}
+        >
+          {() => "données"}
+        </QueryBoundary>
+      )
+      expect(screen.getByText("Absent.")).toBeInTheDocument()
+    })
+
+    it("erreurIntrouvable lit un statut 404 par sa forme", () => {
+      expect(erreurIntrouvable(erreur404)).toBe(true)
+      expect(erreurIntrouvable(erreur500)).toBe(false)
+      expect(erreurIntrouvable("404")).toBe(false)
+      expect(erreurIntrouvable(null)).toBe(false)
+    })
+  })
+})
+
+describe("QueryErrorBanner", () => {
+  it("ne rend rien tant que la requête n'a pas échoué", () => {
+    const { container } = render(
+      <QueryErrorBanner requete={{ isError: false, error: null }} />
+    )
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it("affiche l'échec avec « Réessayer », occupé pendant la tentative", async () => {
+    const refetch = vi.fn()
+    const { rerender } = render(
+      <QueryErrorBanner
+        requete={{ isError: true, error: new Error("Hors ligne"), refetch }}
+        description="Les groupes n'ont pas pu être chargés."
+      />
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent("Hors ligne")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Les groupes n'ont pas pu être chargés."
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Réessayer" }))
+    expect(refetch).toHaveBeenCalledOnce()
+    rerender(
+      <QueryErrorBanner
+        requete={{
+          isError: true,
+          error: new Error("Hors ligne"),
+          isFetching: true,
+          refetch,
+        }}
+      />
+    )
+    expect(screen.getByRole("button", { name: "Réessayer" })).toHaveAttribute(
+      "aria-busy",
+      "true"
     )
   })
 })

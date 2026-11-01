@@ -50,9 +50,9 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
-  SidebarTrigger,
   useSidebar,
 } from "@etic-ui/components/ui/sidebar"
+import { Button } from "@etic-ui/components/ui/button"
 import { TooltipProvider } from "@etic-ui/components/ui/tooltip"
 import {
   ThemeMenu,
@@ -115,7 +115,8 @@ export interface AppShellProps {
   compte?: AppShellCompte
   theme?: Pick<ThemeMenuProps, "valeur" | "onValeurChange">
   lien?: AppShellLienComposant
-  /** Au-dessus du contenu, sur toute sa largeur (bandeau d'erreur…). */
+  /** Au-dessus du contenu (bandeau d'erreur…), avec les marges latérales de
+   *  `PageContainer` : la page n'a pas à les recopier. */
   bandeau?: ReactNode
   children: ReactNode
 }
@@ -183,7 +184,17 @@ export function AppShell({
           className="min-w-0 outline-none"
         >
           <BarreMobile application={application} Lien={Lien} />
-          {bandeau}
+          {bandeau !== null && bandeau !== undefined && bandeau !== false ? (
+            // Marges latérales et haute de `PageContainer` (à garder
+            // accordées), qui suit et pose sa propre marge haute. Masqué
+            // quand le bandeau ne rend rien (`ErrorBanner` sans erreur…).
+            <div
+              data-slot="app-shell-bandeau"
+              className="px-4 pt-6 empty:hidden min-[1025px]:px-8 min-[1025px]:pt-8 sm:px-6"
+            >
+              {bandeau}
+            </div>
+          ) : null}
           {children}
         </SidebarInset>
       </SidebarProvider>
@@ -444,7 +455,7 @@ function BarreMobile({
   application,
   Lien,
 }: Pick<AppShellProps, "application"> & { Lien: AppShellLienComposant }) {
-  const { isMobile, openMobile } = useSidebar()
+  const { isMobile, openMobile, toggleSidebar } = useSidebar()
   if (!isMobile) return null
   return (
     // Sa hauteur (h-12) est reprise par le `scroll-padding-top` de styles.css :
@@ -453,11 +464,21 @@ function BarreMobile({
       data-slot="app-shell-mobile-bar"
       className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-2"
     >
-      <SidebarTrigger
-        aria-label="Ouvrir le menu"
+      {/* Le bouton de `SidebarTrigger`, avec un seul nom : celui de
+          shadcn (« Afficher ou masquer le menu », en `sr-only`), masqué par
+          un `aria-label`, divergeait du nom lu. */}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        data-sidebar="trigger"
+        data-slot="app-shell-menu-trigger"
         aria-expanded={openMobile}
         className="size-9"
-      />
+        onClick={toggleSidebar}
+      >
+        <PanelLeftIcon />
+        <span className="sr-only">Ouvrir le menu</span>
+      </Button>
       <Lien
         href={application.href ?? "/"}
         className="flex min-w-0 items-center gap-2 rounded-md px-1 font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring"

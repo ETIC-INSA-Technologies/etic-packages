@@ -28,7 +28,9 @@ const tabsListVariants = cva(
     variants: {
       variant: {
         default: "bg-muted",
-        line: "gap-1 bg-transparent",
+        // Écart ETIC : sur un écran étroit, les onglets passent à la ligne au
+        // lieu de déborder (un défilement couperait le trait de l'actif).
+        line: "gap-1 bg-transparent group-data-horizontal/tabs:h-auto group-data-horizontal/tabs:max-w-full group-data-horizontal/tabs:flex-wrap group-data-horizontal/tabs:justify-start group-data-horizontal/tabs:gap-y-2",
       },
     },
     defaultVariants: {
@@ -61,6 +63,9 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
         "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
         "data-active:bg-background data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground",
         "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
+        // Écart ETIC : onglets `line` qui passent à la ligne (voir
+        // `tabsListVariants`) : hauteur fixe, largeur du libellé.
+        "group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:h-7 group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:flex-none",
         className
       )}
       {...props}

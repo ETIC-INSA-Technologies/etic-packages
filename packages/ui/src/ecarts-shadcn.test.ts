@@ -8,7 +8,15 @@ import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
 import { MOBILE_MEDIA_QUERY } from "@etic-ui/hooks/use-mobile"
-import { Alert, Button, Calendar, Slider } from "@etic-ui/index"
+import {
+  Alert,
+  Button,
+  Calendar,
+  Slider,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@etic-ui/index"
 
 const lire = (chemin: string) =>
   readFileSync(resolve(import.meta.dirname, chemin), "utf8")
@@ -226,5 +234,50 @@ describe("écarts avec shadcn", () => {
     const checkbox = lire("components/ui/checkbox.tsx")
     expect(checkbox).not.toContain("border-input")
     expect(checkbox).toContain("border border-(--control-border)")
+  })
+
+  it("onglets line : passent à la ligne sur un écran étroit au lieu de déborder", () => {
+    const tabs = lire("components/ui/tabs.tsx")
+    for (const classe of [
+      "group-data-horizontal/tabs:h-auto",
+      "group-data-horizontal/tabs:max-w-full",
+      "group-data-horizontal/tabs:flex-wrap",
+      "group-data-horizontal/tabs:justify-start",
+      "group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:h-7",
+      "group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:flex-none",
+    ])
+      expect(tabs).toContain(classe)
+    // La variante par défaut (pastille sur fond muted) garde sa hauteur fixe.
+    render(
+      createElement(
+        Tabs,
+        { defaultValue: "a" },
+        createElement(
+          TabsList,
+          { "aria-label": "Pastilles" },
+          createElement(TabsTrigger, { value: "a" }, "A")
+        ),
+        createElement(
+          TabsList,
+          { variant: "line", "aria-label": "Lignes" },
+          createElement(TabsTrigger, { value: "a" }, "A")
+        )
+      )
+    )
+    const [pastilles, lignes] = screen.getAllByRole("tablist")
+    expect(pastilles).toHaveClass("group-data-horizontal/tabs:h-8")
+    expect(pastilles).not.toHaveClass("group-data-horizontal/tabs:flex-wrap")
+    expect(lignes).toHaveClass(
+      "group-data-horizontal/tabs:h-auto",
+      "group-data-horizontal/tabs:flex-wrap"
+    )
+    expect(lignes).not.toHaveClass("group-data-horizontal/tabs:h-8")
+  })
+
+  it("avatar : diamètre libre, initiales proportionnelles", () => {
+    const avatar = lire("components/ui/avatar.tsx")
+    expect(avatar).toContain("diametre?: number")
+    expect(avatar).toContain("data-diametre={diametre}")
+    expect(avatar).toContain("group-data-diametre/avatar:text-[length:inherit]")
   })
 })

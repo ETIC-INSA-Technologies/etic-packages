@@ -1,8 +1,11 @@
 import type { ReactNode } from "react"
-import { InboxIcon } from "lucide-react"
+import { InboxIcon, SearchXIcon } from "lucide-react"
 
 import { EmptyState } from "@etic-ui/components/etic/empty-state"
-import { ErrorBanner } from "@etic-ui/components/etic/error-banner"
+import {
+  ErrorBanner,
+  type ErrorBannerProps,
+} from "@etic-ui/components/etic/error-banner"
 import { SkeletonTable } from "@etic-ui/components/etic/loading"
 
 /**
@@ -42,6 +45,18 @@ export interface QueryBoundaryProps<T> {
   /** Force le chargement : requête qui attend encore son entrée (une
    *  requête désactivée n'est ni en cours ni chargée). */
   enAttente?: boolean
+  /**
+   * Affiché à la place du bandeau d'erreur quand l'élément demandé n'existe
+   * pas (fiche supprimée, adresse erronée) : une chaîne devient le titre d'un
+   * `EmptyState`, un nœud (avec un lien de retour…) est rendu tel quel. Sans
+   * lui, « introuvable » est une erreur comme une autre. Les autres échecs
+   * (réseau, 500…) gardent le bandeau et « Réessayer » : ils ne sont jamais
+   * annoncés comme « introuvable ».
+   */
+  introuvable?: ReactNode
+  /** L'erreur dit-elle « introuvable » ? Par défaut : un `status` 404
+   *  (`ApiError` de `@etic-insa/auth`, ou toute erreur de même forme). */
+  estIntrouvable?: (erreur: unknown) => boolean
 }
 
 function videParDefaut(donnees: unknown) {
@@ -50,10 +65,53 @@ function videParDefaut(donnees: unknown) {
   return Array.isArray(items) && items.length === 0
 }
 
+/** Une erreur de statut HTTP 404, lue par sa forme. */
+export function erreurIntrouvable(erreur: unknown): boolean {
+  return (
+    typeof erreur === "object" &&
+    erreur !== null &&
+    (erreur as { status?: unknown }).status === 404
+  )
+}
+
+/** Ce que `QueryErrorBanner` lit d'une requête. */
+export type QueryErrorBannerRequete = Pick<
+  QueryBoundaryRequete<unknown>,
+  "isError" | "error" | "isFetching" | "refetch"
+>
+
+export interface QueryErrorBannerProps extends Omit<
+  ErrorBannerProps,
+  "erreur" | "onReessayer" | "enCours"
+> {
+  /** Le résultat de `useQuery` convient tel quel. */
+  requete: QueryErrorBannerRequete
+}
+
+/**
+ * L'échec d'une requête de lecture, avec « Réessayer » (occupé pendant la
+ * nouvelle tentative) ; rien tant qu'elle n'a pas échoué. Le bandeau de
+ * `QueryBoundary`, pour une page qui place elle-même ses données (liste
+ * gardée à l'écran, plusieurs requêtes…).
+ */
+export function QueryErrorBanner({ requete, ...props }: QueryErrorBannerProps) {
+  if (!requete.isError) return null
+  const { refetch } = requete
+  return (
+    <ErrorBanner
+      erreur={requete.error}
+      onReessayer={refetch ? () => void refetch() : undefined}
+      enCours={!!requete.isFetching}
+      {...props}
+    />
+  )
+}
+
 /**
  * Les quatre états d'une requête, partout pareils : squelette pendant le
  * chargement, bandeau d'erreur avec « Réessayer », état vide, puis les
- * données. La page n'écrit que le dernier.
+ * données. La page n'écrit que le dernier. Une fiche ajoute `introuvable`
+ * (404), distinct d'une panne.
  *
  * Aucune enveloppe : le bandeau et le contenu sont rendus directement dans
  * le parent (grille, flex…), qui règle l'espacement (`flex flex-col gap-4`
@@ -68,18 +126,28 @@ export function QueryBoundary<T>({
   estVide = videParDefaut,
   squelette,
   enAttente = false,
+  introuvable,
+  estIntrouvable = erreurIntrouvable,
 }: QueryBoundaryProps<T>) {
-  const { data, refetch } = requete
+  const { data } = requete
   const chargement = enAttente || requete.isLoading
 
-  const erreur =
-    requete.isError && !enAttente ? (
-      <ErrorBanner
-        erreur={requete.error}
-        onReessayer={refetch ? () => void refetch() : undefined}
-        enCours={!!requete.isFetching}
-      />
-    ) : null
+  if (
+    introuvable !== undefined &&
+    requete.isError &&
+    !enAttente &&
+    estIntrouvable(requete.error)
+  ) {
+    // Rien d'autre : pas de « Réessayer » (l'élément n'existe pas), ni de
+    // données d'avant (la fiche a disparu entre-temps).
+    return typeof introuvable === "string" ? (
+      <EmptyState titre={introuvable} icone={SearchXIcon} />
+    ) : (
+      introuvable
+    )
+  }
+
+  const erreur = enAttente ? null : <QueryErrorBanner requete={requete} />
 
   let contenu: ReactNode = null
   if (chargement) contenu = squelette ?? <SkeletonTable />

@@ -22,26 +22,48 @@ export type AuthImageCharger = (
   signal: AbortSignal
 ) => Promise<Blob>
 
+/** Où en est le chargement d'une image authentifiée. */
+export interface AuthObjectUrlEtat {
+  /** URL locale (`blob:`) de l'image, une fois chargée. */
+  url: string | null
+  /** Chargement en cours (jamais sans `src`). */
+  enCours: boolean
+  /** Le chargement a échoué : `charger` a rejeté sa promesse. */
+  echec: boolean
+  /** Raison du rejet, telle que reçue (`undefined` sans échec). */
+  erreur: unknown
+}
+
+type Resultat = { src: string; cle: unknown } & (
+  | { url: string; echec: false; erreur?: never }
+  | { url?: never; echec: true; erreur: unknown }
+)
+
+const SANS_SRC: AuthObjectUrlEtat = {
+  url: null,
+  enCours: false,
+  echec: false,
+  erreur: undefined,
+}
+const EN_COURS: AuthObjectUrlEtat = { ...SANS_SRC, enCours: true }
+
 /**
- * URL locale (`blob:`) d'une image qu'un simple `<img src>` ne peut pas
- * obtenir, faute de pouvoir s'authentifier. Les octets sont récupérés par
- * `charger`, puis l'URL est révoquée au démontage ou quand `src` change.
- * `null` pendant le chargement, en cas d'échec, ou sans `src`.
+ * État complet d'une image qu'un simple `<img src>` ne peut pas obtenir,
+ * faute de pouvoir s'authentifier : URL locale (`blob:`), chargement en
+ * cours, échec. Les octets sont récupérés par `charger`, puis l'URL est
+ * révoquée au démontage ou quand `src` change. Sert à dire « indisponible »
+ * plutôt que de laisser un chargement sans fin (aperçu d'un fichier…).
  *
  * `cle` force un nouveau chargement quand les octets changent derrière une
  * même `src` (photo remplacée). `charger` peut changer à chaque rendu : seul
  * le dernier sert, sans relancer de chargement.
  */
-export function useAuthObjectUrl(
+export function useAuthObjectUrlEtat(
   src: string | null | undefined,
   charger: AuthImageCharger,
   cle?: unknown
-): string | null {
-  const [url, setUrl] = useState<{
-    src: string
-    cle: unknown
-    url: string
-  } | null>(null)
+): AuthObjectUrlEtat {
+  const [resultat, setResultat] = useState<Resultat | null>(null)
   // La dernière fonction reçue, lue au moment du chargement.
   const chargerActuel = useEffectEvent((adresse: string, signal: AbortSignal) =>
     charger(adresse, signal)
@@ -56,10 +78,10 @@ export function useAuthObjectUrl(
       .then((blob) => {
         if (!actif) return
         creee = URL.createObjectURL(blob)
-        setUrl({ src, cle, url: creee })
+        setResultat({ src, cle, url: creee, echec: false })
       })
-      .catch(() => {
-        if (actif) setUrl(null)
+      .catch((erreur: unknown) => {
+        if (actif) setResultat({ src, cle, echec: true, erreur })
       })
     return () => {
       actif = false
@@ -68,9 +90,26 @@ export function useAuthObjectUrl(
     }
   }, [src, cle])
 
-  // L'URL d'une ancienne `src` (ou d'une ancienne `cle`, déjà révoquée)
-  // n'est jamais rendue.
-  return src && url?.src === src && Object.is(url.cle, cle) ? url.url : null
+  if (!src) return SANS_SRC
+  // Le résultat d'une ancienne `src` (ou d'une ancienne `cle`, URL déjà
+  // révoquée) n'est jamais rendu : la nouvelle est en cours.
+  if (resultat?.src !== src || !Object.is(resultat.cle, cle)) return EN_COURS
+  return resultat.echec
+    ? { ...SANS_SRC, echec: true, erreur: resultat.erreur }
+    : { ...SANS_SRC, url: resultat.url }
+}
+
+/**
+ * URL locale (`blob:`) d'une image authentifiée : `null` pendant le
+ * chargement, en cas d'échec, ou sans `src`. `useAuthObjectUrlEtat`
+ * distingue en plus le chargement de l'échec.
+ */
+export function useAuthObjectUrl(
+  src: string | null | undefined,
+  charger: AuthImageCharger,
+  cle?: unknown
+): string | null {
+  return useAuthObjectUrlEtat(src, charger, cle).url
 }
 
 export interface AuthImageProps extends Omit<ComponentProps<"img">, "src"> {
@@ -79,8 +118,11 @@ export interface AuthImageProps extends Omit<ComponentProps<"img">, "src"> {
   charger: AuthImageCharger
   /** Changer cette valeur recharge l'image (voir `useAuthObjectUrl`). */
   cle?: unknown
-  /** Affiché pendant le chargement, en cas d'échec ou sans `src`. */
+  /** Affiché pendant le chargement, sans `src`, et en cas d'échec si
+   *  `secoursEchec` manque. */
   secours?: ReactNode
+  /** Affiché en cas d'échec (« Aperçu indisponible »…) ; `secours` sinon. */
+  secoursEchec?: ReactNode
 }
 
 /** Image servie par une adresse authentifiée : l'application fournit la
@@ -90,10 +132,12 @@ export function AuthImage({
   charger,
   cle,
   secours = null,
+  secoursEchec,
   alt = "",
   ...props
 }: AuthImageProps) {
-  const url = useAuthObjectUrl(src, charger, cle)
+  const { url, echec } = useAuthObjectUrlEtat(src, charger, cle)
+  if (echec && secoursEchec !== undefined) return <>{secoursEchec}</>
   if (!url) return <>{secours}</>
   return <img src={url} alt={alt} {...props} />
 }
@@ -117,6 +161,8 @@ export interface AuthAvatarProps extends Omit<
 /**
  * Photo de profil servie par une adresse authentifiée, sur l'`Avatar` de
  * shadcn : les initiales tant que la photo manque, charge ou échoue.
+ * `diametre` (en px) en fait la grande photo d'une fiche, initiales
+ * proportionnées ; leur graisse suit celle de la racine (`font-semibold`…).
  */
 export function AuthAvatar({
   initiales,

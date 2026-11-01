@@ -1,7 +1,18 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AuthAvatar, AuthImage, EmptyState } from "@etic-ui/index"
+import {
+  AuthAvatar,
+  AuthImage,
+  EmptyState,
+  useAuthObjectUrlEtat,
+} from "@etic-ui/index"
 
 let compteur = 0
 beforeEach(() => {
@@ -97,5 +108,96 @@ describe("AuthAvatar", () => {
     render(<AuthAvatar initiales="AL" src={null} charger={charger} />)
     expect(screen.getByText("AL")).toBeInTheDocument()
     expect(charger).not.toHaveBeenCalled()
+  })
+
+  it("prend un diamètre libre, initiales proportionnées", () => {
+    render(
+      <AuthAvatar
+        initiales="AL"
+        src={null}
+        charger={vi.fn()}
+        diametre={64}
+        style={{ outline: "1px solid" }}
+      />
+    )
+    const racine = screen.getByText("AL").closest('[data-slot="avatar"]')
+    expect(racine).toHaveAttribute("data-diametre", "64")
+    expect(racine).toHaveStyle({
+      width: "64px",
+      height: "64px",
+      fontSize: "23px",
+      outline: "1px solid",
+    })
+    expect(screen.getByText("AL")).toHaveClass(
+      "group-data-diametre/avatar:text-[length:inherit]"
+    )
+  })
+
+  it("sans diamètre, garde les tailles de shadcn", () => {
+    render(<AuthAvatar initiales="AL" src={null} charger={vi.fn()} size="lg" />)
+    const racine = screen.getByText("AL").closest('[data-slot="avatar"]')
+    expect(racine).not.toHaveAttribute("data-diametre")
+    expect(racine).toHaveAttribute("data-size", "lg")
+    expect(racine?.getAttribute("style") ?? "").not.toContain("width")
+  })
+})
+
+describe("useAuthObjectUrlEtat", () => {
+  it("distingue le chargement, la réussite et l'échec", async () => {
+    let rejeter: (raison: unknown) => void = () => {}
+    const charger = vi.fn(
+      (src: string) =>
+        new Promise<Blob>((resoudre, rej) => {
+          if (src === "/ok") resoudre(blob)
+          else rejeter = rej
+        })
+    )
+    const { result, rerender } = renderHook(
+      ({ src }: { src: string | null }) => useAuthObjectUrlEtat(src, charger),
+      { initialProps: { src: "/ok" as string | null } }
+    )
+    expect(result.current).toEqual({
+      url: null,
+      enCours: true,
+      echec: false,
+      erreur: undefined,
+    })
+    await waitFor(() => expect(result.current.url).toBe("blob:test/1"))
+    expect(result.current.enCours).toBe(false)
+
+    rerender({ src: "/refuse" })
+    expect(result.current).toMatchObject({ url: null, enCours: true })
+    const raison = new Error("403")
+    act(() => rejeter(raison))
+    await waitFor(() => expect(result.current.echec).toBe(true))
+    expect(result.current).toEqual({
+      url: null,
+      enCours: false,
+      echec: true,
+      erreur: raison,
+    })
+
+    rerender({ src: null })
+    expect(result.current).toEqual({
+      url: null,
+      enCours: false,
+      echec: false,
+      erreur: undefined,
+    })
+  })
+
+  it("AuthImage dit l'échec par `secoursEchec`, distinct du chargement", async () => {
+    const charger = vi.fn().mockRejectedValue(new Error("403"))
+    render(
+      <AuthImage
+        src="/fichier"
+        charger={charger}
+        secours="Chargement…"
+        secoursEchec="Aperçu indisponible"
+      />
+    )
+    expect(screen.getByText("Chargement…")).toBeInTheDocument()
+    expect(await screen.findByText("Aperçu indisponible")).toBeInTheDocument()
+    expect(screen.queryByText("Chargement…")).toBeNull()
   })
 })

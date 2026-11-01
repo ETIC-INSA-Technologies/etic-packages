@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { cn } from "cn"
-import { ChevronDownIcon, CircleAlertIcon, RotateCwIcon } from "lucide-react"
+import { CircleAlertIcon, RotateCwIcon } from "lucide-react"
 
 import {
   Alert,
@@ -12,8 +12,8 @@ import { Button } from "@etic-ui/components/ui/button"
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from "@etic-ui/components/ui/collapsible"
+import { DisclosureTrigger } from "@etic-ui/components/etic/disclosure"
 import { SpinnerDecoratif } from "@etic-ui/components/etic/loading"
 
 export interface ErrorBannerProps {
@@ -100,19 +100,9 @@ export function DetailTechnique({
 }) {
   return (
     <Collapsible className="mt-1">
-      <CollapsibleTrigger
-        render={
-          <Button
-            variant="link"
-            size="xs"
-            // 24 px de haut au moins : cible tactile (WCAG 2.5.8).
-            className="group/detail h-auto min-h-6 px-0 text-current"
-          />
-        }
-      >
+      <DisclosureTrigger variante="lien" taille="xs" className="text-current">
         {libelle}
-        <ChevronDownIcon className="transition-transform group-data-panel-open/detail:rotate-180" />
-      </CollapsibleTrigger>
+      </DisclosureTrigger>
       <CollapsibleContent>
         <pre className="mt-1 max-h-64 overflow-auto rounded-md bg-muted p-2 font-mono text-xs whitespace-pre-wrap text-foreground">
           {texteDuDetail(detail)}

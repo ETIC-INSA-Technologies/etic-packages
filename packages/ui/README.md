@@ -144,6 +144,10 @@ gras d'un éditeur). Sur mobile, la page réserve en haut la hauteur de la barre
 (`scroll-padding-top`) : une ancre ne s'arrête pas dessous. `ThemeMenu` existe aussi seul
 (page de connexion…) ; son `className` va sur le bouton.
 
+`bandeau` (un `ErrorBanner` qui concerne toute l'application…) s'affiche au-dessus du
+contenu avec les marges latérales de `PageContainer` : l'application le passe nu. Un bandeau
+qui ne rend rien (`ErrorBanner` sans erreur) ne laisse pas d'espace vide.
+
 `PageContainer` est le conteneur de chaque page dans `AppShell` : marges (16 px sur
 téléphone, 24 puis 32 px au-delà), espacement vertical régulier entre les blocs (`gap-6`),
 et `largeur` maximale centrée (`md`, `lg`, `xl`, ou `full` par défaut). Les pages ne posent
@@ -166,11 +170,16 @@ chargement d'une image) et, au besoin, son composant de lien (`lien`, comme pour
 | `ErrorBoundary`                                                          | Filet sous le rendu : message, détail technique, « Réessayer », « Retour à l'accueil » ; `cleReinitialisation` (la route) l'efface. Le focus perdu avec la partie cassée passe sur le message.                                                                                                                                                                                                                          |
 | `EmptyState`, `Loading`, `SkeletonTable`, `SkeletonCard`, `SkeletonPage` | État vide (`Empty` dans un cadre pointillé, `icone` lucide : `icone={InboxIcon}`) ; attente annoncée (`Spinner`) ; squelettes de tableau, de carte et de fiche, un seul statut « Chargement… » chacun.                                                                                                                                                                                                                  |
 | `QueryBoundary`                                                          | Chargement, erreur (avec « Réessayer »), vide et données d'une requête ; accepte tel quel le résultat de `useQuery`. L'échec d'une actualisation garde les données, montées, sous le bandeau d'erreur ; pendant une nouvelle tentative, le bandeau reste, son bouton occupé. Sans enveloppe : rendu dans le parent, qui règle l'espacement.                                                                             |
+| `QueryBoundary introuvable`, `erreurIntrouvable`                         | Fiche : `introuvable` (texte ou nœud, avec un lien de retour) remplace le bandeau quand l'erreur dit 404 (`status`, lu par `erreurIntrouvable` ; `estIntrouvable` pour une autre règle), sans « Réessayer ». Les autres échecs gardent le bandeau : une panne n'est jamais annoncée « introuvable ».                                                                                                                    |
+| `QueryErrorBanner`                                                       | Le bandeau d'erreur de `QueryBoundary`, seul (`requete` : `isError`, `error`, `isFetching`, `refetch`), pour une page qui place elle-même ses données ; rien tant que la requête n'a pas échoué. Accepte `titre`, `description`, `className` d'`ErrorBanner`.                                                                                                                                                           |
+| `Disclosure`, `DisclosureTrigger`                                        | Section repliable à chevron tournant, fermée par défaut : `titre`, `compteur` en pastille, `variante` `lien` (en ligne), `discret` (fantôme estompé) ou `carte` (bloc encadré), `defautOuvert` ou `ouvert` / `onOuvertChange`. `DisclosureTrigger` seul pour un `Collapsible` composé à la main.                                                                                                                        |
+| `CenteredScreen`                                                         | Écran hors de la coquille (connexion, page introuvable, vérification de session) : le `<main>` de la page, contenu centré sur toute la hauteur, fond estompé.                                                                                                                                                                                                                                                           |
 | `StatTile`, `StatusBadge`                                                | Chiffre clé d'un résumé ; badge d'état à pastille. `ton` (type `StatusTon`) : `neutral`, `success`, `warning`, `destructive`.                                                                                                                                                                                                                                                                                           |
 | `CopyButton`, `DeleteButton`, `IconToggle`                               | Copie avec retour « Copié ! », ou « Copie impossible » si le navigateur refuse (`onCopie`, `onEchec`) ; corbeille qui ouvre une confirmation ; bouton à icône qui pose ou retire un marqueur (`Toggle`, `aria-pressed`, `onActifChange`, `enCours` occupé sans perdre le focus ; actif, en couleur de son `ton`, `warning` par défaut). Tous ont une infobulle, et `verrou` pour dire pourquoi l'action est impossible. |
 | `TooltipButton`                                                          | `Button` avec infobulle et état `verrou` (désactivé mais focalisable, la raison en infobulle) : la règle pour tout bouton à icône seule, que l'infobulle nomme (`aria-label`, sauf nom donné). `destructif` : gris, rouge au survol seulement (corbeille, retrait dans une liste).                                                                                                                                      |
 | `ButtonLink`                                                             | Lien à l'allure de bouton (`variant`, `size` de `Button`), annoncé comme un lien ; `lien` : le composant de lien du routeur de l'application, comme pour `AppShell` (`<a>` par défaut).                                                                                                                                                                                                                                 |
 | `AuthAvatar`, `AuthImage`, `useAuthObjectUrl`                            | Image servie par une adresse authentifiée : l'application passe `charger(src, signal)` (type `AuthImageCharger`) qui renvoie le `Blob` ; l'avatar garde les initiales tant que la photo manque.                                                                                                                                                                                                                         |
+| `useAuthObjectUrlEtat`, `secoursEchec`, `diametre`                       | État complet d'une image authentifiée (`url`, `enCours`, `echec`, `erreur`) pour dire « indisponible » plutôt que charger sans fin ; `secoursEchec` d'`AuthImage` en cas d'échec ; `diametre` (px) d'`AuthAvatar` et d'`Avatar`, initiales proportionnées (leur graisse suit la racine).                                                                                                                                |
 
 `ConfirmDialog` et `FormDialog` s'ouvrent par un `declencheur`, ou sont contrôlés (`ouvert`,
 `onOuvertChange`). `DeleteButton` est son propre déclencheur ; `ouvert` et `onOuvertChange`
@@ -709,7 +718,14 @@ npm run build      # dist/ : un module par composant, types, styles.css
     `Input` (en 14 px sur téléphone, iOS zoome à la sélection) ;
   - bouton qui ouvre la liste de `combobox.tsx` nommé « Afficher les options » ;
   - `alert.tsx` : `role="status"` pour `info` et `success` (messages d'état, annoncés sans
-    interrompre), `role="alert"` gardé pour les autres variantes.
+    interrompre), `role="alert"` gardé pour les autres variantes ;
+  - onglets `variant="line"` de `tabs.tsx` qui passent à la ligne sur un écran étroit
+    (liste en `h-auto max-w-full flex-wrap justify-start`, déclencheurs en `h-7 flex-none`)
+    au lieu de déborder ; un défilement couperait le trait de l'onglet actif. La variante par
+    défaut, en pastille, ne change pas ;
+  - `avatar.tsx` : `diametre` (px) au-delà des tailles `sm`, `default` et `lg` (24 à 40 px),
+    qui pose largeur, hauteur et taille des initiales (36 % du diamètre), reprise par
+    `AvatarFallback` (`group-data-diametre/avatar:text-[length:inherit]`).
 
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 

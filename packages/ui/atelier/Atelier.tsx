@@ -151,6 +151,7 @@ import {
   type ThemePreference,
 } from "@etic-ui/index"
 import { BOUTONS } from "./Boutons"
+import { COQUILLE } from "./Coquille"
 import { DemoTableaux } from "./DemoTableaux"
 import { FORMULAIRES } from "./Formulaires"
 import { RETOURS } from "./Retours"
@@ -670,6 +671,15 @@ export function Atelier() {
             actif: `#${id}` === section,
           })),
         },
+        {
+          titre: "Coquille et fiches",
+          liens: COQUILLE.map(({ id, titre, icone }) => ({
+            libelle: titre,
+            href: `#${id}`,
+            icone,
+            actif: `#${id}` === section,
+          })),
+        },
       ]}
       compte={{
         nom: "Ada Lovelace",
@@ -743,6 +753,13 @@ export function Atelier() {
             </section>
           )
         )}
+
+        {COQUILLE.map(({ id, titre, rendu }) => (
+          <section key={id} id={id} className="flex flex-col gap-4">
+            <h2 className="text-lg font-medium">{titre}</h2>
+            {rendu()}
+          </section>
+        ))}
 
         <section id="couleurs" className="flex flex-col gap-4">
           <h2 className="text-lg font-medium">Couleurs de texte</h2>

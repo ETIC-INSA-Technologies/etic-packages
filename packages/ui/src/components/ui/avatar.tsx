@@ -4,17 +4,37 @@ import * as React from "react"
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar"
 import { cn } from "cn"
 
+/** Taille des initiales d'un avatar de diamètre libre, en part du diamètre. */
+const PART_INITIALES = 0.36
+
 function Avatar({
   className,
   size = "default",
+  diametre,
+  style,
   ...props
 }: AvatarPrimitive.Root.Props & {
   size?: "default" | "sm" | "lg"
+  /** Écart ETIC : diamètre libre, en px (photo d'une fiche…), au-delà des
+   *  tailles de shadcn (24, 32, 40 px). Remplace `size` ; les initiales
+   *  suivent (36 % du diamètre). */
+  diametre?: number
 }) {
   return (
     <AvatarPrimitive.Root
       data-slot="avatar"
       data-size={size}
+      data-diametre={diametre}
+      style={
+        diametre
+          ? (etat) => ({
+              width: diametre,
+              height: diametre,
+              fontSize: Math.round(diametre * PART_INITIALES),
+              ...(typeof style === "function" ? style(etat) : style),
+            })
+          : style
+      }
       className={cn(
         "group/avatar relative flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:border-border after:mix-blend-darken data-[size=lg]:size-10 data-[size=sm]:size-6 dark:after:mix-blend-lighten",
         className
@@ -46,6 +66,9 @@ function AvatarFallback({
       data-slot="avatar-fallback"
       className={cn(
         "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
+        // Écart ETIC : avec un diamètre libre, les initiales prennent la
+        // taille posée sur la racine (proportionnelle au diamètre).
+        "group-data-diametre/avatar:text-[length:inherit]",
         className
       )}
       {...props}

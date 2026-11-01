@@ -273,6 +273,29 @@ describe("AppShell", () => {
     await user.click(lien)
     await waitFor(() => expect(screen.queryByRole("navigation")).toBeNull())
   })
+
+  it("sur mobile, le bouton du menu n'a qu'un nom, sans aria-label", () => {
+    simulerLargeur(true)
+    rendre()
+    const bouton = screen.getByRole("button", { name: "Ouvrir le menu" })
+    expect(bouton).not.toHaveAttribute("aria-label")
+    expect(bouton).toHaveTextContent(/^Ouvrir le menu$/)
+    expect(bouton).toHaveAttribute("aria-expanded", "false")
+  })
+
+  it("pose les marges de PageContainer autour du bandeau", () => {
+    simulerLargeur(false)
+    rendre({ bandeau: <p>Reprise impossible</p> })
+    const bandeau = screen.getByText("Reprise impossible").parentElement
+    expect(bandeau).toHaveAttribute("data-slot", "app-shell-bandeau")
+    expect(bandeau).toHaveClass("px-4", "pt-6", "sm:px-6", "empty:hidden")
+  })
+
+  it("sans bandeau, n'ajoute pas d'enveloppe", () => {
+    simulerLargeur(false)
+    rendre({ bandeau: null })
+    expect(document.querySelector('[data-slot="app-shell-bandeau"]')).toBeNull()
+  })
 })
 
 describe("ThemeMenu", () => {
