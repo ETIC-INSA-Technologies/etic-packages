@@ -157,7 +157,8 @@ export function Disclosure({
       defaultOpen={defautOuvert}
       open={ouvert}
       onOpenChange={onOuvertChange}
-      className={cn(carte && "rounded-lg border", className)}
+      // Fond de carte : blanc sur le fond de page gray-50, comme une Card.
+      className={cn(carte && "rounded-lg border bg-card", className)}
       {...props}
     >
       <DisclosureTrigger

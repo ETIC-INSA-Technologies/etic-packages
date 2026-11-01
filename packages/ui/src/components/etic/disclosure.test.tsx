@@ -108,6 +108,19 @@ describe("Disclosure", () => {
     expect(screen.getByText("Expression CRON")).toBeVisible()
   })
 
+  it("variante carte : un bloc encadré sur le fond des cartes", () => {
+    const { container } = render(
+      <Disclosure titre="Groupe" variante="carte">
+        <p>…</p>
+      </Disclosure>
+    )
+    expect(container.querySelector('[data-slot="disclosure"]')).toHaveClass(
+      "rounded-lg",
+      "border",
+      "bg-card"
+    )
+  })
+
   it("lit le compteur avec le titre", () => {
     render(
       <Disclosure titre="Ignorés" compteur={12} variante="carte">

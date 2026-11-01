@@ -1048,9 +1048,8 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
   (`--muted-foreground` à 80 %) en sombre aussi, au lieu de `--input` (sous 2:1) ;
   `color-scheme` dans `:root` et `.dark`. Les valeurs sont commentées dans `styles.css` ;
   `theme.test.ts` compare chaque jeton au registre, écarts (`ECARTS`) exceptés, et en vérifie
-  les contrastes. Hors `ui/`, `CenteredScreen` est posé sur
-  `bg-muted/40` au lieu du `bg-muted` des blocs de connexion de shadcn (fond moins appuyé, en
-  sombre surtout).
+  les contrastes. Hors `ui/`, `CenteredScreen` est posé sur `bg-muted/40` au lieu du
+  `bg-muted` des blocs de connexion de shadcn (fond moins appuyé, en sombre surtout).
 
   Sans écart de code mais garanti par le même test : `Button` sans `type` rend
   `type="button"` (Base UI le fait pour un bouton natif) et ne soumet donc pas son formulaire.
