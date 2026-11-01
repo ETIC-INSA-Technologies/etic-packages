@@ -12,16 +12,20 @@ import {
   TooltipButton,
 } from "@etic-ui/index"
 
-/** Bouton qui reste occupé deux secondes après un clic. */
-function DemoOccupe() {
-  const [occupe, setOccupe] = useState(false)
+/** Bouton en cours d'action deux secondes après un clic. */
+function DemoEnCours() {
+  const [enCours, setEnCours] = useState(false)
   const lancer = () => {
-    setOccupe(true)
-    setTimeout(() => setOccupe(false), 2000)
+    setEnCours(true)
+    setTimeout(() => setEnCours(false), 2000)
   }
   return (
     <>
-      <Button occupe={occupe} libelleOccupe="Enregistrement…" onClick={lancer}>
+      <Button
+        enCours={enCours}
+        libelleEnCours="Enregistrement…"
+        onClick={lancer}
+      >
         <SaveIcon data-icon="inline-start" />
         Enregistrer
       </Button>
@@ -29,7 +33,7 @@ function DemoOccupe() {
         variant="outline"
         size="icon"
         infobulle="Enregistrer"
-        occupe={occupe}
+        enCours={enCours}
         onClick={lancer}
       >
         <SaveIcon />
@@ -56,7 +60,7 @@ export const BOUTONS: {
           <TooltipButton variant="outline" verrou="Droits insuffisants">
             Verrouillé
           </TooltipButton>
-          <DemoOccupe />
+          <DemoEnCours />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <TooltipButton
@@ -101,7 +105,7 @@ export const BOUTONS: {
           </ButtonLink>
         </div>
         <div className="flex max-w-sm flex-col gap-2">
-          <InputGroup data-demo="copie-defaut">
+          <InputGroup>
             <InputGroupInput
               aria-label="Valeur à copier"
               className="font-mono"

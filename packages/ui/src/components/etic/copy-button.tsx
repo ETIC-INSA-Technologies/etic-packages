@@ -74,7 +74,6 @@ export function CopyButton({
   className,
   ...props
 }: CopyButtonProps) {
-  const size = tailleDemandee ?? "icon-sm"
   const [etat, setEtat] = useState<"copie" | "echec" | null>(null)
   const minuterie = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -95,7 +94,7 @@ export function CopyButton({
     <>
       <TooltipButton
         variant={variant}
-        size={size}
+        size={tailleDemandee ?? "icon-sm"}
         // Nom constant : le résultat est annoncé par la zone ci-dessous.
         aria-label={libelle}
         infobulle={annonce || libelle}
@@ -106,6 +105,9 @@ export function CopyButton({
           // l'`InputGroupButton` `icon-xs` de shadcn : à 28 px, le bouton
           // touchait presque la bordure du champ (1 px) et son anneau de
           // focus en sortait. Une taille donnée par l'application prime.
+          // Écrites en entier : le bouton ignore où il est rendu (pas de
+          // `render={<InputGroupButton />}` possible), et Tailwind ne voit
+          // pas une classe préfixée au rendu (`inputGroupButtonVariants`).
           tailleDemandee === undefined &&
             "in-data-[slot=input-group-addon]:size-6 in-data-[slot=input-group-addon]:rounded-[calc(var(--radius)-3px)]",
           etat === "copie" && "text-success",

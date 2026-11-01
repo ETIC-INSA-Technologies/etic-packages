@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { SaveIcon } from "lucide-react"
 import { describe, expect, it, vi } from "vitest"
 
-import { Button, fermerSaufOccupe } from "@etic-ui/index"
+import { Button, fermerSaufEnCours } from "@etic-ui/index"
 
 describe("Button désactivé mais focalisable", () => {
   it("prend l'allure désactivée avec aria-disabled, sans couper le survol", () => {
@@ -28,7 +28,7 @@ describe("Button désactivé mais focalisable", () => {
   })
 })
 
-describe("Button occupé", () => {
+describe("Button en cours", () => {
   it("annonce l'attente, ignore les clics et garde le focus", async () => {
     const onClick = vi.fn()
     const { rerender } = render(
@@ -43,7 +43,7 @@ describe("Button occupé", () => {
     expect(bouton).not.toHaveAttribute("aria-busy")
 
     rerender(
-      <Button onClick={onClick} occupe libelleOccupe="Enregistrement…">
+      <Button onClick={onClick} enCours libelleEnCours="Enregistrement…">
         <SaveIcon data-icon="inline-start" />
         Enregistrer
       </Button>
@@ -60,7 +60,7 @@ describe("Button occupé", () => {
 
   it("remplace ses icônes par une roue muette", () => {
     render(
-      <Button size="icon" aria-label="Enregistrer" occupe>
+      <Button size="icon" aria-label="Enregistrer" enCours>
         <SaveIcon />
       </Button>
     )
@@ -73,8 +73,8 @@ describe("Button occupé", () => {
     expect(screen.queryByRole("status")).toBeNull()
   })
 
-  it("sans libelleOccupe, garde son contenu", () => {
-    render(<Button occupe>Supprimer</Button>)
+  it("sans libelleEnCours, garde son contenu", () => {
+    render(<Button enCours>Supprimer</Button>)
     expect(screen.getByRole("button", { name: "Supprimer" })).toHaveAttribute(
       "aria-busy",
       "true"
@@ -95,14 +95,14 @@ describe("Button en ligne", () => {
   })
 })
 
-describe("fermerSaufOccupe", () => {
+describe("fermerSaufEnCours", () => {
   it("ne ferme pas pendant l'action, ferme sinon", () => {
     const onFermer = vi.fn()
-    fermerSaufOccupe(true, onFermer)(false)
+    fermerSaufEnCours(true, onFermer)(false)
     expect(onFermer).not.toHaveBeenCalled()
-    fermerSaufOccupe(false, onFermer)(true)
+    fermerSaufEnCours(false, onFermer)(true)
     expect(onFermer).not.toHaveBeenCalled()
-    fermerSaufOccupe(false, onFermer)(false)
+    fermerSaufEnCours(false, onFermer)(false)
     expect(onFermer).toHaveBeenCalledOnce()
   })
 })

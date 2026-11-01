@@ -65,15 +65,11 @@ describe("écarts avec shadcn", () => {
     expect(button).not.toContain("aria-disabled:pointer-events-none")
   })
 
-  it("Button : taille inline, occupé (roue muette, aria-busy, focus gardé)", () => {
-    const button = lire("components/ui/button.tsx")
-    expect(button).toContain('inline: "h-auto min-h-6 gap-1 px-0"')
-    expect(button).toContain("aria-busy={occupe || undefined}")
-    expect(button).toContain(
-      "focusableWhenDisabled={focusableWhenDisabled || occupe}"
-    )
-    expect(lire("components/ui/spinner.tsx")).toContain(
-      "function SpinnerDecoratif"
+  it("Button : taille inline (lien dans une phrase, cible de 24 px)", () => {
+    // `enCours` et `SpinnerDecoratif` sont testés par leur comportement
+    // (button.test.tsx).
+    expect(lire("components/ui/button.tsx")).toContain(
+      'inline: "h-auto min-h-6 gap-1 px-0"'
     )
   })
 

@@ -50,8 +50,8 @@ export interface TooltipButtonProps extends ComponentProps<typeof Button> {
 }
 
 /** Rouge au survol (`destructif`) : les classes de la corbeille de
- *  `DeleteButton`. */
-const CLASSES_DESTRUCTIF_AU_SURVOL =
+ *  `DeleteButton`. Usage interne (non exporté par `index.ts`). */
+export const CLASSES_DESTRUCTIF_AU_SURVOL =
   "hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/20"
 
 /**
@@ -90,21 +90,19 @@ export function TooltipButton({
   // Nom d'un bouton à icône seule : l'infobulle, jamais la raison du verrou
   // (elle est sa description). Un bouton à texte garde son texte pour nom
   // (WCAG 2.5.3).
-  const nomParInfobulle =
-    infobulle &&
+  const estIconeSansNom =
+    !!infobulle &&
     String(props.size ?? "").startsWith("icon") &&
     props["aria-label"] === undefined &&
     props["aria-labelledby"] === undefined
-      ? infobulle
-      : undefined
   return (
     <>
       <Tooltip>
         <TooltipTrigger
           render={
             <Button
+              aria-label={estIconeSansNom ? infobulle : undefined}
               {...props}
-              aria-label={nomParInfobulle ?? props["aria-label"]}
               disabled={disabled || !!verrou}
               // Un bouton désactivé nativement ne reçoit ni survol ni focus :
               // l'infobulle de la raison ne s'afficherait jamais. L'allure

@@ -64,8 +64,8 @@ export function useOuvertureDialogue(
     onOuvertChange?.(suivant)
   }
   const changer = (suivant: boolean) => {
-    if (!suivant && enCours) return
-    definir(suivant)
+    if (suivant) definir(true)
+    else fermerSaufEnCours(enCours, () => definir(false))(suivant)
   }
   return { ouvert: ouvert ?? ouvertInterne, definir, changer }
 }
@@ -76,12 +76,12 @@ export function useOuvertureDialogue(
  * l'arrêterait pas, elle aboutirait après coup. `ConfirmDialog` et
  * `FormDialog` le font d'eux-mêmes.
  */
-export function fermerSaufOccupe(
-  occupe: boolean,
+export function fermerSaufEnCours(
+  enCours: boolean,
   onFermer: () => void
 ): (ouvert: boolean) => void {
   return (ouvert) => {
-    if (!ouvert && !occupe) onFermer()
+    if (!ouvert && !enCours) onFermer()
   }
 }
 

@@ -261,8 +261,7 @@ export {
 } from "./components/ui/sidebar"
 export { Skeleton } from "./components/ui/skeleton"
 export { Slider } from "./components/ui/slider"
-export { Spinner } from "./components/ui/spinner"
-export { SpinnerDecoratif } from "./components/ui/spinner"
+export { Spinner, SpinnerDecoratif } from "./components/ui/spinner"
 export { Switch } from "./components/ui/switch"
 export {
   Table,
@@ -310,7 +309,7 @@ export {
 // Retours et mise en page : dialogues, en-têtes, états d'une page (erreur,
 // vide, chargement), statistiques, boutons d'action.
 export type { ActionDialogue } from "./components/etic/action"
-export { fermerSaufOccupe } from "./components/etic/action"
+export { fermerSaufEnCours } from "./components/etic/action"
 export {
   AuthAvatar,
   type AuthAvatarProps,

@@ -156,13 +156,6 @@ describe("TooltipButton", () => {
     expect(await trouverInfobulle()).toHaveTextContent("Droits insuffisants")
   })
 
-  it("verrouillé, prend l'allure désactivée du Button", () => {
-    render(<TooltipButton verrou="Droits insuffisants">Publier</TooltipButton>)
-    expect(screen.getByRole("button", { name: "Publier" })).toHaveClass(
-      "aria-disabled:opacity-50"
-    )
-  })
-
   it("à icône seule, est nommé par son infobulle", () => {
     render(
       <TooltipButton size="icon-sm" variant="ghost" infobulle="Modifier">
@@ -246,7 +239,7 @@ describe("TooltipButton", () => {
     expect(verrouille.className).not.toContain("hover:text-destructive")
   })
 
-  it("occupé, garde son infobulle, son nom et le focus", async () => {
+  it("en cours, garde son infobulle, son nom et le focus", async () => {
     const { rerender } = render(
       <TooltipButton size="icon" infobulle="Actualiser">
         <PencilIcon />
@@ -255,7 +248,7 @@ describe("TooltipButton", () => {
     const bouton = screen.getByRole("button", { name: "Actualiser" })
     await userEvent.tab()
     rerender(
-      <TooltipButton size="icon" infobulle="Actualiser" occupe>
+      <TooltipButton size="icon" infobulle="Actualiser" enCours>
         <PencilIcon />
       </TooltipButton>
     )

@@ -53,18 +53,18 @@ type ButtonProps = ButtonPrimitive.Props &
      * (`focusableWhenDisabled`) : désactivé nativement, il rendrait le focus
      * à la page.
      */
-    occupe?: boolean
+    enCours?: boolean
     /** Libellé pendant l'action (« Suppression… ») ; sans lui, le contenu
      *  reste. */
-    libelleOccupe?: React.ReactNode
+    libelleEnCours?: React.ReactNode
   }
 
 function Button({
   className,
   variant = "default",
   size = "default",
-  occupe = false,
-  libelleOccupe,
+  enCours = false,
+  libelleEnCours,
   disabled,
   focusableWhenDisabled,
   children,
@@ -77,16 +77,16 @@ function Button({
         buttonVariants({ variant, size }),
         // La roue remplace les icônes : un bouton à icône seule n'en montre
         // qu'une, et sa largeur ne change pas.
-        occupe && "[&>svg:not([data-slot=spinner])]:hidden",
+        enCours && "[&>svg:not([data-slot=spinner])]:hidden",
         className
       )}
-      disabled={disabled || occupe}
-      focusableWhenDisabled={focusableWhenDisabled || occupe}
-      aria-busy={occupe || undefined}
+      disabled={disabled || enCours}
+      focusableWhenDisabled={focusableWhenDisabled || enCours}
+      aria-busy={enCours || undefined}
       {...props}
     >
-      {occupe ? <SpinnerDecoratif data-icon="inline-start" /> : null}
-      {occupe && libelleOccupe !== undefined ? libelleOccupe : children}
+      {enCours ? <SpinnerDecoratif data-icon="inline-start" /> : null}
+      {enCours ? (libelleEnCours ?? children) : children}
     </ButtonPrimitive>
   )
 }

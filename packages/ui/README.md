@@ -181,10 +181,10 @@ effet), se ferme si elle aboutit, affiche l'erreur si elle échoue. Avec TanStac
 reste ouvert sans erreur : suppression en deux temps, où la page change sa question (la
 description de `ConfirmDialog` est une région polie : la nouvelle est lue).
 
-Hors de ces dialogues, un bouton qui lance une action longue passe `occupe` au `Button` (ou au
-`TooltipButton`) : la roue remplace ses icônes, `libelleOccupe` (« Suppression… ») son texte,
+Hors de ces dialogues, un bouton qui lance une action longue passe `enCours` au `Button` (ou au
+`TooltipButton`) : la roue remplace ses icônes, `libelleEnCours` (« Suppression… ») son texte,
 et il reste focalisable (`aria-busy`, clics ignorés). Un dialogue composé à la main refuse de
-se fermer pendant l'action avec `onOpenChange={fermerSaufOccupe(occupe, fermer)}`. Un lien dans
+se fermer pendant l'action avec `onOpenChange={fermerSaufEnCours(enCours, fermer)}`. Un lien dans
 une phrase ou une cellule : `<Button variant="link" size="inline">`. `SpinnerDecoratif` est
 la roue muette, à côté d'un texte qui dit déjà l'attente. Un `CopyButton` placé dans un
 `InputGroupAddon` passe à 24 px, comme le bouton de shadcn dans un groupe (sauf `size` donnée).
@@ -681,8 +681,8 @@ npm run build      # dist/ : un module par composant, types, styles.css
     `pointer-events-none`, qui couperait l'infobulle de sa raison ;
   - `button.tsx` : taille `inline` (`h-auto min-h-6 gap-1 px-0`), pour un lien `variant="link"`
     dans une phrase ou une cellule, cible tactile de 24 px gardée ;
-  - `button.tsx` : `occupe` (roue muette à la place des icônes, `aria-busy`, clics ignorés,
-    focus gardé par `focusableWhenDisabled`) et `libelleOccupe` ; `spinner.tsx` :
+  - `button.tsx` : `enCours` (roue muette à la place des icônes, `aria-busy`, clics ignorés,
+    focus gardé par `focusableWhenDisabled`) et `libelleEnCours` ; `spinner.tsx` :
     `SpinnerDecoratif`, roue sans rôle ni nom, cachée aux lecteurs d'écran ;
   - variantes `success` et `warning` ajoutées à `badge.tsx`, sur le modèle de `destructive`
     (teinte à 10 %, 20 % en sombre, texte de la couleur) ;

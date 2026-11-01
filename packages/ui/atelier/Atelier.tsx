@@ -643,17 +643,12 @@ export function Atelier() {
           titre: "Composants",
           liens: [
             { libelle: "Button", href: "#button", icone: BoxIcon },
-            ...BOUTONS.map(({ id, titre }) => ({
-              libelle: titre,
-              href: `#${id}`,
-              icone: icone(id),
-            })),
             ...PRIMITIVES.map(({ id, titre }) => ({
               libelle: titre,
               href: `#${id}`,
               icone: icone(id),
             })),
-            ...FORMULAIRES.map(({ id, titre }) => ({
+            ...[...BOUTONS, ...FORMULAIRES].map(({ id, titre }) => ({
               libelle: titre,
               href: `#${id}`,
               icone: icone(id),
@@ -733,13 +728,6 @@ export function Atelier() {
           </div>
         </section>
 
-        {BOUTONS.map(({ id, titre, rendu }) => (
-          <section key={id} id={id} className="flex flex-col gap-4">
-            <h2 className="text-lg font-medium">{titre}</h2>
-            {rendu()}
-          </section>
-        ))}
-
         {PRIMITIVES.map(({ id, titre, rendu }) => (
           <section key={id} id={id} className="flex flex-col gap-4">
             <h2 className="text-lg font-medium">{titre}</h2>
@@ -747,12 +735,14 @@ export function Atelier() {
           </section>
         ))}
 
-        {[...FORMULAIRES, ...RETOURS].map(({ id, titre, rendu }) => (
-          <section key={id} id={id} className="flex flex-col gap-4">
-            <h2 className="text-lg font-medium">{titre}</h2>
-            {rendu()}
-          </section>
-        ))}
+        {[...BOUTONS, ...FORMULAIRES, ...RETOURS].map(
+          ({ id, titre, rendu }) => (
+            <section key={id} id={id} className="flex flex-col gap-4">
+              <h2 className="text-lg font-medium">{titre}</h2>
+              {rendu()}
+            </section>
+          )
+        )}
 
         <section id="couleurs" className="flex flex-col gap-4">
           <h2 className="text-lg font-medium">Couleurs de texte</h2>
