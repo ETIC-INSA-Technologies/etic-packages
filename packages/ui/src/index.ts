@@ -2,6 +2,31 @@
 export { cn } from "./lib/utils"
 export { MOBILE_MEDIA_QUERY, useIsMobile } from "./hooks/use-mobile"
 
+// Utilitaires et hooks : textes chiffrés en français, dates ISO du
+// DatePicker, recherche locale, champs sans remplissage automatique.
+export {
+  accorde,
+  type AncienneteOptions,
+  compte,
+  formaterAnciennete,
+  formaterDate,
+  formaterDateHeure,
+  formaterDateHeureLongue,
+  formaterDuree,
+  formaterDureeArrondie,
+  formaterHorodatage,
+  formaterOctets,
+  nombreFr,
+  participe,
+  type Unite,
+  uniteAccordee,
+} from "./lib/format"
+export { ecrireDateIso, lireDateIso } from "./lib/dates"
+export { correspondance, normaliser } from "./lib/normalize"
+export { NO_AUTOFILL } from "./lib/autofill"
+export { useDebouncedValue } from "./hooks/use-debounced-value"
+export { useDocumentTitle } from "./hooks/use-document-title"
+
 // Composants shadcn (components/ui), tels quels ou presque.
 export {
   Alert,

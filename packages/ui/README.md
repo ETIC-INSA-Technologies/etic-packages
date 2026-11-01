@@ -567,6 +567,35 @@ page. Avec TanStack Query, `placeholderData: keepPreviousData` garde la page pr�
 total) pendant le chargement de la suivante. « Précédente » et « Suivante » restent focalisables
 en bout de liste.
 
+### Utilitaires et hooks
+
+Textes chiffrés en français : une valeur absente rend un repli (« — » par défaut, dernier
+argument ou option `repli`), une date illisible est rendue telle quelle.
+
+| Fonction                                                                             | Rôle                                                                                                                                                        |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `compte`, `accorde`, `nombreFr`, `uniteAccordee`, `participe`                        | « 1 234 lignes », « 0 doublon » (0 et 1 au singulier) ; le mot seul, pluriel irrégulier en option ; nombre au format français ; participe accordé en genre. |
+| `formaterOctets`                                                                     | « 512 o », « 1,5 Ko », « 120 Mo » (base 1 024, une décimale sous 100).                                                                                      |
+| `formaterDuree`, `formaterDureeArrondie`, `formaterAnciennete`                       | « 3 j 4 h » ; « 3 j » ; « il y a 3 j 4 h » ou « à l'instant » (`arrondie`, `ilYA: false` pour « 3 j »).                                                     |
+| `formaterDate`, `formaterDateHeure`, `formaterHorodatage`, `formaterDateHeureLongue` | « 05 juillet 2026 » (une date sans heure reste ce jour-là dans tous les fuseaux) ; « 05/07/2026 14:30 » ; à la seconde ; « 05 juillet 2026 à 14:30 ».       |
+| `lireDateIso`, `ecrireDateIso`                                                       | Date sans heure de l'API (`AAAA-MM-JJ`) ↔ `Date` du `DatePicker`, en heure locale ; un 31 février est refusé.                                               |
+| `normaliser`, `correspondance`                                                       | Texte sans accents ni casse ; filtre d'une recherche locale (`correspondance(recherche)(...textes)`, recherche vide : tout passe).                          |
+| `NO_AUTOFILL`                                                                        | Attributs à étaler sur un champ qui n'est pas un identifiant : les gestionnaires de mots de passe s'en écartent.                                            |
+| `useDebouncedValue`, `useDocumentTitle`                                              | Valeur recopiée après un délai sans changement (300 ms par défaut) ; titre de l'onglet le temps que la page est montée.                                     |
+
+```tsx
+const [recherche, setRecherche] = useState("")
+const rechercheDifferee = useDebouncedValue(recherche)
+const correspond = correspondance(recherche)
+const visibles = postes.filter((p) => correspond(p.nom, p.pole?.nom))
+
+<DatePicker
+  valeur={lireDateIso(membre.date_naissance)}
+  onValeurChange={(date) => setDateNaissance(ecrireDateIso(date))}
+/>
+<Input type="search" {...NO_AUTOFILL} />
+```
+
 ### Développer contre les sources locales
 
 Pour voir une modification de la bibliothèque instantanément dans une application, sans publier,

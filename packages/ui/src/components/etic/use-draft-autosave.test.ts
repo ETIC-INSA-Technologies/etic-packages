@@ -159,6 +159,85 @@ describe("useDraftAutosave", () => {
     expect(enregistrer).toHaveBeenCalledTimes(1)
   })
 
+  it("se sait à jour sur la dernière écriture arrivée, pas sur une caduque", async () => {
+    const { enregistrer, appels, stockage } = creerStockage()
+    const { result, rerender } = rendre(enregistrer)
+
+    rerender({ contenu: { texte: "P1" } })
+    await attendre()
+    // Deux frappes pendant que P1 est en cours : P2 devient caduque avant
+    // même de partir.
+    rerender({ contenu: { texte: "P2" } })
+    await attendre()
+    rerender({ contenu: { texte: "P3" } })
+    await attendre()
+    expect(enregistrer).toHaveBeenCalledTimes(1)
+
+    appels[0].arriver()
+    await microtaches()
+    expect(appels[1].contenu).toEqual({ texte: "P3" })
+    appels[1].arriver()
+    await microtaches()
+    expect(stockage.contenu).toEqual({ texte: "P3" })
+
+    // Rangé sur P3 (et non sur P1) : rien à écrire, rien à signaler.
+    expect(result.current.nonEnregistre()).toBe(false)
+    await act(async () => {
+      await result.current.enregistrerMaintenant()
+    })
+    expect(enregistrer).toHaveBeenCalledTimes(2)
+  })
+
+  it("enregistrerMaintenant() attend l'écriture en cours au lieu d'en émettre une seconde du même contenu", async () => {
+    const { enregistrer, appels, stockage } = creerStockage()
+    const { result, rerender } = rendre(enregistrer)
+
+    rerender({ contenu: { texte: "P1" } })
+    await attendre()
+    expect(enregistrer).toHaveBeenCalledTimes(1)
+
+    let fini = false
+    let promesse: Promise<void>
+    await act(async () => {
+      promesse = result.current.enregistrerMaintenant().then(() => {
+        fini = true
+      })
+      await Promise.resolve()
+    })
+    expect(enregistrer).toHaveBeenCalledTimes(1)
+    expect(fini).toBe(false) // il attend vraiment
+
+    appels[0].arriver()
+    await act(async () => {
+      await promesse
+    })
+    expect(fini).toBe(true)
+    expect(enregistrer).toHaveBeenCalledTimes(1)
+    expect(stockage.contenu).toEqual({ texte: "P1" })
+  })
+
+  it("ne re-sérialise pas un contenu qui garde son identité", async () => {
+    const { enregistrer } = creerStockage()
+    // `toJSON` compte les sérialisations de ce contenu.
+    const toJSON = vi.fn(() => ({ texte: "A" }))
+    const contenu = { texte: "A", toJSON }
+    const { rerender } = renderHook(
+      ({ contenu }: { contenu: Contenu; rendu: number }) =>
+        useDraftAutosave<Contenu>({ contenu, enregistrer }),
+      { initialProps: { contenu, rendu: 0 } }
+    )
+    const apresMontage = toJSON.mock.calls.length
+    expect(apresMontage).toBeGreaterThan(0)
+
+    rerender({ contenu, rendu: 1 })
+    rerender({ contenu, rendu: 2 })
+    expect(toJSON).toHaveBeenCalledTimes(apresMontage)
+
+    // Un nouveau contenu, lui, est sérialisé.
+    rerender({ contenu: { ...contenu }, rendu: 3 })
+    expect(toJSON.mock.calls.length).toBeGreaterThan(apresMontage)
+  })
+
   it("annuler() abandonne l'écriture en attente", async () => {
     const { enregistrer } = creerStockage()
     const { result, rerender } = rendre(enregistrer)

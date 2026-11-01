@@ -62,7 +62,9 @@ export interface DraftAutosave<T = unknown> {
 
 export interface DraftAutosaveOptions<T> {
   /** Ce qu'il faut ranger, sérialisable en JSON ; `null` tant que rien ne
-   *  vaut la peine d'être rangé (rien n'est alors écrit). */
+   *  vaut la peine d'être rangé (rien n'est alors écrit). Référence stable
+   *  (état, `useMemo`) tant qu'il ne change pas, jamais modifiée sur place :
+   *  il n'est sérialisé qu'à un changement d'identité. */
   contenu: T | null
   /** Range le brouillon et renvoie sa nouvelle version. `version` est celle
    *  que le client croit à jour ; rejeter si elle a changé. Reçoit le
@@ -88,7 +90,10 @@ export function useDraftAutosave<T>({
   delai = 1200,
   versionInitiale = 0,
 }: DraftAutosaveOptions<T>): DraftAutosave<T> {
-  const json = JSON.stringify(contenu ?? null)
+  // Sérialisé quand `contenu` change d'identité, pas à chaque rendu : un gros
+  // brouillon (des centaines de lignes d'import) coûterait sinon à chaque
+  // frappe ailleurs dans la page.
+  const json = useMemo(() => JSON.stringify(contenu ?? null), [contenu])
   const aContenu = contenu !== null
 
   // Dernier contenu rendu, lu par les fonctions stables. Mis à jour dans un
