@@ -89,9 +89,9 @@ function fetchMuet() {
   const espion = vi.fn(
     (_url: string, init: RequestInit = {}) =>
       new Promise<Response>((_resoudre, rejeter) => {
-        init.signal?.addEventListener("abort", () =>
-          rejeter(new DOMException("annulé", "AbortError"))
-        )
+        const annuler = () => rejeter(new DOMException("annulé", "AbortError"))
+        if (init.signal?.aborted) annuler()
+        init.signal?.addEventListener("abort", annuler)
       })
   )
   vi.stubGlobal("fetch", espion)
@@ -208,6 +208,16 @@ describe("client HTTP commun", () => {
     expect(new Headers(init.headers).has("Authorization")).toBe(false)
   })
 
+  it("refuse une redirection reçue en 3xx (Node, undici)", async () => {
+    for (const status of [301, 302, 307, 308]) {
+      simulerFetch(() => ({ status }))
+      const erreur = await creerClientHttp({ jeton: () => JETON })
+        .get("/x")
+        .then(rate, echec)
+      expect(erreur.code).toBe(CODE_REDIRECTION_REFUSEE)
+    }
+  })
+
   it("ne suit pas une redirection quand le jeton est envoyé", async () => {
     vi.stubGlobal(
       "fetch",
@@ -228,12 +238,35 @@ describe("client HTTP commun", () => {
 
   it("refuse un chemin qui mènerait à une autre origine", async () => {
     const espion = simulerFetch(() => ({ corps: {} }))
-    const client = creerClientHttp({ jeton: () => JETON })
-    const chemins = ["//evil.example/x", "/\\evil.example", "https://e.x", "x"]
-    for (const chemin of chemins) {
-      await expect(client.get(chemin)).rejects.toThrow(TypeError)
+    const chemins = [
+      "/\t/evil.example/x",
+      "/\r/evil.example/x",
+      "/\n/evil.example/x",
+      "/\\evil.example",
+      "//evil.example/x",
+      "https://evil.example/x",
+      "x",
+      "/a b",
+      "/a\u0000",
+    ]
+    for (const base of ["", "/api", "https://api.exemple.org/v1"]) {
+      const client = creerClientHttp({ base, jeton: () => JETON })
+      for (const chemin of chemins) {
+        await expect(client.get(chemin), `${base} ${chemin}`).rejects.toThrow(
+          TypeError
+        )
+        expect(() => client.url(chemin)).toThrow(TypeError)
+      }
     }
     expect(espion).not.toHaveBeenCalled()
+  })
+
+  it("garde %2F%2F comme un chemin", async () => {
+    const espion = simulerFetch(() => ({ corps: {} }))
+    await creerClientHttp({ base: "/api", jeton: () => JETON }).get(
+      "/%2F%2Fevil.example/x"
+    )
+    expect(espion.mock.calls[0]?.[0]).toBe("/api/%2F%2Fevil.example/x")
   })
 
   it("le jeton n'entre dans aucune erreur, quel que soit l'échec", async () => {
@@ -261,6 +294,91 @@ describe("client HTTP commun", () => {
     expect(erreur).toBeInstanceOf(ErreurApi)
     expect(erreur.code).toBe(CODE_DELAI_DEPASSE)
     expect(erreur.status).toBe(0)
+  })
+
+  it("valide delaiMax : RangeError pour ≤ 0 ou non fini, plafond 2^31-1", () => {
+    for (const delaiMax of [0, -1, NaN, -Infinity]) {
+      expect(() => creerClientHttp({ delaiMax })).toThrow(RangeError)
+    }
+    expect(() => creerClientHttp({ delaiMax: Infinity })).not.toThrow()
+    expect(() => creerClientHttp({ delaiMax: null })).not.toThrow()
+  })
+
+  it("plafonne le délai à 2^31-1 et ne pose aucune minuterie sans délai", async () => {
+    const minuterie = vi.spyOn(globalThis, "setTimeout")
+    try {
+      simulerFetch(() => ({ corps: {} }))
+      await creerClientHttp({ delaiMax: 2 ** 40 }).get("/x")
+      expect(minuterie).toHaveBeenCalledTimes(1)
+      expect(minuterie.mock.calls[0]?.[1]).toBe(2 ** 31 - 1)
+      minuterie.mockClear()
+      await creerClientHttp({ delaiMax: Infinity }).get("/x")
+      await creerClientHttp({ delaiMax: null }).get("/x")
+      await creerClientHttp().get("/x", { delaiMax: null })
+      expect(minuterie).not.toHaveBeenCalled()
+    } finally {
+      minuterie.mockRestore()
+    }
+  })
+
+  it("accepte un délai propre à une requête", async () => {
+    fetchMuet()
+    const client = creerClientHttp({ delaiMax: 60_000 })
+    const erreur = await client.get("/lent", { delaiMax: 20 }).then(rate, echec)
+    expect(erreur.code).toBe(CODE_DELAI_DEPASSE)
+    await expect(client.get("/x", { delaiMax: 0 })).rejects.toThrow(RangeError)
+  })
+
+  it("ne laisse aucune minuterie après un échec", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+    try {
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("down")))
+      const erreur = await creerClientHttp().get("/x").then(rate, echec)
+      expect(erreur.code).toBe(CODE_RESEAU)
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("combine les signaux sans AbortSignal.any (Safari < 17.4)", async () => {
+    const any = AbortSignal.any
+    Object.defineProperty(AbortSignal, "any", {
+      value: undefined,
+      configurable: true,
+    })
+    try {
+      // Délai dépassé, avec un signal de l'appelant.
+      fetchMuet()
+      const controleur = new AbortController()
+      const retrait = vi.spyOn(controleur.signal, "removeEventListener")
+      const erreur = await creerClientHttp({ delaiMax: 20 })
+        .get("/x", { signal: controleur.signal })
+        .then(rate, echec)
+      expect(erreur.code).toBe(CODE_DELAI_DEPASSE)
+      expect(retrait).toHaveBeenCalledWith("abort", expect.any(Function))
+
+      // Annulation par l'appelant.
+      const annulation = new AbortController()
+      const promesse = creerClientHttp()
+        .get("/x", { signal: annulation.signal })
+        .then(rate, echec)
+      annulation.abort()
+      expect((await promesse).name).toBe("AbortError")
+
+      // Signal déjà abaissé.
+      const deja = new AbortController()
+      deja.abort()
+      const erreur3 = await creerClientHttp()
+        .get("/x", { signal: deja.signal })
+        .then(rate, echec)
+      expect(erreur3).not.toBeInstanceOf(ErreurApi)
+    } finally {
+      Object.defineProperty(AbortSignal, "any", {
+        value: any,
+        configurable: true,
+      })
+    }
   })
 
   it("laisse passer l'annulation voulue par l'appelant", async () => {
@@ -310,6 +428,26 @@ describe("client HTTP commun", () => {
     expect(erreur.message).toMatch(/page HTML/)
   })
 
+  it("abandonne sans rejet non traité le corps d'une page HTML", async () => {
+    // Annulation d'un flux déjà en erreur : sa promesse rejetée doit être
+    // rattrapée.
+    const annulation = Promise.reject(new Error("flux en erreur"))
+    const rattrape = vi.spyOn(annulation, "catch")
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        type: "basic",
+        headers: new Headers({ "content-type": "text/html" }),
+        body: { cancel: () => annulation },
+      })
+    )
+    const erreur = await creerClientHttp().lireBlob("/f").then(rate, echec)
+    expect(erreur.code).toBe(CODE_REPONSE_NON_JSON)
+    expect(rattrape).toHaveBeenCalled()
+  })
+
   it("lit un fichier", async () => {
     simulerFetch(() => ({
       texte: "abc",
@@ -319,9 +457,28 @@ describe("client HTTP commun", () => {
     expect(blob.size).toBe(3)
   })
 
-  it("rend undefined pour une réponse vide (204)", async () => {
+  it("lit un fichier avec les options d'une requête", async () => {
+    const espion = simulerFetch(() => ({
+      texte: "abc",
+      enTetes: { "content-type": "application/pdf" },
+    }))
+    await creerClientHttp().lireBlob("/f", {
+      query: { v: 2 },
+      credentials: "include",
+      enTetes: { "X-Essai": "1" },
+      delaiMax: 120_000,
+    })
+    expect(espion.mock.calls[0]?.[0]).toBe("/f?v=2")
+    const init = initDe(espion, 0)
+    expect(init.credentials).toBe("include")
+    expect(new Headers(init.headers).get("X-Essai")).toBe("1")
+  })
+
+  it("rend null pour une réponse vide (204 ou 200 vide)", async () => {
     simulerFetch(() => ({ status: 204 }))
-    await expect(creerClientHttp().delete("/x")).resolves.toBeUndefined()
+    await expect(creerClientHttp().delete("/x")).resolves.toBeNull()
+    simulerFetch(() => ({ status: 200 }))
+    await expect(creerClientHttp().post("/x")).resolves.toBeNull()
   })
 
   it("sérialise le corps en JSON, sauf FormData, Blob, URLSearchParams…", async () => {
@@ -371,11 +528,31 @@ describe("client HTTP commun", () => {
     expect(erreur.code).toBe("unauthenticated")
   })
 
+  it("rend l'erreur 401 même si surNonAuthentifie lève, et signale l'exception", async () => {
+    const signaler = vi.fn()
+    vi.stubGlobal("reportError", signaler)
+    const panne = new Error("rappel en panne")
+    simulerFetch(() => ({ status: 401 }))
+    const erreur = await creerClientHttp({
+      surNonAuthentifie: () => {
+        throw panne
+      },
+    })
+      .get("/x")
+      .then(rate, echec)
+    expect(erreur).toBeInstanceOf(ErreurApi)
+    expect(erreur.status).toBe(401)
+    expect(signaler).toHaveBeenCalledWith(panne)
+  })
+
   it("construit la chaîne de requête sans valeurs vides, tableaux répétés", async () => {
     expect(
       chaineRequete({ q: "a b", vide: "", n: null, u: undefined, f: false })
     ).toBe("?q=a+b&f=false")
     expect(chaineRequete({ type: ["CE", "BC"] })).toBe("?type=CE&type=BC")
+    expect(chaineRequete({ type: ["CE", "", null, undefined] })).toBe(
+      "?type=CE"
+    )
     expect(chaineRequete({})).toBe("")
     const espion = simulerFetch(() => ({ corps: [] }))
     await creerClientHttp({ base: "/api" }).get("/m", { query: { page: 2 } })

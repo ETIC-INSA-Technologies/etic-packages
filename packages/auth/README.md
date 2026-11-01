@@ -221,19 +221,25 @@ location.assign(api.url("/auth/login", { suivant: "/" }))
 ```
 
 - Verbes : `get(chemin, options?)`, `post`, `put` et `patch(chemin, corps?, options?)`,
-  `delete(chemin, options?)` ; options `query`, `signal`, `credentials`, `enTetes`. Ils rendent
-  le JSON de la réponse, `undefined` pour une réponse vide (204 compris). `corps` part tel quel
-  s'il est un `FormData`, un `Blob`, un `URLSearchParams` ou un `ArrayBuffer` (ou une vue), en
-  JSON sinon. `lireBlob(chemin, { query, signal })` lit un fichier ; `url(chemin, query?)`
-  rend l'URL complète, pour une navigation.
+  `delete(chemin, options?)` ; options `query`, `signal`, `credentials`, `enTetes`, `delaiMax`.
+  Ils rendent le JSON de la réponse, `null` pour une réponse vide (204 ou 200 vide : react-query
+  refuse un `queryFn` qui rend `undefined`). `corps` part tel quel s'il est un `FormData`, un
+  `Blob`, un `URLSearchParams` ou un `ArrayBuffer` (ou une vue), en JSON sinon.
+  `lireBlob(chemin, options?)` lit un fichier, avec les mêmes options ; `url(chemin, query?)`
+  rend l'URL complète, pour une navigation. Dans `query`, les valeurs vides (`undefined`,
+  `null`, `""`) sont omises, dans un tableau aussi.
 - Toute requête qui n'aboutit pas lève une `ErreurApi` (`status`, `code`, `message`,
   `details`) : celle de l'enveloppe `{"error": {…}}` du backend, ou un code et un texte lisibles
   déduits du statut : `unauthenticated` (401), `forbidden` (403), `not_found` (404), `conflict`
   (409), `validation_error` (422), `not_implemented` (501), `external_service_unavailable`
   (502, 503), `internal_error` (autre 5xx), `http_<statut>` (autre 4xx).
 - Codes propres au client, avec `status` 0 : `network_error` (`CODE_RESEAU`, pas de réponse) et
-  `delai_depasse` (`CODE_DELAI_DEPASSE`, 30 s par défaut, réglable par `delaiMax`).
-  L'annulation demandée par l'appelant (`signal`) reste une annulation.
+  `delai_depasse` (`CODE_DELAI_DEPASSE`). L'annulation demandée par l'appelant (`signal`)
+  reste une annulation.
+- `delaiMax`, sur le client ou sur une requête : 30 s par défaut, plafonné à 2^31-1 ms ;
+  `Infinity` ou `null` : aucun délai. Une valeur ≤ 0 ou non finie lève une `RangeError`. Pour
+  l'envoi ou la lecture d'un gros fichier, l'allonger sur la requête :
+  `api.lireBlob(chemin, { delaiMax: 300_000 })`.
 - Une page HTML (ou tout autre corps qui n'est pas du JSON) reçue en 200 lève
   `reponse_non_json` (`CODE_REPONSE_NON_JSON`) : en pratique, `/api` n'est pas routé vers le
   backend et le proxy a servi l'`index.html`. `lireBlob` refuse de même une page HTML.
@@ -241,13 +247,20 @@ location.assign(api.url("/auth/login", { suivant: "/" }))
   aucune erreur ni aucun journal.
 - `redirections` : `"refusees"` (le défaut quand `jeton` est fourni) fait d'une redirection une
   erreur `redirection_refusee` (`CODE_REDIRECTION_REFUSEE`) au lieu de la suivre, pour que le
-  jeton ne parte pas ailleurs ; `"suivies"` (le défaut sans jeton) les suit. Avec FastAPI, un
-  chemin qui diffère de la route par la barre oblique finale reçoit une 307
-  (`redirect_slashes`) : l'écrire exactement comme la route.
-- `surNonAuthentifie` est appelé sur tout 401, avant que l'erreur soit levée.
-- Un chemin doit commencer par un seul `/` (`//hote` mènerait vers une autre origine). Sinon,
-  `TypeError` : c'est une erreur de programmation, hors du contrat `ErreurApi`, qu'aucun écran
-  n'a à traiter.
+  jeton ne parte pas ailleurs ; `"suivies"` (le défaut sans jeton) les suit. Une réponse 3xx
+  reçue telle quelle (Node) est refusée de même. Avec FastAPI, un chemin qui diffère de la
+  route par la barre oblique finale reçoit une 307 (`redirect_slashes`) : l'écrire exactement
+  comme la route.
+- `surNonAuthentifie` est appelé sur tout 401, avant que l'erreur soit levée. S'il lève,
+  l'appelant reçoit quand même l'`ErreurApi` 401, et l'exception du rappel est signalée à part
+  par `reportError` (console et événement `error` de la fenêtre), à défaut relancée dans une
+  micro-tâche : ni avalée, ni à la place de l'erreur.
+- Un chemin commence par un seul `/`, sans espace ni caractère de contrôle (l'analyseur d'URL
+  retire tabulations et retours à la ligne : `/\t/hote` deviendrait `//hote`), et l'URL résolue
+  garde l'origine de la base ; `/%2F%2F…` reste un chemin. Sinon, `TypeError` : c'est une
+  erreur de programmation, hors du contrat `ErreurApi`, qu'aucun écran n'a à traiter.
+- Sans `AbortSignal.any` (Safari avant 17.4), le signal de l'appelant et le délai sont combinés
+  par des écouteurs, retirés en fin de requête.
 
 #### Migrer depuis le client d'ETIC Members ou d'ETIC Docs
 
@@ -262,17 +275,16 @@ location.assign(api.url("/auth/login", { suivant: "/" }))
 | `api.get(chemin, query, signal)` (Members)                            | `api.get(chemin, { query, signal })`                                      |
 | `api.delete(chemin, query)` (Members)                                 | `api.delete(chemin, { query })`                                           |
 | `api.postForm(chemin, formData)` (Members)                            | `api.post(chemin, formData)`                                              |
-| `api.getBlob`, `apiFetchBlob` (Members)                               | `api.lireBlob(chemin, { signal })`                                        |
+| `api.getBlob`, `apiFetchBlob` (Members)                               | `api.lireBlob(chemin, { signal, delaiMax })`                              |
 | 401 : événement `eticdocs:non-authentifie`, `etic-admin:unauthorized` | `surNonAuthentifie` (`signalerNonAuthentifie`, ou celui de l'application) |
 
 Codes qui changent :
 
 - Members : sans enveloppe, `http_<statut>` et « Erreur inattendue (HTTP n). » laissent la place
   aux codes ci-dessus ; un 200 qui n'est pas du JSON lève `reponse_non_json` au lieu d'une
-  `SyntaxError`.
+  `SyntaxError` ; une réponse vide rend `null` au lieu de `undefined`.
 - Docs : sans enveloppe, un 4xx hors table donne `http_<statut>` au lieu d'`internal_error` ;
-  une réponse vide rend `undefined` au lieu de `null` ; l'erreur réseau ne porte plus
-  `details.cause`.
+  l'erreur réseau ne porte plus `details.cause`.
 - Les deux : `delai_depasse` distingue le délai dépassé de la panne réseau.
 
 ## Développer

@@ -128,28 +128,30 @@ export function analyserErreur(status: number, corps: unknown): ErreurApi {
   return new ErreurApi(status, codeRepli, messageRepli)
 }
 
+type ValeurSimple = string | number | boolean | null | undefined
+
 /** Paramètres de requête ; un tableau donne une occurrence par élément
  *  (`type=a&type=b`, lu comme une liste par FastAPI). */
 export type ParametresRequete = Record<
   string,
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | readonly (string | number | boolean)[]
+  ValeurSimple | readonly ValeurSimple[]
 >
 
+const estVide = (valeur: ValeurSimple) =>
+  valeur === undefined || valeur === null || valeur === ""
+
 /** `?a=1&b=2`, ou `""` : les valeurs vides (`undefined`, `null`, `""`) sont
- *  omises, un filtre non renseigné n'apparaît pas dans l'URL. */
+ *  omises, dans un tableau aussi : un filtre non renseigné n'apparaît pas
+ *  dans l'URL. */
 export function chaineRequete(parametres?: ParametresRequete): string {
   if (!parametres) return ""
   const usp = new URLSearchParams()
   for (const [cle, valeur] of Object.entries(parametres)) {
-    if (valeur === undefined || valeur === null || valeur === "") continue
     if (Array.isArray(valeur)) {
-      for (const element of valeur) usp.append(cle, String(element))
-    } else {
+      for (const element of valeur as readonly ValeurSimple[]) {
+        if (!estVide(element)) usp.append(cle, String(element))
+      }
+    } else if (!estVide(valeur as ValeurSimple)) {
       usp.set(cle, String(valeur))
     }
   }
@@ -172,11 +174,14 @@ export interface OptionsClientHttp {
    *  cookie. Sans valeur, celle de `fetch` (`same-origin`). */
   credentials?: RequestCredentials
   /** Appelé sur tout 401, avant que l'erreur soit levée (vider le jeton,
-   *  `signalerNonAuthentifie`…). */
+   *  `signalerNonAuthentifie`…). S'il lève, l'appelant reçoit quand même
+   *  l'`ErreurApi` 401 ; l'exception du rappel est signalée à part
+   *  (`reportError`). */
   surNonAuthentifie?: (erreur: ErreurApi) => void
-  /** Délai maximal d'une requête, corps compris, en millisecondes (30 s par
-   *  défaut). */
-  delaiMax?: number
+  /** Délai maximal d'une requête, corps compris, en millisecondes : 30 s
+   *  par défaut, plafonné à 2^31-1 ; `Infinity` ou `null` : aucun délai.
+   *  Une valeur ≤ 0 ou non finie lève une `RangeError`. */
+  delaiMax?: number | null
 }
 
 /** Options d'une requête. */
@@ -187,10 +192,13 @@ export interface OptionsRequete {
   credentials?: RequestCredentials
   /** En-têtes supplémentaires ; `Authorization` reste celui du client. */
   enTetes?: Record<string, string>
+  /** Remplace, pour cette requête, le délai maximal du client (mêmes
+   *  valeurs) : à allonger pour l'envoi ou la lecture d'un gros fichier. */
+  delaiMax?: number | null
 }
 
 export interface ClientHttp {
-  /** Les verbes rendent la réponse JSON (`undefined` si elle est vide, 204
+  /** Les verbes rendent la réponse JSON (`null` si elle est vide, 204
    *  compris) ou lèvent une `ErreurApi`. `corps` part tel quel s'il est un
    *  `FormData`, un `Blob`, un `URLSearchParams` ou un `ArrayBuffer` (et ses
    *  vues), sérialisé en JSON sinon. */
@@ -203,24 +211,105 @@ export interface ClientHttp {
     options?: OptionsRequete
   ): Promise<T>
   delete<T>(chemin: string, options?: OptionsRequete): Promise<T>
-  /** Fichier (image, PDF…) lu avec la même authentification. */
-  lireBlob(
-    chemin: string,
-    options?: Pick<OptionsRequete, "query" | "signal">
-  ): Promise<Blob>
+  /** Fichier (image, PDF…) lu avec la même authentification ; pour un gros
+   *  fichier, allonger `delaiMax`. */
+  lireBlob(chemin: string, options?: OptionsRequete): Promise<Blob>
   /** URL complète d'un chemin, pour une navigation (lien de connexion…). */
   url(chemin: string, query?: ParametresRequete): string
 }
 
-/** Un chemin relatif à la base : `/…`, jamais `//hote` ni `/\hote`, que le
- *  navigateur lirait comme une autre origine (et y enverrait le jeton).
- *  Erreur de programmation, hors du contrat `ErreurApi` : `TypeError`. */
-function verifierChemin(chemin: string): void {
-  if (!/^\/(?![/\\])/.test(chemin)) {
+/** Adresse de référence pour résoudre une base relative : la page, ou une
+ *  origine fictive hors navigateur (tests, rendu serveur). */
+function adresseDeReference(): string {
+  return globalThis.location?.href ?? "http://reference.invalid/"
+}
+
+/**
+ * Un chemin relatif à la base, qui ne peut pas mener ailleurs que l'origine
+ * de la base (le jeton y partirait) : il commence par un seul `/` (ni `//`
+ * ni `/\`, quelle que soit la base), ne contient ni caractère de contrôle ni
+ * espace (l'analyseur d'URL retire tabulations et retours à la ligne :
+ * `/\t/hote` deviendrait `//hote`), et l'URL résolue garde l'origine de la
+ * base. `%2F%2F` reste un chemin.
+ * Erreur de programmation, hors du contrat `ErreurApi` : `TypeError`.
+ */
+function verifierChemin(base: string, chemin: string): void {
+  const valide =
+    /^\/(?![/\\])/.test(chemin) &&
+    // eslint-disable-next-line no-control-regex
+    !/[\u0000- \u007f]/.test(chemin)
+  const reference = adresseDeReference()
+  if (
+    !valide ||
+    new URL(`${base}${chemin}`, reference).origin !==
+      new URL(`${base}/`, reference).origin
+  ) {
     throw new TypeError(
-      "Chemin d'API invalide : il doit commencer par un seul « / »."
+      "Chemin d'API invalide : il doit commencer par « / », sans espace ni caractère de contrôle, et rester sur l'origine de l'API."
     )
   }
+}
+
+/** Plafond des minuteries des navigateurs : au-delà, elles partent aussitôt. */
+const DELAI_PLAFOND_MS = 2 ** 31 - 1
+
+/** Délai en millisecondes, ou `null` pour aucun délai. */
+function validerDelai(
+  delai: number | null | undefined,
+  defaut: number | null
+): number | null {
+  if (delai === undefined) return defaut
+  if (delai === null || delai === Infinity) return null
+  if (!Number.isFinite(delai) || delai <= 0) {
+    throw new RangeError(
+      "delaiMax : un nombre de millisecondes supérieur à 0, Infinity ou null."
+    )
+  }
+  return Math.min(delai, DELAI_PLAFOND_MS)
+}
+
+/** Un signal qui s'abaisse avec le premier des `signaux`. `AbortSignal.any`
+ *  manque avant Safari 17.4 : repli par écouteurs, que `liberer` retire. */
+function combinerSignaux(signaux: AbortSignal[]): {
+  signal: AbortSignal | undefined
+  liberer: () => void
+} {
+  const rien = () => {}
+  if (signaux.length <= 1) return { signal: signaux[0], liberer: rien }
+  if (typeof AbortSignal.any === "function") {
+    return { signal: AbortSignal.any(signaux), liberer: rien }
+  }
+  const controleur = new AbortController()
+  const ecouteurs = signaux.map((signal) => {
+    const abandonner = () => controleur.abort(signal.reason)
+    signal.addEventListener("abort", abandonner, { once: true })
+    return () => signal.removeEventListener("abort", abandonner)
+  })
+  const deja = signaux.find((signal) => signal.aborted)
+  if (deja) controleur.abort(deja.reason)
+  return {
+    signal: controleur.signal,
+    liberer: () => ecouteurs.forEach((retirer) => retirer()),
+  }
+}
+
+/** Signale une exception sans interrompre le flux en cours : `reportError`
+ *  (console et événement `error` de la fenêtre, comme une exception non
+ *  rattrapée), à défaut une exception relancée dans une micro-tâche. */
+function signalerException(exception: unknown): void {
+  if (typeof globalThis.reportError === "function") {
+    globalThis.reportError(exception)
+  } else {
+    queueMicrotask(() => {
+      throw exception
+    })
+  }
+}
+
+/** Abandonne un corps qui ne sera pas lu ; un flux déjà en erreur ne doit
+ *  pas laisser de rejet non traité. */
+function abandonnerCorps(reponse: Response): void {
+  void reponse.body?.cancel().catch(() => {})
 }
 
 function estCorpsBrut(corps: unknown): corps is BodyInit {
@@ -261,7 +350,9 @@ function lireJson(texte: string): unknown {
 
 async function lireReponseJson<T>(reponse: Response): Promise<T> {
   const texte = await reponse.text()
-  if (!texte) return undefined as T
+  // `null`, pas `undefined` : react-query refuse un `queryFn` qui rend
+  // `undefined`.
+  if (!texte) return null as T
   const corps = lireJson(texte)
   if (corps === undefined) throw erreurNonJson(reponse, texte)
   return corps as T
@@ -271,7 +362,7 @@ async function lireReponseBlob(reponse: Response): Promise<Blob> {
   // Un fichier attendu, une page HTML reçue : c'est le repli `index.html`
   // d'un proxy, pas le fichier. Son corps n'est pas lu.
   if (annonceHtml(reponse)) {
-    void reponse.body?.cancel()
+    abandonnerCorps(reponse)
     throw erreurNonJson(reponse)
   }
   return reponse.blob()
@@ -281,12 +372,12 @@ type Requete = OptionsRequete & { methode: string; corps?: unknown }
 
 export function creerClientHttp(options: OptionsClientHttp = {}): ClientHttp {
   const base = (options.base ?? "").replace(/\/+$/, "")
-  const delaiMax = options.delaiMax ?? DELAI_MAX_PAR_DEFAUT_MS
+  const delaiClient = validerDelai(options.delaiMax, DELAI_MAX_PAR_DEFAUT_MS)
   const redirections =
     options.redirections ?? (options.jeton ? "refusees" : "suivies")
 
   function url(chemin: string, query?: ParametresRequete): string {
-    verifierChemin(chemin)
+    verifierChemin(base, chemin)
     return `${base}${chemin}${chaineRequete(query)}`
   }
 
@@ -314,24 +405,30 @@ export function creerClientHttp(options: OptionsClientHttp = {}): ClientHttp {
     if (jeton) enTetes.set("Authorization", `Bearer ${jeton}`)
     else enTetes.delete("Authorization")
 
+    const delaiMs = validerDelai(opts.delaiMax, delaiClient)
     // Minuterie annulée dès la fin de la requête (`AbortSignal.timeout`
     // survivrait, elle, tout le délai).
-    const delai = new AbortController()
-    const minuteur = setTimeout(() => delai.abort(), delaiMax)
-    const signal = opts.signal
-      ? AbortSignal.any([opts.signal, delai.signal])
-      : delai.signal
+    const delai = delaiMs === null ? null : new AbortController()
+    let minuteur: ReturnType<typeof setTimeout> | undefined
+    let liberer = () => {}
 
     // Une `ErreurApi` passe telle quelle ; une annulation voulue par
     // l'appelant (react-query) reste une annulation ; le délai et la panne
     // réseau deviennent des `ErreurApi`.
     const traduire = (erreur: unknown): never => {
       if (erreur instanceof ErreurApi) {
-        if (erreur.status === 401) options.surNonAuthentifie?.(erreur)
+        if (erreur.status === 401 && options.surNonAuthentifie) {
+          // Le rappel ne remplace pas l'erreur 401 et n'est pas tu.
+          try {
+            options.surNonAuthentifie(erreur)
+          } catch (exception) {
+            signalerException(exception)
+          }
+        }
         throw erreur
       }
       if (opts.signal?.aborted) throw erreur
-      if (delai.signal.aborted) {
+      if (delai?.signal.aborted) {
         throw new ErreurApi(
           0,
           CODE_DELAI_DEPASSE,
@@ -346,15 +443,28 @@ export function creerClientHttp(options: OptionsClientHttp = {}): ClientHttp {
     }
 
     try {
+      if (delai && delaiMs !== null) {
+        minuteur = setTimeout(() => delai.abort(), delaiMs)
+      }
+      const combine = combinerSignaux(
+        [opts.signal, delai?.signal].filter((s) => s !== undefined)
+      )
+      liberer = combine.liberer
       const reponse = await fetch(adresse, {
         method: opts.methode,
         headers: enTetes,
         body: charge,
-        signal,
+        signal: combine.signal,
         credentials: opts.credentials ?? options.credentials,
         redirect: redirections === "refusees" ? "manual" : "follow",
       })
-      if (reponse.type === "opaqueredirect") {
+      // Navigateur : `opaqueredirect` ; Node (undici) : le vrai statut 3xx.
+      if (
+        redirections === "refusees" &&
+        (reponse.type === "opaqueredirect" ||
+          (reponse.status >= 300 && reponse.status < 400))
+      ) {
+        abandonnerCorps(reponse)
         throw new ErreurApi(
           0,
           CODE_REDIRECTION_REFUSEE,
@@ -369,6 +479,7 @@ export function creerClientHttp(options: OptionsClientHttp = {}): ClientHttp {
       return traduire(erreur)
     } finally {
       clearTimeout(minuteur)
+      liberer()
     }
   }
 
