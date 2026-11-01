@@ -185,7 +185,8 @@ export function AppShell({
         <SidebarInset
           id={idContenu}
           tabIndex={-1}
-          className="min-w-0 outline-none"
+          // Fond de page (bg-page) au lieu de bg-background (shadcn).
+          className="min-w-0 bg-page outline-none"
         >
           <BarreMobile application={application} Lien={Lien} />
           {/* Gouttières de `PageContainer`, qui suit et pose sa propre marge
@@ -465,10 +466,10 @@ function BarreMobile({
   if (!isMobile) return null
   return (
     // Sa hauteur (h-12) est reprise par le `scroll-padding-top` de styles.css :
-    // une ancre ne passe pas sous la barre collante.
+    // une ancre ne passe pas sous la barre collante. Sur le fond de la page.
     <header
       data-slot="app-shell-mobile-bar"
-      className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-2"
+      className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-page px-2"
     >
       {/* Un seul nom, par `libelle` : un `aria-label` aurait masqué le texte
           lu de shadcn, qui en divergeait. */}

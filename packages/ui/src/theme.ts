@@ -67,20 +67,23 @@ export function appliquerTheme(theme: ThemePreference): void {
 /**
  * Peint le thème du compte : l'applique et le mémorise dès qu'il est connu
  * (`undefined` tant que le compte n'est pas chargé : rien ne change, le thème
- * peint par `theme-boot.js` reste). Un changement fait dans un autre onglet
- * (événement `storage` de la copie locale) est appliqué ici aussi, puis
- * transmis à `onThemeAutreOnglet` pour que l'application aligne son état sans
- * rappeler le serveur.
+ * peint par `theme-boot.js` reste). `null` ou une valeur inconnue (serveur
+ * plus récent) vaut `"system"`, comme dans `theme-boot.js`. Un changement fait dans un
+ * autre onglet (événement `storage` de la copie locale) est appliqué ici
+ * aussi, puis transmis à `onThemeAutreOnglet`, obligatoire : l'application
+ * aligne son état sans rappeler le serveur, sinon `theme` resterait l'ancienne
+ * valeur et la rechoisir ne repeindrait rien.
  */
 export function useThemeApplique(
-  theme: ThemePreference | undefined,
-  onThemeAutreOnglet?: (theme: ThemePreference) => void
+  theme: string | null | undefined,
+  onThemeAutreOnglet: (theme: ThemePreference) => void
 ): void {
   useEffect(() => {
-    if (!theme) return
-    appliquerTheme(theme)
+    if (theme === undefined) return
+    const valide = estThemePreference(theme) ? theme : "system"
+    appliquerTheme(valide)
     try {
-      localStorage.setItem(CLE_THEME, theme)
+      localStorage.setItem(CLE_THEME, valide)
     } catch {
       // Stockage indisponible (navigation privée stricte) : seul le premier
       // rendu du prochain chargement en pâtit.
@@ -99,7 +102,7 @@ export function useThemeApplique(
       const suivant = evenement.newValue
       if (!estThemePreference(suivant)) return
       appliquerTheme(suivant)
-      rappel.current?.(suivant)
+      rappel.current(suivant)
     }
     window.addEventListener("storage", surStockage)
     return () => window.removeEventListener("storage", surStockage)

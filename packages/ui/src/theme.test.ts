@@ -82,10 +82,13 @@ const REGISTRE_GRAY = {
 const ECARTS = {
   // La barre latérale suit le contrat d'accent de l'application.
   commun: ["sidebar-primary", "sidebar-primary-foreground", "sidebar-ring"],
-  // Fond de page gray-50 (cartes blanches qui s'en détachent) ; lisibilité :
-  // ≥ 4,5:1 sur --muted, sur la teinte de --destructive.
-  clair: ["background", "muted-foreground", "destructive"],
+  // Lisibilité : ≥ 4,5:1 sur --muted, sur la teinte de --destructive.
+  clair: ["muted-foreground", "destructive"],
   sombre: ["destructive"],
+  // Jetons ajoutés, absents du registre : --page, fond de la page (bg-page :
+  // body, contenu d'AppShell), gray-50 en clair (cartes blanches qui s'en
+  // détachent), --background en sombre.
+  ajouts: ["page"],
 }
 
 // oklch(L C H) → sRGB hexadécimal (conversion d'OKLab de Björn Ottosson,
@@ -190,25 +193,28 @@ const css = lire("src/styles.css")
 const racineCss = variables(css, ":root")
 const sombreCss = variables(css, ".dark")
 
-// Fonds de la page et des cartes (tableaux compris), lus dans le thème :
-// `fonds` ceux où se pose du texte, `surfaces` ceux où se pose une teinte
-// (bg-x/10…). `teinteDestructive` : opacité de bg-destructive (10 %, 20 % en
-// sombre). `accent` : suffixe du sélecteur d'un contrat d'accent.
+// Fonds de la page, des surfaces et des cartes (tableaux compris), lus dans
+// le thème : `fonds` ceux où se pose du texte, `surfaces` ceux où se pose une
+// teinte (bg-x/10…). `teinteDestructive` : opacité de bg-destructive (10 %,
+// 20 % en sombre). `accent` : suffixe du sélecteur d'un contrat d'accent.
 function surfaces(
   nom: "clair" | "sombre",
   vars: ReturnType<typeof variables>,
   teinteDestructive: number,
   accent: string
 ) {
-  const [fond, card, muted] = ["background", "card", "muted"].map(vars.valeur)
+  const [page, fond, card, muted] = ["page", "background", "card", "muted"].map(
+    vars.valeur
+  )
   return {
     nom,
     vars,
+    page,
     fond,
     card,
     muted,
-    fonds: [fond, card, muted],
-    surfaces: [fond, card],
+    fonds: [page, fond, card, muted],
+    surfaces: [page, fond, card],
     teinteDestructive,
     accent,
   }
@@ -229,6 +235,16 @@ describe("couleur de base", () => {
       }
     }
   )
+
+  it("--page : ajout absent du registre, gray-50 en clair, le fond en sombre", () => {
+    for (const ajout of ECARTS.ajouts) {
+      expect(Object.keys(REGISTRE_GRAY.clair)).not.toContain(ajout)
+    }
+    // gray-50 de Tailwind 4.
+    expect(racineCss.brute("page")).toBe("oklch(0.985 0.002 247.839)")
+    expect(sombreCss.brute("page")).toBe("var(--background)")
+    expect(css).toContain("--color-page: var(--page);")
+  })
 
   it("color-scheme suit le thème (contrôles natifs, barres de défilement)", () => {
     expect(racineCss.bloc).toContain("color-scheme: light;")
@@ -259,16 +275,24 @@ describe("couleur de base", () => {
     }
   )
 
-  // Cartes, menus et tableaux (bg-card) se détachent du fond de la même
-  // façon dans les deux thèmes : un cran plus clairs que lui.
+  // Cartes, menus et tableaux (bg-card) se détachent de la page de la même
+  // façon dans les deux thèmes : un cran plus clairs qu'elle.
   it.each(THEMES)(
-    "$nom : les cartes sont plus claires que le fond",
-    ({ vars }) => {
+    "$nom : les cartes sont plus claires que la page",
+    ({ vars, page }) => {
       for (const surface of ["card", "popover"]) {
-        expect(luminance(vars.valeur(surface))).toBeGreaterThan(
-          luminance(vars.valeur("background"))
-        )
+        expect(luminance(vars.valeur(surface))).toBeGreaterThan(luminance(page))
       }
+    }
+  )
+
+  // Surfaces de shadcn en bg-background posées sur bg-muted (onglet actif
+  // dans TabsList) : elles s'en distinguent comme dans le registre (1,10:1
+  // en clair, blanc sur gray-100 ; gray-50 n'y donnait que 1,05:1).
+  it.each(THEMES)(
+    "$nom : bg-background se distingue de bg-muted (onglet actif)",
+    ({ fond, muted }) => {
+      expect(contraste(fond, muted)).toBeGreaterThanOrEqual(1.08)
     }
   )
 
@@ -276,6 +300,7 @@ describe("couleur de base", () => {
     "$nom : chaque texte se lit sur sa surface",
     ({ nom, vars }) => {
       const paires = [
+        ["foreground", "page"],
         ["foreground", "background"],
         ["foreground", "muted"],
         ["card-foreground", "card"],
@@ -286,6 +311,7 @@ describe("couleur de base", () => {
         ["sidebar-accent-foreground", "sidebar-accent"],
         // Contrat d'accent par défaut (sans application).
         ["primary-foreground", "primary"],
+        ["primary-text", "page"],
         ["primary-text", "background"],
         ["primary-text", "muted"],
       ]
@@ -307,6 +333,7 @@ describe("couleur de base", () => {
     ({ nom, vars }) => {
       const texte = vars.valeur("muted-foreground")
       for (const fond of [
+        "page",
         "background",
         "muted",
         "card",
@@ -325,18 +352,13 @@ describe("couleur de base", () => {
   )
 
   // Bord d'une case à cocher vide : --muted-foreground à 80 %, déclaré dans
-  // :root seulement. Avec `dark` sur <html>, var(--muted-foreground) s'y
-  // résout en valeur sombre : le contour sombre se calcule donc avec elle.
-  it("le bord d'une case à cocher suit --muted-foreground", () => {
-    expect(racineCss.brute("control-border")).toBe(
-      "color-mix( in oklab, var(--muted-foreground) 80%, transparent )"
-    )
-    expect(sombreCss.brute("control-border")).toBeUndefined()
-  })
-
+  // les deux blocs (un `dark` posé sur un sous-arbre le recalcule aussi).
   it.each(THEMES)(
     "$nom : le bord d'une case à cocher se voit",
     ({ nom, vars, fonds }) => {
+      expect(vars.brute("control-border")).toBe(
+        "color-mix( in oklab, var(--muted-foreground) 80%, transparent )"
+      )
       const couleur = vars.valeur("muted-foreground")
       for (const fond of fonds) {
         lisible(

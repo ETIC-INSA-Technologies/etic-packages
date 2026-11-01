@@ -261,18 +261,21 @@ describe("écarts avec shadcn", () => {
   })
 
   // Thème : couleur de base gray de shadcn au lieu de neutral. Écarts avec
-  // le registre (fond de page gray-50 en clair, cartes blanches ;
-  // --muted-foreground clair plus foncé ; --control-border dérivé de
-  // --muted-foreground en sombre aussi) : voir ECARTS de theme.test.ts, qui
-  // compare chaque jeton au registre et vérifie les contrastes.
-  // CenteredScreen sur bg-muted/40 : centered-screen.test.tsx.
+  // le registre (--muted-foreground clair plus foncé ; --control-border
+  // dérivé de --muted-foreground en sombre aussi) et ajout de --page (fond de
+  // la page, gray-50 en clair) : voir ECARTS de theme.test.ts, qui compare
+  // chaque jeton au registre et vérifie les contrastes.
+  // CenteredScreen sur bg-muted/40 : centered-screen.test.tsx ; contenu
+  // d'AppShell sur bg-page : app-shell.test.tsx.
 
-  it("tableaux : cadre en bg-card, blanc sur le fond comme une carte", () => {
-    const { container } = render(createElement(Table))
-    expect(
-      container.querySelector('[data-slot="table-container"]')
-    ).toHaveClass("bg-card")
+  it("thème : la page sur bg-page, --background reste la surface de shadcn", () => {
+    // jsdom n'applique pas styles.css : la règle de base est lue.
+    expect(lire("styles.css")).toMatch(
+      /body \{[^}]*@apply bg-page text-foreground;/
+    )
+  })
 
+  it("tableaux : cadre de DataTable en bg-card, blanc comme une carte", () => {
     function Tableau() {
       const table = useDataTable({
         donnees: [] as { id: string }[],
@@ -288,6 +291,10 @@ describe("écarts avec shadcn", () => {
     expect(document.querySelector('[data-slot="data-table"]')).toHaveClass(
       "bg-card"
     )
+    // Un seul fond : le Table de shadcn, dedans, n'en pose pas.
+    expect(
+      document.querySelector('[data-slot="table-container"]')
+    ).not.toHaveClass("bg-card")
   })
 
   it("case à cocher partielle : un trait sur fond plein, pas une coche", () => {

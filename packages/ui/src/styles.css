@@ -23,10 +23,13 @@
  * valeurs sont celles du registre, sauf les écarts commentés ci-dessous ;
  * src/theme.test.ts les compare au registre et vérifie les contrastes.
  *
- * Le thème sombre s'active par la classe « dark » sur la racine (<html>), pas
- * sur un ancêtre plus bas (les jetons dérivés par var(), comme
- * --control-border, ne sont résolus qu'à la racine) : appliquerTheme()
- * (src/theme.ts) la pose, theme-boot.js la pose avant le premier rendu.
+ * Ajout d'ETIC : --page (classe bg-page), le fond de la page elle-même
+ * (body, contenu d'AppShell). --background reste la surface de shadcn
+ * (onglet actif, bouton outline, calendrier…).
+ *
+ * Le thème sombre s'active par la classe « dark » sur un ancêtre (<html>) :
+ * appliquerTheme() (src/theme.ts) la pose, theme-boot.js la pose avant le
+ * premier rendu.
  */
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
@@ -75,6 +78,7 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
+  --color-page: var(--page);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -86,10 +90,13 @@
 
 :root {
   color-scheme: light;
-  /* Fond de page gray-50 au lieu du blanc du registre : cartes, menus et
+  /* Fond de page (ajout d'ETIC, bg-page) : gray-50. Cartes, menus et
      tableaux (bg-card) restent blancs et s'en détachent, comme en sombre où
-     les cartes (gray-900) sont plus claires que le fond (gray-950). */
-  --background: oklch(0.985 0.002 247.839);
+     les cartes (gray-900) sont plus claires que la page (gray-950).
+     --background garde le blanc du registre : shadcn l'emploie aussi pour des
+     surfaces posées sur --muted ou une carte. */
+  --page: oklch(0.985 0.002 247.839);
+  --background: oklch(1 0 0);
   --foreground: oklch(0.13 0.028 261.692);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.13 0.028 261.692);
@@ -113,8 +120,9 @@
   /* Plus foncé que le registre (oklch(0.577 0.245 27.325)) : ≥ 4,5:1 sur sa
      teinte à 10 % (bouton et badge destructive). */
   --destructive: #c10007;
-  /* Texte sur le fond, les cartes, --muted et sur leur teinte à 20 % :
-     ≥ 4,5:1 (--success un cran plus foncé depuis le fond gray-50). */
+  /* Texte sur la page, le fond, les cartes, --muted et sur leur teinte à
+     20 % : ≥ 4,5:1 (--success un cran plus foncé, #15703f avant, pour la
+     page gray-50). */
   --success: #146c3d;
   --warning: #8a5300;
   /* Information (Alert info) : même exigence. */
@@ -124,8 +132,8 @@
   /* Bord d'une case à cocher vide : --input se voyait à peine sur le blanc
      (et restait sous 2:1 en sombre). --muted-foreground à 80 % : ≥ 3:1 sur
      le fond et sur --muted (contrôle, WCAG 1.4.11), en clair comme en
-     sombre. Déclaré ici seulement : avec « dark » sur la racine (<html>),
-     var(--muted-foreground) s'y résout déjà en valeur sombre. */
+     sombre (redéclaré dans .dark, pour un « dark » posé plus bas que
+     <html>). */
   --control-border: color-mix(
     in oklab,
     var(--muted-foreground) 80%,
@@ -149,6 +157,8 @@
 
 .dark {
   color-scheme: dark;
+  /* En sombre, la page est le fond du registre : rien ne change. */
+  --page: var(--background);
   --background: oklch(0.13 0.028 261.692);
   --foreground: oklch(0.985 0.002 247.839);
   --card: oklch(0.21 0.034 264.665);
@@ -173,6 +183,12 @@
   --info: #7cb4f5;
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
+  /* Même règle qu'en clair : --input (blanc à 15 %) restait sous 2:1. */
+  --control-border: color-mix(
+    in oklab,
+    var(--muted-foreground) 80%,
+    transparent
+  );
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -193,7 +209,8 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    /* bg-page au lieu de bg-background (shadcn) : fond de page gray-50. */
+    @apply bg-page text-foreground;
   }
   html {
     @apply font-sans;

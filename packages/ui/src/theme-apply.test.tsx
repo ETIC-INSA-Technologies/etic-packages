@@ -1,10 +1,15 @@
 /// <reference types="node" />
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
+import { useState } from "react"
 import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { appliquerTheme, useThemeApplique } from "@etic-ui/index"
+import {
+  appliquerTheme,
+  type ThemePreference,
+  useThemeApplique,
+} from "@etic-ui/index"
 import { CLE_THEME, estThemePreference, THEMES } from "@etic-ui/theme"
 
 const html = document.documentElement
@@ -107,22 +112,55 @@ describe("useThemeApplique", () => {
       .mockImplementation(() => {
         throw new Error("refusé")
       })
-    expect(() => renderHook(() => useThemeApplique("dark"))).not.toThrow()
+    expect(() =>
+      renderHook(() => useThemeApplique("dark", () => {}))
+    ).not.toThrow()
     expect(sombre()).toBe(true)
     setItem.mockRestore()
   })
 
   it("rien tant que le thème du compte est inconnu, puis l'applique et le mémorise", () => {
     html.classList.add("dark") // peint par theme-boot.js
-    const { rerender } = renderHook(({ theme }) => useThemeApplique(theme), {
-      initialProps: { theme: undefined as "light" | "dark" | undefined },
-    })
+    const { rerender } = renderHook(
+      ({ theme }) => useThemeApplique(theme, () => {}),
+      { initialProps: { theme: undefined as "light" | "dark" | undefined } }
+    )
     expect(sombre()).toBe(true)
     expect(localStorage.getItem(CLE_THEME)).toBeNull()
 
     rerender({ theme: "light" })
     expect(sombre()).toBe(false)
     expect(localStorage.getItem(CLE_THEME)).toBe("light")
+  })
+
+  it.each([null, "bleu"])(
+    "valeur %s du serveur : traitée comme « system »",
+    (valeur) => {
+      const systeme = simulerSysteme(true)
+      renderHook(() => useThemeApplique(valeur, () => {}))
+      expect(sombre()).toBe(true)
+      expect(localStorage.getItem(CLE_THEME)).toBe("system")
+      act(() => systeme.changer(false))
+      expect(sombre()).toBe(false)
+    }
+  )
+
+  it("après un autre onglet, rechoisir l'ancien thème le repeint", () => {
+    // L'application aligne son état par le rappel, comme Members.
+    const { result } = renderHook(() => {
+      const [theme, setTheme] = useState<ThemePreference>("light")
+      useThemeApplique(theme, setTheme)
+      return setTheme
+    })
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: CLE_THEME, newValue: "dark" })
+      )
+    })
+    expect(sombre()).toBe(true)
+
+    act(() => result.current("light"))
+    expect(sombre()).toBe(false)
   })
 
   it("suit un changement fait dans un autre onglet", () => {

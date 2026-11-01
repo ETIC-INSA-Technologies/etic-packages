@@ -283,6 +283,17 @@ describe("AppShell", () => {
     expect(bouton).toHaveAttribute("aria-expanded", "false")
   })
 
+  it("peint le contenu et la barre mobile sur le fond de page (bg-page)", () => {
+    simulerLargeur(true)
+    rendre()
+    const contenu = screen.getByRole("main")
+    expect(contenu).toHaveClass("bg-page")
+    expect(contenu).not.toHaveClass("bg-background")
+    const barre = document.querySelector('[data-slot="app-shell-mobile-bar"]')
+    expect(barre).toHaveClass("bg-page")
+    expect(barre).not.toHaveClass("bg-background")
+  })
+
   it("rend le bandeau dans le contenu, avant la page", () => {
     simulerLargeur(false)
     rendre({ bandeau: <p role="alert">Reprise impossible</p> })

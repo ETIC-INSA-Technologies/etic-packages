@@ -65,15 +65,18 @@ composants shadcn d'origine emploient `text-primary` (variante `link` du bouton 
 liens survolés) : c'est corrigé dans `src/components/ui/`, et `npm test` échoue si
 `text-primary` y réapparaît.
 
-Le thème sombre s'active par la classe `dark` sur `<html>` (la racine, pas un élément plus
-bas : certains jetons en dérivent d'autres et ne se résolvent qu'à la racine).
+Le thème sombre s'active par la classe `dark` sur `<html>`.
 
 Les neutres (fonds, panneaux, bordures, textes) sont ceux de la couleur de base `gray` de
 shadcn (palette `gray` de Tailwind 4, légèrement bleutée), communs à toute la suite : une
-application ne les redéfinit pas. Écarts, vérifiés par `src/theme.test.ts` avec les
-contrastes : en clair, le fond de page est gray-50 (cartes, menus et tableaux restent blancs
-et s'en détachent, comme les cartes plus claires que le fond en sombre) et
-`--muted-foreground` est un peu plus foncé (≥ 4,5:1 sur `--muted`).
+application ne les redéfinit pas. `--muted-foreground` est un peu plus foncé en clair
+(≥ 4,5:1 sur `--muted`), écart vérifié avec les contrastes par `src/theme.test.ts`.
+
+Le fond de la page elle-même est un jeton ajouté, `--page` (classe `bg-page`) : gray-50 en
+clair, si bien que cartes, menus et tableaux blancs s'en détachent (en sombre, il vaut
+`--background` et les cartes sont déjà plus claires). Le `body` et le contenu d'`AppShell`
+le prennent ; un conteneur pleine page d'une application aussi, plutôt que `bg-background`,
+qui reste la surface blanche de shadcn (onglet actif, bouton `outline`, calendrier…).
 `color-scheme` suit le thème (`light`, `dark`) : barres de défilement et contrôles natifs
 compris.
 
@@ -83,7 +86,9 @@ compris.
 `"light"` et, pour `"system"`, suit `prefers-color-scheme`, y compris quand le système change.
 La préférence vient du compte (`theme` de `@etic-insa/auth`) ; `useThemeApplique` la peint,
 la mémorise dans ce navigateur (`localStorage`, clé `"etic-theme"`) et suit un changement
-fait dans un autre onglet :
+fait dans un autre onglet. Une valeur `null` ou inconnue vaut `"system"`. Le rappel est
+obligatoire : sans lui, l'état de l'application garderait l'ancien thème et le rechoisir ne
+changerait rien.
 
 ```tsx
 import { useThemeApplique } from "@etic-insa/ui"
@@ -109,7 +114,7 @@ Vite ne regroupe pas un script classique : le copier dans `public/` avant `dev` 
 
 ```json
 "scripts": {
-  "theme-boot": "node -e \"require('fs').copyFileSync(require.resolve('@etic-insa/ui/theme-boot.js'), 'public/theme-boot.js')\"",
+  "theme-boot": "node -e \"const fs = require('fs'); fs.mkdirSync('public', { recursive: true }); fs.copyFileSync(require.resolve('@etic-insa/ui/theme-boot.js'), 'public/theme-boot.js')\"",
   "predev": "npm run theme-boot",
   "prebuild": "npm run theme-boot"
 }
@@ -1040,16 +1045,18 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 
   Thème : couleur de base `gray` de shadcn (registre `colors/gray.json`, `cssVarsV4`) au lieu
-  de `neutral` ; `--background` clair gray-50 au lieu du blanc, `--card` et `--popover`
-  restant blancs ; cadre de `Table` (`table-container`) et de `DataTable` en `bg-card` (blanc
-  sur ce fond, comme une carte ; survol et sélection de shadcn inchangés) ; `--success` clair
-  un cran plus foncé (≥ 4,5:1 sur sa teinte posée sur gray-50) ; `--muted-foreground` clair un
+  de `neutral` ; jeton ajouté `--page` (`bg-page`, gray-50 en clair, `--background` en
+  sombre), pris par le `body` au lieu de `bg-background`, `--background` restant celui du
+  registre ; `--success` clair un cran plus foncé (≥ 4,5:1 sur sa teinte posée sur la page
+  gray-50) ; `--muted-foreground` clair un
   peu plus foncé que gray-500 (≥ 4,5:1 sur `--muted`) ; `--control-border`
   (`--muted-foreground` à 80 %) en sombre aussi, au lieu de `--input` (sous 2:1) ;
   `color-scheme` dans `:root` et `.dark`. Les valeurs sont commentées dans `styles.css` ;
   `theme.test.ts` compare chaque jeton au registre, écarts (`ECARTS`) exceptés, et en vérifie
-  les contrastes. Hors `ui/`, `CenteredScreen` est posé sur `bg-muted/40` au lieu du
-  `bg-muted` des blocs de connexion de shadcn (fond moins appuyé, en sombre surtout).
+  les contrastes. Hors `ui/` : `CenteredScreen` est posé sur `bg-muted/40` au lieu du
+  `bg-muted` des blocs de connexion de shadcn (fond moins appuyé, en sombre surtout) ; le
+  contenu d'`AppShell` (`SidebarInset`) et sa barre mobile sont en `bg-page` ; le cadre de
+  `DataTable` et la `Disclosure` `carte` sont en `bg-card`, blancs comme une carte.
 
   Sans écart de code mais garanti par le même test : `Button` sans `type` rend
   `type="button"` (Base UI le fait pour un bouton natif) et ne soumet donc pas son formulaire.
