@@ -148,6 +148,22 @@ describe("DetailList et DetailItem", () => {
     expect(definitions[3]).toHaveTextContent("0")
     expect(definitions[4]).toHaveTextContent("Non renseigné")
   })
+
+  it("discrète, écrit « libellé : valeur » en ligne, en petit", () => {
+    render(
+      <DetailList discret aria-label="Métadonnées">
+        <DetailItem libelle="Acteur">ada</DetailItem>
+        <DetailItem libelle="User-Agent">{null}</DetailItem>
+      </DetailList>
+    )
+    const liste = screen.getByLabelText("Métadonnées")
+    expect(liste).toHaveClass("flex", "flex-wrap", "text-xs")
+    expect(liste).not.toHaveClass("grid")
+    const [acteur, agent] = screen.getAllByRole("term")
+    expect(acteur.parentElement).toHaveTextContent("Acteur : ada")
+    expect(agent.parentElement).toHaveTextContent("User-Agent : —")
+    expect(screen.getAllByRole("definition")[0]).toHaveClass("inline")
+  })
 })
 
 describe("PageContainer", () => {

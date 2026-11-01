@@ -178,9 +178,13 @@ describe("AppShell", () => {
     expect(onSeDeconnecter).not.toHaveBeenCalled()
 
     const dialogue = await screen.findByRole("alertdialog")
-    await user.click(
-      within(dialogue).getByRole("button", { name: "Se déconnecter" })
-    )
+    const valider = within(dialogue).getByRole("button", {
+      name: "Se déconnecter",
+    })
+    // Quitter la session est destructif : validation en rouge, comme
+    // ConfirmDialog.
+    expect(valider).toHaveClass("text-destructive")
+    await user.click(valider)
     expect(onSeDeconnecter).toHaveBeenCalledOnce()
   })
 

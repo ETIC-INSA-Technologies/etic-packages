@@ -423,6 +423,7 @@ function MenuCompte({
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
               onClick={() => {
                 setConfirmer(false)
                 compte.onSeDeconnecter()
