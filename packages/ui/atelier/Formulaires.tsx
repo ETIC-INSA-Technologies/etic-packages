@@ -421,7 +421,7 @@ export const FORMULAIRES: {
     rendu: () => <DemoChoix />,
   },
   {
-    id: "select",
+    id: "select-cas",
     titre: "Select : sous le champ, option figée, liste vide",
     rendu: () => <DemoSelect />,
   },

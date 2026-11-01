@@ -309,6 +309,19 @@ describe("écarts avec shadcn", () => {
     expect(checkbox).toContain("border border-(--control-border)")
   })
 
+  it("radio : contour en --control-border, y compris au focus d'un field-label", () => {
+    const radio = lire("components/ui/radio-group.tsx")
+    expect(radio).not.toContain("border-input")
+    expect(radio).toContain("border border-(--control-border)")
+    expect(radio).toContain("not-data-checked:border-(--control-border)")
+  })
+
+  it("switch : rail éteint en --control-border, en clair comme en sombre", () => {
+    const sw = lire("components/ui/switch.tsx")
+    expect(sw).toContain("data-unchecked:bg-(--control-border)")
+    expect(sw).not.toContain("bg-input")
+  })
+
   it("onglets line : passent à la ligne sous 640 px, comme shadcn au-delà", () => {
     // Le comportement n'existe qu'en CSS : les classes sont le contrat.
     render(

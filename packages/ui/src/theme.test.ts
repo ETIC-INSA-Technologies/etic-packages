@@ -83,7 +83,8 @@ const ECARTS = {
   // La barre latérale suit le contrat d'accent de l'application.
   commun: ["sidebar-primary", "sidebar-primary-foreground", "sidebar-ring"],
   // Lisibilité : ≥ 4,5:1 sur --muted, sur la teinte de --destructive.
-  clair: ["muted-foreground", "destructive"],
+  // --sidebar : blanche en clair (var(--background)) au lieu de gray-50.
+  clair: ["muted-foreground", "destructive", "sidebar"],
   sombre: ["destructive"],
   // Jetons ajoutés, absents du registre : --page, fond de la page (bg-page :
   // body, contenu d'AppShell), gray-50 en clair (cartes blanches qui s'en
@@ -246,6 +247,25 @@ describe("couleur de base", () => {
     expect(css).toContain("--color-page: var(--page);")
   })
 
+  it("--sidebar : blanche en clair, inchangée en sombre ; l'élément actif et le filet s'en distinguent", () => {
+    expect(racineCss.brute("sidebar")).toBe("var(--background)")
+    expect(racineCss.valeur("sidebar")).toBe(racineCss.valeur("background"))
+    expect(sombreCss.brute("sidebar")).toBe(REGISTRE_GRAY.sombre.sidebar)
+    // Pas un contraste de texte : l'élément survolé ou actif et le filet
+    // doivent seulement rester perceptibles (gray-100 sur blanc, gray-200
+    // entre la barre blanche et la page gray-50).
+    const blanc = racineCss.valeur("sidebar")
+    expect(
+      contraste(racineCss.valeur("sidebar-accent"), blanc)
+    ).toBeGreaterThan(1.05)
+    expect(
+      contraste(racineCss.valeur("sidebar-border"), racineCss.valeur("page"))
+    ).toBeGreaterThan(1.1)
+    expect(
+      contraste(racineCss.valeur("sidebar-border"), blanc)
+    ).toBeGreaterThan(1.1)
+  })
+
   it("color-scheme suit le thème (contrôles natifs, barres de défilement)", () => {
     expect(racineCss.bloc).toContain("color-scheme: light;")
     expect(sombreCss.bloc).toContain("color-scheme: dark;")
@@ -366,6 +386,30 @@ describe("couleur de base", () => {
           fond,
           NON_TEXTE,
           `${nom}, bord de case`
+        )
+      }
+    }
+  )
+
+  // Contour de la radio non cochée et rail du switch éteint : le même
+  // --control-border que la case à cocher, ≥ 3:1 sur la page, une carte et
+  // --muted ; le pouce reste distinct du rail (bg-background en clair,
+  // bg-foreground en sombre, comme switch.tsx).
+  it.each(THEMES)(
+    "$nom : contour de radio et rail de switch éteint se voient",
+    ({ nom, vars, fonds, surfaces }) => {
+      const couleur = vars.valeur("muted-foreground")
+      for (const fond of fonds) {
+        const rail = teinte(couleur, fond, 0.8)
+        lisible(rail, fond, NON_TEXTE, `${nom}, contour de radio / rail`)
+      }
+      const pouce = vars.valeur(nom === "clair" ? "background" : "foreground")
+      for (const fond of surfaces) {
+        lisible(
+          pouce,
+          teinte(couleur, fond, 0.8),
+          NON_TEXTE,
+          `${nom}, pouce sur rail éteint`
         )
       }
     }

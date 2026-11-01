@@ -960,6 +960,10 @@ npm run build      # dist/ : un module par composant, types, styles.css
   - bord d'une case à cocher vide en `--control-border` (`styles.css`) au lieu de `--input` :
     `--muted-foreground` à 80 % en clair (≥ 3:1, le bord de Nova se voyait à peine), `--input`
     en sombre ;
+  - même règle pour le contour d'une radio non cochée (`radio-group.tsx`, focus dans un
+    `field-label` compris) et le rail d'un switch éteint (`switch.tsx`, `--control-border` à la
+    place de `bg-input`) : ≥ 3:1 sur la page et sur une carte, en clair comme en sombre (le
+    registre restait à 1,6:1 et 1,3:1 en sombre) ; le pouce reste distinct du rail ;
   - variantes `warning`, `info` et `success` ajoutées à `alert.tsx`, sur le modèle de
     `destructive` (fond de carte, texte de la couleur, description à 90 %), et couleur `--info`
     dans `styles.css` ;
@@ -1050,7 +1054,8 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
   registre ; `--success` clair un cran plus foncé (≥ 4,5:1 sur sa teinte posée sur la page
   gray-50) ; `--muted-foreground` clair un
   peu plus foncé que gray-500 (≥ 4,5:1 sur `--muted`) ; `--control-border`
-  (`--muted-foreground` à 80 %) en sombre aussi, au lieu de `--input` (sous 2:1) ;
+  (`--muted-foreground` à 80 %) en sombre aussi, au lieu de `--input` (sous 2:1) ; `--sidebar`
+  clair = `--background` (barre latérale blanche, au lieu du gray-50 du registre) ;
   `color-scheme` dans `:root` et `.dark`. Les valeurs sont commentées dans `styles.css` ;
   `theme.test.ts` compare chaque jeton au registre, écarts (`ECARTS`) exceptés, et en vérifie
   les contrastes. Hors `ui/` : `CenteredScreen` est posé sur `bg-muted/40` au lieu du

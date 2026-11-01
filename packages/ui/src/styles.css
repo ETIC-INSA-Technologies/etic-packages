@@ -129,7 +129,8 @@
   --info: #1f5aa8;
   --border: oklch(0.928 0.006 264.531);
   --input: oklch(0.928 0.006 264.531);
-  /* Bord d'une case à cocher vide : --input se voyait à peine sur le blanc
+  /* Bord d'une case à cocher ou d'une radio vide, rail d'un switch éteint :
+     --input se voyait à peine sur le blanc
      (et restait sous 2:1 en sombre). --muted-foreground à 80 % : ≥ 3:1 sur
      le fond et sur --muted (contrôle, WCAG 1.4.11), en clair comme en
      sombre (redéclaré dans .dark, pour un « dark » posé plus bas que
@@ -145,7 +146,9 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0.002 247.839);
+  /* Écart au registre (gray-50, identique à --page) : en clair la barre
+     latérale est blanche, comme une carte, et se détache de la page. */
+  --sidebar: var(--background);
   --sidebar-foreground: oklch(0.13 0.028 261.692);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
