@@ -303,7 +303,9 @@ describe("écarts avec shadcn", () => {
           SidebarProvider,
           null,
           createElement(SidebarTrigger),
-          createElement(SidebarTrigger, { libelle: "Ouvrir le menu" })
+          createElement(SidebarTrigger, { libelle: "Ouvrir le menu" }),
+          // API de shadcn gardée : des `children` remplacent le contenu.
+          createElement(SidebarTrigger, null, "Navigation")
         )
       )
       expect(
@@ -311,6 +313,9 @@ describe("écarts avec shadcn", () => {
       ).toBeInTheDocument()
       const bouton = screen.getByRole("button", { name: "Ouvrir le menu" })
       expect(bouton).toHaveAttribute("data-slot", "sidebar-trigger")
+      const personnalise = screen.getByRole("button", { name: "Navigation" })
+      expect(personnalise).toHaveTextContent(/^Navigation$/)
+      expect(personnalise.querySelector("svg")).toBeNull()
     } finally {
       vi.unstubAllGlobals()
     }

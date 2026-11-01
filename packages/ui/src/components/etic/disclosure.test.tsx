@@ -156,4 +156,21 @@ describe("DisclosureTrigger", () => {
     expect(bouton).toHaveAttribute("aria-expanded", "true")
     expect(screen.getByText("{}")).toBeVisible()
   })
+
+  it("ne laisse pas remplacer le Button de sa variante (`render` refusé)", () => {
+    render(
+      <Collapsible>
+        <DisclosureTrigger
+          // @ts-expect-error `render` est retiré des props.
+          render={<a href="#ailleurs" />}
+        >
+          Détails
+        </DisclosureTrigger>
+      </Collapsible>
+    )
+    expect(screen.queryByRole("link")).toBeNull()
+    expect(screen.getByRole("button", { name: "Détails" }).tagName).toBe(
+      "BUTTON"
+    )
+  })
 })

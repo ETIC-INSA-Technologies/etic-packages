@@ -140,9 +140,87 @@ describe("AuthAvatar", () => {
     expect(racine).toHaveAttribute("data-size", "lg")
     expect(racine?.getAttribute("style") ?? "").not.toContain("width")
   })
+
+  it("avec un diamètre, les règles de `size` ne s'appliquent plus", () => {
+    // `text-xs` des initiales et taille du badge suivent `data-size`.
+    render(
+      <AuthAvatar
+        initiales="AL"
+        src={null}
+        charger={vi.fn()}
+        size="sm"
+        diametre={64}
+      />
+    )
+    const racine = screen.getByText("AL").closest('[data-slot="avatar"]')
+    expect(racine).not.toHaveAttribute("data-size")
+    expect(racine).toHaveAttribute("data-diametre", "64")
+  })
+
+  it("un diamètre de 0 est ignoré, partout pareil", () => {
+    render(
+      <AuthAvatar
+        initiales="AL"
+        src={null}
+        charger={vi.fn()}
+        size="lg"
+        diametre={0}
+      />
+    )
+    const racine = screen.getByText("AL").closest('[data-slot="avatar"]')
+    expect(racine).not.toHaveAttribute("data-diametre")
+    expect(racine).toHaveAttribute("data-size", "lg")
+    expect(racine?.getAttribute("style") ?? "").not.toContain("width")
+  })
 })
 
 describe("useAuthObjectUrlEtat", () => {
+  it("A, B puis A : ne rend jamais l'URL déjà révoquée de A", async () => {
+    // A répond tout de suite la première fois, puis plus jamais ; B non plus.
+    let appelsA = 0
+    const charger = vi.fn(
+      (src: string) =>
+        new Promise<Blob>((resoudre) => {
+          if (src === "/a" && ++appelsA === 1) resoudre(blob)
+        })
+    )
+    const { result, rerender } = renderHook(
+      ({ src }: { src: string }) => useAuthObjectUrlEtat(src, charger),
+      { initialProps: { src: "/a" } }
+    )
+    await waitFor(() => expect(result.current.url).toBe("blob:test/1"))
+
+    rerender({ src: "/b" })
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:test/1")
+    rerender({ src: "/a" })
+    // Nouveau chargement de A en cours : pas l'ancienne URL, révoquée.
+    expect(result.current).toEqual({
+      url: null,
+      enCours: true,
+      echec: false,
+      erreur: undefined,
+    })
+    expect(charger).toHaveBeenCalledTimes(3)
+  })
+
+  it("A en échec, B puis A : n'annonce pas l'ancien échec de A", async () => {
+    let appelsA = 0
+    const charger = vi.fn(
+      (src: string) =>
+        new Promise<Blob>((_resoudre, rejeter) => {
+          if (src === "/a" && ++appelsA === 1) rejeter(new Error("403"))
+        })
+    )
+    const { result, rerender } = renderHook(
+      ({ src }: { src: string }) => useAuthObjectUrlEtat(src, charger),
+      { initialProps: { src: "/a" } }
+    )
+    await waitFor(() => expect(result.current.echec).toBe(true))
+    rerender({ src: "/b" })
+    rerender({ src: "/a" })
+    expect(result.current).toMatchObject({ enCours: true, echec: false })
+  })
+
   it("distingue le chargement, la réussite et l'échec", async () => {
     let rejeter: (raison: unknown) => void = () => {}
     const charger = vi.fn(

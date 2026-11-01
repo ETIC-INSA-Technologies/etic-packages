@@ -23,8 +23,10 @@ export type DisclosureVariante = "lien" | "discret" | "carte"
 /** Taille du bouton des variantes `lien` et `discret`. */
 export type DisclosureTaille = "xs" | "sm" | "default"
 
-export interface DisclosureTriggerProps extends ComponentProps<
-  typeof CollapsibleTrigger
+/** Sans `render` : le `Button` de la variante n'est pas remplaçable. */
+export interface DisclosureTriggerProps extends Omit<
+  ComponentProps<typeof CollapsibleTrigger>,
+  "render"
 > {
   /** `lien` par défaut. */
   variante?: DisclosureVariante
@@ -85,14 +87,16 @@ export function DisclosureTrigger({
   return (
     <CollapsibleTrigger
       data-variante={variante}
+      className={cn("group/disclosure", style.classes, className)}
+      {...props}
+      // Après `props` : un `render` passé malgré le type ne remplace pas le
+      // `Button` de la variante.
       render={
         <Button
           variant={style.variant}
           size={variante === "carte" ? style.taille : (taille ?? style.taille)}
         />
       }
-      className={cn("group/disclosure", style.classes, className)}
-      {...props}
     >
       <ChevronRightIcon
         aria-hidden

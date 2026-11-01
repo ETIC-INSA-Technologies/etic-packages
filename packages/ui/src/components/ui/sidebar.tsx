@@ -259,10 +259,12 @@ function SidebarTrigger({
   className,
   onClick,
   libelle = "Afficher ou masquer le menu",
+  children,
   ...props
-}: Omit<React.ComponentProps<typeof Button>, "children"> & {
+}: React.ComponentProps<typeof Button> & {
   /** Écart ETIC : nom du bouton, lu par les lecteurs d'écran (« Ouvrir le
-   *  menu »…), au lieu d'un `aria-label` qui masquerait celui-ci. */
+   *  menu »…), au lieu d'un `aria-label` qui masquerait celui-ci. Sans effet
+   *  si `children` remplace le contenu. */
   libelle?: string
 }) {
   const { toggleSidebar } = useSidebar()
@@ -280,8 +282,12 @@ function SidebarTrigger({
       }}
       {...props}
     >
-      <PanelLeftIcon />
-      <span className="sr-only">{libelle}</span>
+      {children ?? (
+        <>
+          <PanelLeftIcon />
+          <span className="sr-only">{libelle}</span>
+        </>
+      )}
     </Button>
   )
 }

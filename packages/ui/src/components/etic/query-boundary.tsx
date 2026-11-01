@@ -126,25 +126,30 @@ export function QueryBoundary<T>({
   const { data } = requete
   const chargement = enAttente || requete.isLoading
   const enErreur = requete.isError && !enAttente
-
-  if (
+  // `null` ou `false` valent « non fourni » : le bandeau habituel.
+  const introuvableActif =
     introuvable !== undefined &&
+    introuvable !== null &&
+    introuvable !== false &&
     enErreur &&
     erreurIntrouvable(requete.error)
-  ) {
-    // Rien d'autre : pas de « Réessayer » (l'élément n'existe pas), ni de
-    // données d'avant (la fiche a disparu entre-temps).
-    return typeof introuvable === "string" ? (
-      <EmptyState titre={introuvable} icone={SearchXIcon} />
-    ) : (
-      introuvable
-    )
-  }
 
-  const erreur = enErreur ? <QueryErrorBanner requete={requete} /> : null
+  const erreur =
+    enErreur && !introuvableActif ? (
+      <QueryErrorBanner requete={requete} />
+    ) : null
 
   let contenu: ReactNode = null
-  if (chargement) contenu = squelette ?? <SkeletonTable />
+  if (introuvableActif) {
+    // À la place du contenu : pas de « Réessayer » (l'élément n'existe pas),
+    // ni de données d'avant (la fiche a disparu entre-temps).
+    contenu =
+      typeof introuvable === "string" ? (
+        <EmptyState titre={introuvable} icone={SearchXIcon} />
+      ) : (
+        introuvable
+      )
+  } else if (chargement) contenu = squelette ?? <SkeletonTable />
   else if (data !== undefined) {
     contenu =
       vide !== undefined && estVide(data) ? (

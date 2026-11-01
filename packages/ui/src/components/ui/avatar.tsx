@@ -20,17 +20,21 @@ function Avatar({
    *  suivent (36 % du diamètre). */
   diametre?: number
 }) {
+  // Une seule condition pour tout ce qui dépend du diamètre (0 : ignoré).
+  const libre = diametre !== undefined && diametre > 0 ? diametre : undefined
   return (
     <AvatarPrimitive.Root
       data-slot="avatar"
-      data-size={size}
-      data-diametre={diametre}
+      // Sans `data-size`, les règles liées à `size` (initiales en `text-xs`,
+      // taille du badge) ne s'appliquent pas à un diamètre libre.
+      data-size={libre ? undefined : size}
+      data-diametre={libre}
       style={
-        diametre
+        libre
           ? (etat) => ({
-              width: diametre,
-              height: diametre,
-              fontSize: Math.round(diametre * PART_INITIALES),
+              width: libre,
+              height: libre,
+              fontSize: Math.round(libre * PART_INITIALES),
               ...(typeof style === "function" ? style(etat) : style),
             })
           : style

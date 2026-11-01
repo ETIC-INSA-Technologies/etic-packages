@@ -116,8 +116,14 @@ export interface AppShellProps {
   compte?: AppShellCompte
   theme?: Pick<ThemeMenuProps, "valeur" | "onValeurChange">
   lien?: AppShellLienComposant
-  /** Au-dessus du contenu (bandeau d'erreur…), avec les marges latérales de
-   *  `PageContainer` : la page n'a pas à les recopier. */
+  /**
+   * Au-dessus du contenu, avec les gouttières de `PageContainer` : message
+   * qui concerne toute l'application (reprise de session impossible…). Il
+   * prend toute la largeur du contenu : la coquille ignore la `largeur` de
+   * la page, si bien qu'il déborde d'une page étroite (`largeur="md"`) sur
+   * grand écran. Un message propre à une page se place dans son
+   * `PageContainer`.
+   */
   bandeau?: ReactNode
   children: ReactNode
 }

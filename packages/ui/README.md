@@ -146,7 +146,10 @@ gras d'un éditeur). Sur mobile, la page réserve en haut la hauteur de la barre
 
 `bandeau` (un `ErrorBanner` qui concerne toute l'application…) s'affiche au-dessus du
 contenu avec les marges latérales de `PageContainer` : l'application le passe nu. Un bandeau
-qui ne rend rien (`ErrorBanner` sans erreur) ne laisse pas d'espace vide.
+qui ne rend rien (`ErrorBanner` sans erreur) ne laisse pas d'espace vide. Il prend toute la
+largeur du contenu, car la coquille ignore la `largeur` de la page : sur grand écran, il
+déborde d'une page étroite (`largeur="md"`). Il sert donc aux messages de toute
+l'application ; un message propre à une page se place dans son `PageContainer`.
 
 `PageContainer` est le conteneur de chaque page dans `AppShell` : marges (16 px sur
 téléphone, 24 puis 32 px au-delà), espacement vertical régulier entre les blocs (`gap-6`),

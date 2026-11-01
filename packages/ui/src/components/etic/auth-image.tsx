@@ -92,12 +92,17 @@ export function useAuthObjectUrlEtat(
       actif = false
       controleur.abort()
       if (creee) URL.revokeObjectURL(creee)
+      // Le résultat ne vaut que pour ce chargement : si `src` revient ensuite
+      // à cette valeur (A, B, puis A), l'URL révoquée (ou l'ancien échec) ne
+      // doit pas reparaître pendant le nouveau chargement.
+      setResultat(null)
     }
   }, [src, cle])
 
   if (!src) return SANS_SRC
   // Le résultat d'une ancienne `src` (ou d'une ancienne `cle`, URL déjà
-  // révoquée) n'est jamais rendu : la nouvelle est en cours.
+  // révoquée) n'est jamais rendu, même avant que le nettoyage l'efface : la
+  // nouvelle est en cours.
   if (resultat?.src !== src || !Object.is(resultat.cle, cle)) return EN_COURS
   return resultat.etat
 }

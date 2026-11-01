@@ -1,11 +1,11 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import {
   QueryClient,
   QueryClientProvider,
   useQuery,
 } from "@tanstack/react-query"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import {
@@ -308,6 +308,70 @@ describe("QueryBoundary", () => {
         </QueryBoundary>
       )
       expect(screen.getByRole("alert")).toHaveTextContent("Introuvable")
+    })
+
+    it.each([null, false])(
+      "`introuvable={%s}` vaut « non fourni » : le bandeau habituel",
+      (valeur) => {
+        render(
+          <QueryBoundary
+            requete={requete({
+              isError: true,
+              error: erreur404,
+              refetch: () => {},
+            })}
+            introuvable={valeur}
+          >
+            {() => "données"}
+          </QueryBoundary>
+        )
+        expect(screen.getByRole("alert")).toHaveTextContent("Introuvable")
+        expect(
+          screen.getByRole("button", { name: "Réessayer" })
+        ).toBeInTheDocument()
+      }
+    )
+
+    it("prend la place du contenu, en sœur dans le parent, puis rend la main aux données", () => {
+      let montages = 0
+      function Fiche() {
+        const [saisie, setSaisie] = useState("")
+        useEffect(() => {
+          montages++
+        }, [])
+        return (
+          <input
+            aria-label="Nom"
+            value={saisie}
+            onChange={(e) => setSaisie(e.target.value)}
+          />
+        )
+      }
+      const rendu = (etat: Partial<QueryBoundaryRequete<string>>) => (
+        <div data-testid="grille">
+          <QueryBoundary
+            requete={requete(etat)}
+            introuvable={<p>Groupe introuvable.</p>}
+          >
+            {() => <Fiche />}
+          </QueryBoundary>
+        </div>
+      )
+      const { rerender } = render(rendu({ isError: true, error: erreur404 }))
+      const grille = screen.getByTestId("grille")
+      expect(grille.children).toHaveLength(1)
+      expect(grille.firstElementChild).toHaveTextContent("Groupe introuvable.")
+
+      rerender(rendu({ data: "Bureau" }))
+      fireEvent.change(screen.getByRole("textbox", { name: "Nom" }), {
+        target: { value: "Bureau 2" },
+      })
+      // Une actualisation qui échoue ensuite (500) garde la fiche montée.
+      rerender(rendu({ data: "Bureau", isError: true, error: erreur500 }))
+      expect(screen.getByRole("textbox", { name: "Nom" })).toHaveValue(
+        "Bureau 2"
+      )
+      expect(montages).toBe(1)
     })
 
     it("lit le statut par la forme de l'erreur, pas par sa classe", () => {
