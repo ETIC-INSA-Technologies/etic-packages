@@ -1,10 +1,8 @@
-import type { ComponentProps } from "react"
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle"
 import { cn } from "cn"
 import type { LucideIcon } from "lucide-react"
 
 import { Button } from "@etic-ui/components/ui/button"
-import type { Toggle } from "@etic-ui/components/ui/toggle"
 import {
   Tooltip,
   TooltipContent,
@@ -14,9 +12,20 @@ import { useRaisonVerrou } from "@etic-ui/components/etic/tooltip-button"
 import { TONS, type StatusTon } from "@etic-ui/lib/ton"
 
 export interface IconToggleProps extends Omit<
-  ComponentProps<typeof Toggle>,
-  "children" | "pressed" | "defaultPressed" | "onPressedChange" | "disabled"
+  TogglePrimitive.Props,
+  | "children"
+  | "pressed"
+  | "defaultPressed"
+  | "onPressedChange"
+  | "disabled"
+  | "render"
+  | "nativeButton"
 > {
+  /** `default` (fond transparent) par défaut, ou `outline` (cadre). */
+  variant?: "default" | "outline"
+  /** Taille du bouton carré : `sm` (28 px) par défaut, `default` (32 px)
+   *  ou `lg` (36 px). Noms de la 0.2.0, gardés. */
+  size?: keyof typeof TAILLES
   /** État actuel : le marqueur est-il posé ? */
   actif: boolean
   /** Appelé avec l'état voulu. */
@@ -94,7 +103,7 @@ export function IconToggle({
               render={
                 <Button
                   variant={variant === "outline" ? "outline" : "ghost"}
-                  size={TAILLES[size ?? "sm"]}
+                  size={TAILLES[size]}
                   disabled={!!verrou}
                   focusableWhenDisabled
                   enCours={enCours}

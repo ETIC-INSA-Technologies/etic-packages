@@ -3,10 +3,7 @@ import type { VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
 import { buttonVariants } from "@etic-ui/components/ui/button"
-import {
-  LienApplication,
-  type LienComposant,
-} from "@etic-ui/components/etic/lien"
+import { useLien, type LienComposant } from "@etic-ui/components/etic/lien"
 
 export interface ButtonLinkProps
   extends ComponentProps<"a">, VariantProps<typeof buttonVariants> {
@@ -31,9 +28,13 @@ export function ButtonLink({
   className,
   ...props
 }: ButtonLinkProps) {
+  const Lien = useLien(lien)
   return (
-    <LienApplication
-      lien={lien}
+    // `Lien` vient des props ou du contexte : stable, il n'est pas créé
+    // pendant le rendu. La règle ne peut pas le savoir d'une valeur rendue
+    // par un hook (voir `useLien`).
+    // eslint-disable-next-line react-hooks/static-components
+    <Lien
       data-slot="button"
       className={cn(buttonVariants({ variant, size }), className)}
       {...props}

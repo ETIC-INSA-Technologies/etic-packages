@@ -2,8 +2,13 @@ import "@testing-library/jest-dom/vitest"
 import { cleanup } from "@testing-library/react"
 import { afterEach } from "vitest"
 
+import { oublierDerniereEntree } from "@etic-ui/lib/navigation-clavier"
+
 afterEach(() => {
   cleanup()
+  // Le suivi du clavier est global à la page : chaque test repart sans
+  // entrée vue, comme une page qui vient de charger.
+  oublierDerniereEntree()
 })
 
 // jsdom n'a pas `checkVisibility` (tous les navigateurs visés l'ont), et son

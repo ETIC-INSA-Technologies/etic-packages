@@ -56,8 +56,7 @@ import {
 import { TooltipButton } from "@etic-ui/components/etic/tooltip-button"
 import { useLien, type LienComposant } from "@etic-ui/components/etic/lien"
 
-/** Lien du routeur de l'application : `LienComposant`, sous son nom de la
- *  0.2.0. */
+/** @deprecated Nom de la 0.2.0 : utiliser `LienComposant`. */
 export type AppShellLienComposant = LienComposant
 
 export interface AppShellLien {
@@ -112,7 +111,7 @@ export interface AppShellProps {
   theme?: Pick<ThemeMenuProps, "valeur" | "onValeurChange">
   /** Composant de lien du routeur ; par défaut, celui du `LienProvider`,
    *  sinon un `<a>`. */
-  lien?: AppShellLienComposant
+  lien?: LienComposant
   /**
    * Au-dessus du contenu, avec les gouttières de `PageContainer` : message
    * qui concerne toute l'application (reprise de session impossible…). Il
@@ -295,7 +294,7 @@ function Logo({
 function Marque({
   application,
   Lien,
-}: Pick<AppShellProps, "application"> & { Lien: AppShellLienComposant }) {
+}: Pick<AppShellProps, "application"> & { Lien: LienComposant }) {
   return (
     <SidebarMenu className="min-w-0 flex-1">
       <SidebarMenuItem>
@@ -321,7 +320,7 @@ function Marque({
 function Navigation({
   sections,
   Lien,
-}: Pick<AppShellProps, "sections"> & { Lien: AppShellLienComposant }) {
+}: Pick<AppShellProps, "sections"> & { Lien: LienComposant }) {
   return (
     <nav aria-label="Navigation principale">
       {sections.map((section, index) => (
@@ -365,7 +364,7 @@ function MenuCompte({
   Lien,
 }: {
   compte: AppShellCompte
-  Lien: AppShellLienComposant
+  Lien: LienComposant
 }) {
   const [confirmer, setConfirmer] = useState(false)
 
@@ -461,7 +460,7 @@ function MenuCompte({
 function BarreMobile({
   application,
   Lien,
-}: Pick<AppShellProps, "application"> & { Lien: AppShellLienComposant }) {
+}: Pick<AppShellProps, "application"> & { Lien: LienComposant }) {
   const { isMobile, openMobile } = useSidebar()
   if (!isMobile) return null
   return (

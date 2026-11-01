@@ -384,8 +384,8 @@ export function FormDialog({
                 disabled={action.enCours}
                 focusableWhenDisabled
                 enCours={action.enCours && lanceur === "secondaire"}
+                // Désactivé pendant une action : Base UI ignore alors le clic.
                 onClick={() => {
-                  if (action.enCours) return
                   setLanceur("secondaire")
                   void action.lancer(actionSecondaire.onChoisir)
                 }}

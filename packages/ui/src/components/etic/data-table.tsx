@@ -96,10 +96,7 @@ import {
   participe,
   type DataTableUnite,
 } from "@etic-ui/components/etic/data-table-format"
-import {
-  LienApplication,
-  type LienComposant,
-} from "@etic-ui/components/etic/lien"
+import { useLien, type LienComposant } from "@etic-ui/components/etic/lien"
 import {
   focaliserTableau,
   rendreFocusApresLigne,
@@ -1724,17 +1721,21 @@ const TITRE_DE_LIGNE =
 export function DataTableCellLink(
   props: DataTableCellLinkProps | DataTableCellButtonProps
 ) {
-  if (props.href !== undefined) {
-    const { className, ...lienProps } = props
+  const { lien, ...reste } = props
+  const Lien = useLien(lien)
+  if (reste.href !== undefined) {
+    const { className, ...lienProps } = reste
     return (
-      <LienApplication
+      // `Lien` vient des props ou du contexte : stable (voir `ButtonLink`).
+      // eslint-disable-next-line react-hooks/static-components
+      <Lien
         data-slot="data-table-cell-link"
         className={cn(TITRE_DE_LIGNE, className)}
         {...lienProps}
       />
     )
   }
-  const { className, type = "button", ...boutonProps } = props
+  const { className, type = "button", ...boutonProps } = reste
   return (
     <button
       data-slot="data-table-cell-link"

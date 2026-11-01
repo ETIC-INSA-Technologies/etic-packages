@@ -145,12 +145,14 @@ gras d'un éditeur). Sur mobile, la page réserve en haut la hauteur de la barre
 (page de connexion…) ; son `className` va sur le bouton.
 
 Le composant de lien du routeur se donne une fois, autour de l'application :
-`<LienProvider lien={LienRouteur}>`. `AppShell`, `DetailHeader`, `ButtonLink` et
-`DataTableCellLink` le prennent
-alors par défaut, sans `lien={…}` à chaque appel ; leur prop `lien` reste prioritaire
-(`lien="a"` : un vrai `<a>`, rechargement complet). Sans fournisseur ni prop, un `<a>`.
-`useLien(lien?)` rend le même choix à un composant de l'application, et le type
-`LienComposant` (alias `AppShellLienComposant`) le décrit.
+`<LienProvider lien={LienRouteur}>`, où `LienRouteur` est une référence stable, définie
+au niveau du module (un composant écrit en ligne serait nouveau à chaque rendu, et React
+remonterait tous les liens). `AppShell`, `DetailHeader`, `ButtonLink` et
+`DataTableCellLink` le prennent alors par défaut, sans `lien={…}` à chaque appel ; leur
+prop `lien` reste prioritaire. Téléchargement ou adresse externe : `lien="a"` (un vrai
+`<a>`, rechargement complet). Sans fournisseur ni prop, un `<a>`. `useLien(lien?)` rend le
+même choix aux liens propres de l'application (`const Lien = useLien()`) ; le type
+`LienComposant` le décrit (`AppShellLienComposant`, son ancien nom, est déprécié).
 
 `bandeau` (un `ErrorBanner` qui concerne toute l'application…) s'affiche au-dessus du
 contenu avec les marges latérales de `PageContainer` : l'application le passe nu. Un bandeau

@@ -549,10 +549,8 @@ describe("écarts avec shadcn", () => {
   it("infobulle : ouverte au focus après une navigation au clavier seulement", () => {
     // Le comportement est testé dans tooltip.test.tsx (menu fermé par Échap,
     // clic, frappe, tabulation).
-    const tooltip = lire("components/ui/tooltip.tsx")
-    expect(tooltip).toContain("suivreNavigationClavier")
-    expect(tooltip).toContain(
-      "if (focusHorsNavigation()) event.preventBaseUIHandler()"
+    expect(lire("components/ui/tooltip.tsx")).toContain(
+      'from "@etic-ui/lib/navigation-clavier"'
     )
   })
 })
