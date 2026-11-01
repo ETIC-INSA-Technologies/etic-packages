@@ -22,7 +22,12 @@ export {
   uniteAccordee,
 } from "./lib/format"
 export { ecrireDateIso, lireDateIso } from "./lib/dates"
-export { correspondance, normaliser } from "./lib/normalize"
+export {
+  comparerFr,
+  correspondance,
+  normaliser,
+  normaliserRecherche,
+} from "./lib/normalize"
 export { NO_AUTOFILL } from "./lib/autofill"
 export { useDebouncedValue } from "./hooks/use-debounced-value"
 export { useDocumentTitle } from "./hooks/use-document-title"
@@ -513,15 +518,26 @@ export {
   type DataTableRowActionsProps,
   type DataTableSelectionColumnOptions,
   type UseDataTableOptions,
+  dataTableActionsColumn,
+  DataTableCellLink,
+  type DataTableActionsColumnOptions,
+  type DataTableCellButtonProps,
+  type DataTableCellLinkProps,
+  type DataTableRequete,
 } from "./components/etic/data-table"
+export { focaliserTableau } from "./components/etic/data-table-focus"
 export type { DataTableUnite } from "./components/etic/data-table-format"
 export {
   DataTableBulkActions,
   type DataTableBulkActionsProps,
+  type DataTableBulkActionsSelectionProps,
+  type DataTableBulkActionsTableProps,
 } from "./components/etic/data-table-bulk-actions"
 export {
   DataTablePagination,
   type DataTablePaginationProps,
+  type DataTablePaginationDecalageProps,
+  type DataTablePaginationTableProps,
 } from "./components/etic/data-table-pagination"
 export {
   DataTableCount,
@@ -531,11 +547,30 @@ export {
   type DataTableSelectFilterOption,
   type DataTableSelectFilterProps,
   type DataTableToolbarProps,
+  type DataTableCountNombresProps,
+  type DataTableCountTableProps,
+  type DataTableRechercheAttributs,
 } from "./components/etic/data-table-toolbar"
 export {
   DataTableViewOptions,
   type DataTableViewOptionsProps,
+  type DataTableViewOptionsColonne,
+  type DataTableViewOptionsColonnesProps,
+  type DataTableViewOptionsTableProps,
 } from "./components/etic/data-table-view-options"
+export {
+  PorteeStockageLocal,
+  usePersistedState,
+  type PorteeStockageLocalProps,
+  type UsePersistedStateOptions,
+} from "./hooks/use-persisted-state"
+export {
+  useColumnPrefs,
+  type ColumnPrefs,
+  type ColumnPrefsOptionsTableau,
+  type ColumnPrefsResultat,
+  type UseColumnPrefsOptions,
+} from "./hooks/use-column-prefs"
 export type {
   ColumnOrderState,
   ColumnVisibilityState,
@@ -543,4 +578,6 @@ export type {
   OnChangeFn,
   RowSelectionState,
   SortingState,
+  ColumnFiltersState,
+  PaginationState,
 } from "@tanstack/react-table"

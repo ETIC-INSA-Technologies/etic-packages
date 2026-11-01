@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { correspondance, NO_AUTOFILL, normaliser } from "@etic-ui/index"
+import {
+  comparerFr,
+  correspondance,
+  NO_AUTOFILL,
+  normaliser,
+  normaliserRecherche,
+} from "@etic-ui/index"
 
 describe("normaliser", () => {
   it("retire accents et casse", () => {
@@ -26,6 +32,19 @@ describe("correspondance", () => {
   it("laisse tout passer pour une recherche vide", () => {
     expect(correspondance("")("x")).toBe(true)
     expect(correspondance("   ")()).toBe(true)
+  })
+})
+
+describe("normaliserRecherche et comparerFr", () => {
+  it("normalise et rogne une recherche ; vide, elle ne filtre rien", () => {
+    expect(normaliserRecherche("  Élève ")).toBe("eleve")
+    expect(normaliserRecherche("   ")).toBe("")
+  })
+
+  it("trie à la française : accents à leur place, nombres à leur valeur", () => {
+    expect(
+      ["Zélateur", "élève", "Poste 10", "Directeur", "Poste 2"].sort(comparerFr)
+    ).toEqual(["Directeur", "élève", "Poste 2", "Poste 10", "Zélateur"])
   })
 })
 

@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useId } from "react"
+import type { RowData } from "@tanstack/react-table"
 import { cn } from "cn"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 
@@ -16,6 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@etic-ui/components/ui/select"
+import {
+  paginationDuTableau,
+  type DataTableInstance,
+} from "@etic-ui/components/etic/data-table"
 
 /** Fenêtre de pages : la première, la dernière, la courante et ses voisines,
  *  « … » pour les pages sautées. Page 6 sur 20 : 1 … 5 6 7 … 20. */
@@ -33,7 +38,15 @@ function fenetre(courante: number, nombre: number): (number | "…")[] {
   return sortie
 }
 
-export interface DataTablePaginationProps {
+interface DataTablePaginationCommun {
+  /** Nombres d'éléments par page proposés. 10, 25, 50 et 100 par défaut. */
+  limites?: readonly number[]
+  className?: string
+}
+
+/** Pagination par décalage, aux nombres de l'application (côté serveur). */
+export interface DataTablePaginationDecalageProps extends DataTablePaginationCommun {
+  table?: never
   /** Nombre total d'éléments, toutes pages comprises. */
   total: number
   /** Rang (à partir de 0) du premier élément de la page. */
@@ -44,18 +57,67 @@ export interface DataTablePaginationProps {
   /** Sans lui, pas de choix du nombre par page. Changer de taille ramène à
    *  la première page (`onDecalageChange(0)`). */
   onLimiteChange?: (limite: number) => void
-  /** Nombres d'éléments par page proposés. 10, 25, 50 et 100 par défaut. */
-  limites?: readonly number[]
-  className?: string
 }
+
+/** Pagination côté client d'un `useDataTable({ paginationClient: true })` :
+ *  elle lit et règle la page du tableau, sur les lignes filtrées. */
+export interface DataTablePaginationTableProps<
+  TData extends RowData,
+> extends DataTablePaginationCommun {
+  table: DataTableInstance<TData>
+}
+
+export type DataTablePaginationProps<TData extends RowData = RowData> =
+  DataTablePaginationDecalageProps | DataTablePaginationTableProps<TData>
 
 /**
  * Pagination par décalage (offset/limit, total connu) sur la Pagination de
  * shadcn : précédente, fenêtre de pages, suivante, et le nombre de lignes par
  * page (Select). Rien ne s'affiche quand tout tient sur une page de la plus
- * petite taille.
+ * petite taille. Avec `table`, celle d'une pagination côté client, comme la
+ * pagination du guide Data Table de shadcn.
  */
-export function DataTablePagination({
+export function DataTablePagination<TData extends RowData>(
+  props: DataTablePaginationProps<TData>
+) {
+  if (!props.table) return <PaginationParDecalage {...props} />
+  const { table, ...reste } = props
+  const pagination = paginationDuTableau(table)
+  if (pagination.manuelle) {
+    // Sans `paginationClient`, la table ne découpe rien : des numéros de
+    // page qui ne changeraient pas les lignes seraient trompeurs.
+    avertirPaginationManuelle()
+    return null
+  }
+  const { decalage, limite, total } = pagination
+  return (
+    <PaginationParDecalage
+      {...reste}
+      total={total}
+      decalage={decalage}
+      limite={limite}
+      onDecalageChange={(suivant) =>
+        table.setPageIndex(Math.floor(suivant / limite))
+      }
+      onLimiteChange={(suivante) => table.setPageSize(suivante)}
+      // `useDataTable` ramène déjà une page passée au-delà de la fin.
+      ramenerAuDela={false}
+    />
+  )
+}
+
+let averti = false
+function avertirPaginationManuelle() {
+  if (averti) return
+  averti = true
+  console.warn(
+    "DataTablePagination : `table` sans `paginationClient` ne pagine rien. " +
+      "Passez `paginationClient: true` à useDataTable, ou les nombres " +
+      "(`total`, `decalage`, `limite`) d'une pagination côté serveur."
+  )
+}
+
+function PaginationParDecalage({
   total,
   decalage,
   limite,
@@ -63,7 +125,10 @@ export function DataTablePagination({
   onLimiteChange,
   limites = [10, 25, 50, 100],
   className,
-}: DataTablePaginationProps) {
+  ramenerAuDela = true,
+}: Omit<DataTablePaginationDecalageProps, "table"> & {
+  ramenerAuDela?: boolean
+}) {
   const idTaille = useId()
   const nombrePages = Math.max(1, Math.ceil(total / limite))
   const page = Math.min(Math.floor(decalage / limite) + 1, nombrePages)
@@ -79,8 +144,8 @@ export function DataTablePagination({
   const decalageMax = (nombrePages - 1) * limite
   const ramener = useEffectEvent(() => onDecalageChange(decalageMax))
   useEffect(() => {
-    if (total > 0 && decalage >= total) ramener()
-  }, [decalage, total])
+    if (ramenerAuDela && total > 0 && decalage >= total) ramener()
+  }, [ramenerAuDela, decalage, total])
 
   if (nombrePages <= 1 && !choixTaille) return null
 

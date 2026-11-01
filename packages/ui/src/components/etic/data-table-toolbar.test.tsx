@@ -150,6 +150,34 @@ describe("DataTableToolbar", () => {
     // La recherche reste visible.
     expect(screen.getByRole("searchbox")).toBeInTheDocument()
   })
+
+  it("tient les gestionnaires de mots de passe à l'écart de la recherche, et passe les attributs donnés", () => {
+    render(
+      <DataTableToolbar
+        recherche={{
+          valeur: "",
+          onValeurChange: vi.fn(),
+          attributs: {
+            name: "recherche-membres",
+            maxLength: 80,
+            className: "font-mono",
+          },
+        }}
+      />
+    )
+    const champ = screen.getByRole("searchbox", { name: "Rechercher" })
+    expect(champ).toHaveAttribute("autocomplete", "off")
+    expect(champ).toHaveAttribute("data-1p-ignore")
+    expect(champ).toHaveAttribute("data-lpignore", "true")
+    expect(champ).toHaveAttribute("data-bwignore")
+    expect(champ).toHaveAttribute("name", "recherche-membres")
+    expect(champ).toHaveAttribute("maxlength", "80")
+    // Les classes s'ajoutent à celles du champ, sans les remplacer.
+    expect(champ).toHaveClass(
+      "font-mono",
+      "[&::-webkit-search-cancel-button]:appearance-none"
+    )
+  })
 })
 
 describe("DataTableCount", () => {

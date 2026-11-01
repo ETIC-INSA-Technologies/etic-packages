@@ -8,7 +8,11 @@ import {
   Button,
   DataTable,
   DataTableBulkActions,
+  DataTableCellLink,
   DataTableColumnHeader,
+  DeleteButton,
+  dataTableActionsColumn,
+  useColumnPrefs,
   DataTablePagination,
   DataTableRowActions,
   DataTableSelectFilter,
@@ -166,9 +170,148 @@ export function DemoTableaux() {
         pendant que les colonnes défilent.
       </p>
       <DemoJournal />
+      <h3 className="mt-4 text-base font-medium">
+        Liste chargée d'un bloc (côté client)
+      </h3>
+      <p className="text-sm text-muted-foreground">
+        Le tableau filtre, trie et découpe lui-même la liste : recherche sans
+        accents, tri alphabétique français, colonnes gardées dans le navigateur.
+        Supprimer une ligne rend le focus à la ligne suivante.
+      </p>
+      <DemoPostes />
     </>
   )
 }
+
+interface Poste {
+  id: string
+  nom: string
+  pole: string
+  places: number
+}
+
+const POSTES: Poste[] = Array.from({ length: 42 }, (_, i) => ({
+  id: `p${i + 1}`,
+  nom: `${["Chargé", "Responsable", "Élève"][i % 3]} ${POLES[i % POLES.length]} ${i + 1}`,
+  pole: POLES[i % POLES.length],
+  places: (i % 4) + 1,
+}))
+
+const aidePostes = createDataTableColumnHelper<Poste>()
+
+function DemoPostes() {
+  const [postes, setPostes] = useState(POSTES)
+  const [recherche, setRecherche] = useState("")
+  const [pole, setPole] = useState<string | null>(null)
+  const [enErreur, setEnErreur] = useState(false)
+  const colonnesPrefs = useColumnPrefs({
+    cle: "atelier:postes",
+    colonnes: ["pole", "places"],
+    visiblesParDefaut: ["pole", "places"],
+    fixesEnTete: ["nom"],
+  })
+  const colonnes = useMemo(
+    () =>
+      aidePostes.columns([
+        aidePostes.accessor("nom", {
+          header: ({ column }) => (
+            <DataTableColumnHeader column={column} libelle="Poste" />
+          ),
+          meta: { libelle: "Poste" },
+          sortFn: "texteFr",
+          enableHiding: false,
+          cell: ({ row }) => (
+            <DataTableCellLink onClick={() => {}}>
+              {row.original.nom}
+            </DataTableCellLink>
+          ),
+        }),
+        aidePostes.accessor("pole", {
+          header: "Pôle",
+          filterFn: "equalsString",
+        }),
+        aidePostes.accessor("places", { header: "Places" }),
+        dataTableActionsColumn<Poste>({
+          actions: (p) => (
+            <DeleteButton
+              libelle={`le poste ${p.nom}`}
+              confirmation={{
+                description: `Le poste ${p.nom} sera supprimé définitivement.`,
+              }}
+              onSupprimer={() =>
+                setPostes((avant) => avant.filter((x) => x.id !== p.id))
+              }
+            />
+          ),
+        }),
+      ]),
+    []
+  )
+  // Le filtre du pôle reste à la page (Select contrôlé) ; le tableau
+  // l'applique.
+  const filtresColonnes = useMemo(
+    () => (pole ? [{ id: "pole", value: pole }] : []),
+    [pole]
+  )
+  const table = useDataTable({
+    donnees: enErreur ? AUCUN_POSTE : postes,
+    colonnes,
+    idLigne: (p) => p.id,
+    paginationClient: true,
+    filtreGlobal: recherche,
+    onFiltreGlobalChange: setRecherche,
+    filtresColonnes,
+    ...colonnesPrefs.optionsTableau,
+  })
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <Switch
+          id="atelier-erreur"
+          checked={enErreur}
+          onCheckedChange={setEnErreur}
+        />
+        <Label htmlFor="atelier-erreur">Requête en échec</Label>
+      </div>
+      <DataTableToolbar
+        recherche={{
+          valeur: recherche,
+          onValeurChange: setRecherche,
+          placeholder: "Poste, pôle…",
+        }}
+        filtres={
+          <DataTableSelectFilter
+            libelle="Filtrer par pôle"
+            valeur={pole}
+            onValeurChange={setPole}
+            options={POLES.map((p) => ({ valeur: p, libelle: p }))}
+            libelleTous="Tous les pôles"
+          />
+        }
+        filtresActifs={pole ? 1 : 0}
+        onReinitialiser={() => setPole(null)}
+        compteur={{ table, unite: { singulier: "poste", pluriel: "postes" } }}
+      >
+        <DataTableViewOptions table={table} />
+      </DataTableToolbar>
+      <DataTable
+        table={table}
+        libelle="Postes"
+        requete={{
+          isError: enErreur,
+          error: enErreur
+            ? new Error("Les postes n'ont pas pu être chargés.")
+            : null,
+          refetch: () => setEnErreur(false),
+        }}
+        vide="Aucun poste ne correspond à ces critères."
+      />
+      <DataTablePagination table={table} />
+    </div>
+  )
+}
+
+const AUCUN_POSTE: Poste[] = []
 
 function DemoPersonnes() {
   const [recherche, setRecherche] = useState("")

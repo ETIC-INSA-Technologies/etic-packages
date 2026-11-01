@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import {
@@ -496,5 +496,107 @@ describe("sélection de tous les éléments", () => {
     expect(screen.queryByText(/de la page/)).toBeNull()
     rerender(<Liste supprimer={vi.fn()} total={2} />)
     expect(screen.queryByText(/de la page/)).toBeNull()
+  })
+})
+
+describe("DataTableBulkActions : mise en page", () => {
+  // Le retour à la ligne lui-même (390 px) se vérifie au navigateur ; ici,
+  // la structure qui le permet.
+  it("sur mobile, met les actions sur une seconde ligne, sans changer l'ordre de tabulation", async () => {
+    const user = userEvent.setup()
+    render(<Liste supprimer={vi.fn()} />)
+    await user.click(screen.getByRole("checkbox", { name: "Sélectionner Ada" }))
+    const barre = screen.getByRole("toolbar")
+    // Ordre du DOM, celui du bureau : compte, séparateur, actions, « × ».
+    const [compte, separateur, actions, croix] = [...barre.children]
+    expect(compte).toHaveTextContent("1 personne sélectionnée")
+    expect(separateur).toHaveAttribute("data-slot", "separator")
+    expect(separateur).toHaveClass("max-sm:hidden")
+    expect(
+      within(actions as HTMLElement).getByRole("button", { name: "Supprimer" })
+    ).toBeInTheDocument()
+    // Sur mobile, les actions passent sur leur propre ligne, après « × »,
+    // qui reste avec le compte.
+    expect(actions).toHaveClass("max-sm:order-last", "max-sm:basis-full")
+    expect(croix).toBe(boutonDeLaBarre())
+  })
+})
+
+describe("DataTableBulkActions sans useDataTable", () => {
+  function Manuelle() {
+    const [selection, setSelection] = useState<string[]>([])
+    const racine = useRef<HTMLDivElement>(null)
+    return (
+      <>
+        <button type="button">Ailleurs</button>
+        <div ref={racine} tabIndex={-1} data-testid="cadre">
+          <table>
+            <tbody>
+              {["Ada", "Grace"].map((nom) => (
+                <tr key={nom}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      aria-label={`Sélectionner ${nom}`}
+                      checked={selection.includes(nom)}
+                      onChange={(e) =>
+                        setSelection((s) =>
+                          e.target.checked
+                            ? [...s, nom]
+                            : s.filter((n) => n !== nom)
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <DataTableBulkActions
+          nombre={selection.length}
+          onToutDeselectionner={() => setSelection([])}
+          racine={racine}
+          unite={{ singulier: "ligne", pluriel: "lignes" }}
+          feminin
+        >
+          <Button size="sm">Attribuer</Button>
+        </DataTableBulkActions>
+      </>
+    )
+  }
+
+  it("suit le nombre donné et vide la sélection par « Tout désélectionner »", async () => {
+    const user = userEvent.setup()
+    render(<Manuelle />)
+    expect(screen.queryByRole("toolbar")).toBeNull()
+    await user.click(screen.getByRole("checkbox", { name: "Sélectionner Ada" }))
+    await user.click(
+      screen.getByRole("checkbox", { name: "Sélectionner Grace" })
+    )
+    expect(
+      screen.getByRole("toolbar", { name: "2 lignes sélectionnées" })
+    ).toBeInTheDocument()
+
+    await user.click(boutonDeLaBarre())
+    expect(screen.queryByRole("toolbar")).toBeNull()
+    expect(
+      screen.getByRole("checkbox", { name: "Sélectionner Ada" })
+    ).not.toBeChecked()
+    // Le focus revient au cadre donné, pas à la page.
+    expect(document.activeElement).toBe(screen.getByTestId("cadre"))
+  })
+
+  it("Échap vide la sélection depuis le cadre donné, pas d'ailleurs", async () => {
+    const user = userEvent.setup()
+    render(<Manuelle />)
+    await user.click(screen.getByRole("checkbox", { name: "Sélectionner Ada" }))
+    screen.getByRole("button", { name: "Ailleurs" }).focus()
+    await user.keyboard("{Escape}")
+    expect(screen.getByRole("toolbar")).toBeInTheDocument()
+
+    screen.getByRole("checkbox", { name: "Sélectionner Ada" }).focus()
+    await user.keyboard("{Escape}")
+    expect(screen.queryByRole("toolbar")).toBeNull()
   })
 })

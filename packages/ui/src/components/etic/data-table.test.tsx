@@ -1,9 +1,13 @@
-import { render, screen, within } from "@testing-library/react"
+import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { useState, type ReactNode } from "react"
+import { useMemo, useState, type ComponentProps, type ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  Button,
+  DataTableCellLink,
+  dataTableActionsColumn,
+  type DataTableRequete,
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
@@ -16,6 +20,7 @@ import {
   type SortingState,
   type UseDataTableOptions,
 } from "@etic-ui/index"
+import { CASE_VERROUILLEE } from "@etic-ui/components/etic/data-table"
 
 interface Personne {
   id: string
@@ -592,5 +597,255 @@ describe("DataTable, lignes dépliables", () => {
       screen.getByRole("button", { name: "Détail de Alan" })
     ).toHaveAttribute("aria-expanded", "false")
     expect(screen.queryByText("Alan habite Rennes.")).toBeNull()
+  })
+})
+
+describe("DataTable : requête, largeurs, cases et colonnes prêtes à l'emploi", () => {
+  function AvecRequete({
+    requete,
+    donnees = PERSONNES,
+  }: {
+    requete: DataTableRequete
+    donnees?: Personne[]
+  }) {
+    const table = useDataTable({
+      donnees,
+      colonnes: COLONNES,
+      idLigne: (p) => p.id,
+    })
+    return (
+      <div>
+        <DataTable table={table} libelle="Personnes" requete={requete} />
+      </div>
+    )
+  }
+
+  it("affiche le bandeau d'erreur et « Réessayer », sans état vide qui le contredise", async () => {
+    const user = userEvent.setup()
+    const refetch = vi.fn()
+    const { rerender } = render(
+      <AvecRequete
+        donnees={[]}
+        requete={{
+          isError: true,
+          error: new Error("Le serveur ne répond pas."),
+          isFetching: false,
+          refetch,
+        }}
+      />
+    )
+    expect(screen.getByText("Le serveur ne répond pas.")).toBeInTheDocument()
+    expect(screen.queryByText("Aucun résultat.")).toBeNull()
+    // Le bandeau précède le tableau, hors de son cadre.
+    const bandeau = screen.getByRole("alert")
+    const cadre = document.querySelector('[data-slot="data-table"]')!
+    expect(cadre.contains(bandeau)).toBe(false)
+    expect(
+      bandeau.compareDocumentPosition(cadre) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+
+    await user.click(screen.getByRole("button", { name: "Réessayer" }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+
+    // Nouvelle tentative : le tableau est en chargement (isFetching).
+    rerender(
+      <AvecRequete
+        donnees={[]}
+        requete={{ isError: true, error: new Error("x"), isFetching: true }}
+      />
+    )
+    expect(screen.getByRole("table")).toHaveAttribute("aria-busy", "true")
+
+    // Réussite : plus de bandeau, l'état vide revient.
+    rerender(
+      <AvecRequete
+        donnees={[]}
+        requete={{ isError: false, error: null, isFetching: false }}
+      />
+    )
+    expect(screen.queryByRole("alert")).toBeNull()
+    expect(screen.getByText("Aucun résultat.")).toBeInTheDocument()
+  })
+
+  it("garde la largeur des colonnes quand le tableau se vide", () => {
+    // jsdom ne mesure rien : un ResizeObserver factice relève, pour chaque
+    // en-tête observé, une largeur selon son rang.
+    const observateurs: FauxObservateur[] = []
+    class FauxObservateur {
+      cibles = new Set<Element>()
+      rappel: ResizeObserverCallback
+      constructor(rappel: ResizeObserverCallback) {
+        this.rappel = rappel
+        observateurs.push(this)
+      }
+      observe(cible: Element) {
+        this.cibles.add(cible)
+      }
+      disconnect() {}
+      unobserve() {}
+    }
+    vi.stubGlobal("ResizeObserver", FauxObservateur)
+    try {
+      const { rerender } = render(<Tableau />)
+      const entetes = () => screen.getAllByRole("columnheader")
+      // Chaque observateur reçoit la taille de ses cibles.
+      act(() => {
+        for (const observateur of observateurs)
+          observateur.rappel(
+            [...observateur.cibles].map((cible) => ({
+              target: cible,
+              contentRect: {
+                width:
+                  cible instanceof HTMLTableCellElement
+                    ? (cible.cellIndex + 1) * 100
+                    : 800,
+              },
+            })) as unknown as ResizeObserverEntry[],
+            observateur as unknown as ResizeObserver
+          )
+      })
+      expect(entetes()[1].style.width).toBe("")
+
+      rerender(<Tableau donnees={[]} />)
+      expect(entetes().map((th) => th.style.width)).toEqual([
+        "100px",
+        "200px",
+        "300px",
+      ])
+
+      // Les lignes revenues, la mise en page automatique reprend.
+      rerender(<Tableau />)
+      expect(entetes()[1].style.width).toBe("")
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it("donne à la colonne de sélection la largeur de la zone de sa case", () => {
+    render(<Tableau />)
+    const caseEntete = screen.getByRole("checkbox", {
+      name: "Sélectionner la page",
+    })
+    const cellule = caseEntete.closest("th")!
+    // 12 + 16 + 12 px : la zone de 40 px ne déborde plus sur la colonne
+    // suivante (le `pr-0` des cellules à case est remplacé).
+    expect(cellule).toHaveClass("w-10", "px-3", "[&:has([role=checkbox])]:pr-3")
+    expect(cellule).not.toHaveClass("[&:has([role=checkbox])]:pr-0")
+  })
+
+  it("rend lisible la case verrouillée, sans l'estomper", () => {
+    render(<Tableau />)
+    const verrouillee = screen.getByRole("checkbox", {
+      name: "Sélectionner Edsger",
+    })
+    expect(verrouillee).toHaveAttribute("aria-disabled", "true")
+    expect(verrouillee).toHaveClass(...CASE_VERROUILLEE.split(" "))
+  })
+
+  it("colonne « Actions » : en-tête lu mais invisible, commandes à droite", async () => {
+    const user = userEvent.setup()
+    const supprimer = vi.fn()
+    const colonnes = [
+      ...COLONNES,
+      dataTableActionsColumn<Personne>({
+        actions: (p) => (
+          <Button size="sm" onClick={() => supprimer(p.id)}>
+            {`Supprimer ${p.nom}`}
+          </Button>
+        ),
+      }),
+    ]
+    render(<Tableau colonnes={colonnes} />)
+    const entete = screen.getByRole("columnheader", { name: "Actions" })
+    expect(entete).toHaveClass("w-px")
+    expect(within(entete).getByText("Actions")).toHaveClass("sr-only")
+    const bouton = screen.getByRole("button", { name: "Supprimer Grace" })
+    expect(bouton.parentElement).toHaveClass("justify-end", "gap-1")
+
+    await user.click(bouton)
+    expect(supprimer).toHaveBeenCalledWith("2")
+  })
+
+  it("colonne « Actions » masquable et renommable sur demande", () => {
+    const colonne = dataTableActionsColumn<Personne>({
+      actions: () => null,
+      id: "commandes",
+      enableHiding: true,
+      className: "text-right",
+    })
+    expect(colonne.id).toBe("commandes")
+    expect(colonne.enableHiding).toBe(true)
+    expect(colonne.meta).toEqual({
+      libelle: "Actions",
+      className: "w-px text-right",
+    })
+  })
+
+  it("rend le focus à la ligne voisine quand une ligne disparaît avec sa commande focalisée", async () => {
+    const user = userEvent.setup()
+    // Une commande quelconque (pas un `DeleteButton`) qui retire sa ligne.
+    function AvecRetrait() {
+      const [donnees, setDonnees] = useState(PERSONNES.slice(0, 3))
+      const colonnes = useMemo(
+        () => [
+          ...COLONNES,
+          dataTableActionsColumn<Personne>({
+            actions: (p) => (
+              <Button
+                size="sm"
+                onClick={() =>
+                  setDonnees((avant) => avant.filter((x) => x.id !== p.id))
+                }
+              >
+                {`Retirer ${p.nom}`}
+              </Button>
+            ),
+          }),
+        ],
+        []
+      )
+      const table = useDataTable({
+        donnees,
+        colonnes,
+        idLigne: (p) => p.id,
+      })
+      return <DataTable table={table} libelle="Personnes" />
+    }
+    render(<AvecRetrait />)
+    await user.click(screen.getByRole("button", { name: "Retirer Grace" }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Retirer Alan" })
+      )
+    )
+  })
+
+  it("lien de cellule : un vrai lien, par le routeur s'il est donné, ou un bouton", async () => {
+    const user = userEvent.setup()
+    const ouvrir = vi.fn()
+    function LienRouteur(props: ComponentProps<"a">) {
+      return <a data-routeur="" {...props} />
+    }
+    render(
+      <>
+        <DataTableCellLink href="/membres/1">Ada</DataTableCellLink>
+        <DataTableCellLink href="/membres/2" lien={LienRouteur}>
+          Grace
+        </DataTableCellLink>
+        <DataTableCellLink onClick={ouvrir}>Alan</DataTableCellLink>
+      </>
+    )
+    expect(screen.getByRole("link", { name: "Ada" })).toHaveAttribute(
+      "href",
+      "/membres/1"
+    )
+    const routeur = screen.getByRole("link", { name: "Grace" })
+    expect(routeur).toHaveAttribute("data-routeur")
+    expect(routeur).toHaveClass("font-medium", "focus-visible:ring-3")
+
+    const bouton = screen.getByRole("button", { name: "Alan" })
+    expect(bouton).toHaveAttribute("type", "button")
+    await user.click(bouton)
+    expect(ouvrir).toHaveBeenCalledTimes(1)
   })
 })

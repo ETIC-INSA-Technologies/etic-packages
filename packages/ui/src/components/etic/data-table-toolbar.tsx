@@ -1,4 +1,5 @@
-import { useRef, type ReactNode } from "react"
+import { useMemo, useRef, type ComponentProps, type ReactNode } from "react"
+import type { RowData } from "@tanstack/react-table"
 import { cn } from "cn"
 import { ListFilterIcon, SearchIcon, XIcon } from "lucide-react"
 
@@ -34,14 +35,13 @@ import {
   uniteAccordee,
   type DataTableUnite,
 } from "@etic-ui/components/etic/data-table-format"
+import {
+  paginationDuTableau,
+  type DataTableInstance,
+} from "@etic-ui/components/etic/data-table"
+import { NO_AUTOFILL } from "@etic-ui/lib/autofill"
 
-export interface DataTableCountProps {
-  /** Nombre total d'éléments, toutes pages comprises. */
-  total: number
-  /** Rang (à partir de 0) du premier élément affiché. 0 par défaut. */
-  decalage?: number
-  /** Nombre d'éléments affichés. */
-  nombre: number
+interface DataTableCountCommun {
   /** Nom des éléments. « élément », « éléments » par défaut. */
   unite?: DataTableUnite
   /** Accorde « affichées » au féminin. */
@@ -49,19 +49,43 @@ export interface DataTableCountProps {
   className?: string
 }
 
+/** Compteur aux nombres donnés par l'application (pagination côté serveur). */
+export interface DataTableCountNombresProps extends DataTableCountCommun {
+  table?: never
+  /** Nombre total d'éléments, toutes pages comprises. */
+  total: number
+  /** Rang (à partir de 0) du premier élément affiché. 0 par défaut. */
+  decalage?: number
+  /** Nombre d'éléments affichés. */
+  nombre: number
+}
+
+/** Compteur lu dans le tableau (pagination côté client de `useDataTable`) :
+ *  lignes filtrées, page courante. */
+export interface DataTableCountTableProps<
+  TData extends RowData = RowData,
+> extends DataTableCountCommun {
+  table: DataTableInstance<TData>
+}
+
+export type DataTableCountProps<TData extends RowData = RowData> =
+  DataTableCountNombresProps | DataTableCountTableProps<TData>
+
 /**
  * Compteur d'une liste : « 128 éléments · 26–50 affichés ». C'est une zone
  * de statut : après une recherche, un filtre ou un changement de page, le
- * nouveau compte est annoncé sans déplacer le focus.
+ * nouveau compte est annoncé sans déplacer le focus. Avec `table`, il lit
+ * les nombres de la pagination côté client.
  */
-export function DataTableCount({
-  total,
-  decalage = 0,
-  nombre,
-  unite = UNITE_PAR_DEFAUT,
-  feminin = false,
-  className,
-}: DataTableCountProps) {
+export function DataTableCount<TData extends RowData>(
+  props: DataTableCountProps<TData>
+) {
+  const { unite = UNITE_PAR_DEFAUT, feminin = false, className } = props
+  const {
+    total,
+    decalage = 0,
+    nombre,
+  } = props.table ? paginationDuTableau(props.table) : props
   const debut = decalage + 1
   const fin = decalage + nombre
   return (
@@ -119,13 +143,16 @@ export function DataTableSelectFilter({
   libelleTous,
   className,
 }: DataTableSelectFilterProps) {
-  const items = [
-    { value: null, label: libelleTous },
-    ...options.map((option) => ({
-      value: option.valeur,
-      label: option.libelle,
-    })),
-  ]
+  const items = useMemo(
+    () => [
+      { value: null, label: libelleTous },
+      ...options.map((option) => ({
+        value: option.valeur,
+        label: option.libelle,
+      })),
+    ],
+    [libelleTous, options]
+  )
   return (
     <Select items={items} value={valeur} onValueChange={onValeurChange}>
       <SelectTrigger aria-label={libelle} className={className}>
@@ -142,7 +169,13 @@ export function DataTableSelectFilter({
   )
 }
 
-export interface DataTableToolbarProps {
+/** Attributs du champ de recherche que l'application peut ajouter. */
+export type DataTableRechercheAttributs = Omit<
+  ComponentProps<"input">,
+  "value" | "defaultValue" | "onChange" | "type" | "ref"
+>
+
+export interface DataTableToolbarProps<TData extends RowData = RowData> {
   /** Champ de recherche, contrôlé (l'application temporise sa requête). */
   recherche?: {
     valeur: string
@@ -150,6 +183,10 @@ export interface DataTableToolbarProps {
     placeholder?: string
     /** Nom du champ. « Rechercher » par défaut. */
     libelle?: string
+    /** Attributs ajoutés au champ (`name`, `data-*`…). Le champ porte déjà
+     *  `autoComplete="off"` et les attributs qui écartent les gestionnaires
+     *  de mots de passe ; ils peuvent être remplacés ici. */
+    attributs?: DataTableRechercheAttributs
   }
   /** Filtres : `DataTableSelectFilter`… */
   filtres?: ReactNode
@@ -161,8 +198,9 @@ export interface DataTableToolbarProps {
   filtresActifs?: number
   /** Retire tous les filtres (bouton « Réinitialiser »). */
   onReinitialiser?: () => void
-  /** Compteur « N éléments · a–b affichés ». */
-  compteur?: DataTableCountProps
+  /** Compteur « N éléments · a–b affichés » : ses nombres, ou `{ table }`
+   *  pour une pagination côté client. */
+  compteur?: DataTableCountProps<TData>
   /** À droite : `DataTableViewOptions`, bouton d'ajout… */
   children?: ReactNode
   className?: string
@@ -172,7 +210,7 @@ export interface DataTableToolbarProps {
  * Barre d'outils au-dessus d'un tableau, sur le modèle de celle de shadcn :
  * recherche et filtres à gauche, compteur et commandes (colonnes…) à droite.
  */
-export function DataTableToolbar({
+export function DataTableToolbar<TData extends RowData = RowData>({
   recherche,
   filtres,
   filtresActifs,
@@ -180,7 +218,7 @@ export function DataTableToolbar({
   compteur,
   children,
   className,
-}: DataTableToolbarProps) {
+}: DataTableToolbarProps<TData>) {
   const mobile = useIsMobile()
   const replier = mobile && filtres != null && filtresActifs !== undefined
   const racineRef = useRef<HTMLDivElement>(null)
@@ -210,16 +248,22 @@ export function DataTableToolbar({
             <SearchIcon />
           </InputGroupAddon>
           <InputGroupInput
+            // Une recherche n'est jamais un identifiant : sans ces attributs,
+            // les gestionnaires de mots de passe y proposent une adresse.
+            {...NO_AUTOFILL}
+            {...recherche.attributs}
             ref={rechercheRef}
             type="search"
             aria-label={recherche.libelle ?? "Rechercher"}
             placeholder={recherche.placeholder ?? "Rechercher…"}
             value={recherche.valeur}
             onChange={(event) => recherche.onValeurChange(event.target.value)}
-            autoComplete="off"
             // La croix native de Chrome (bleue, 14 px, absente de Firefox)
             // cède la place au bouton ci-dessous.
-            className="[&::-webkit-search-cancel-button]:appearance-none"
+            className={cn(
+              "[&::-webkit-search-cancel-button]:appearance-none",
+              recherche.attributs?.className
+            )}
           />
           {recherche.valeur ? (
             <InputGroupAddon align="inline-end">

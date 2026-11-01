@@ -1,5 +1,4 @@
 import type { ReactNode } from "react"
-import { cn } from "cn"
 import { Trash2Icon } from "lucide-react"
 
 import type { ActionDialogue } from "@etic-ui/components/etic/action"
@@ -8,7 +7,10 @@ import {
   type ConfirmDialogSaisie,
   type DialogFinalFocus,
 } from "@etic-ui/components/etic/confirm-dialog"
-import { TooltipButton } from "@etic-ui/components/etic/tooltip-button"
+import {
+  TooltipButton,
+  type TooltipButtonProps,
+} from "@etic-ui/components/etic/tooltip-button"
 
 export interface DeleteButtonProps {
   /**
@@ -45,15 +47,22 @@ export interface DeleteButtonProps {
    * écrit en toutes lettres.
    */
   avecTexte?: boolean
+  /**
+   * Taille du bouton, celle de `Button` : `icon-sm` par défaut pour la
+   * corbeille, `default` avec `avecTexte`. Dans un `DetailHeader`
+   * `tailleActions="lg"`, `icon-lg` (ou `lg` avec `avecTexte`).
+   */
+  size?: TooltipButtonProps["size"]
   /** Ouverture de la confirmation suivie par l'application (le bouton reste
    *  son déclencheur) : pour oublier un état « en deux temps » à la
    *  fermeture, par exemple. */
   ouvert?: boolean
   onOuvertChange?: (ouvert: boolean) => void
   /**
-   * Où mettre le focus quand la confirmation se ferme. Une suppression
-   * réussie fait disparaître la ligne, et le bouton avec elle : sans cible,
-   * le focus tombe sur la page. La ligne suivante, ou le titre de la liste.
+   * Où mettre le focus quand la confirmation se ferme. Par défaut, le
+   * bouton. Dans une ligne de `DataTable` qui disparaît avec la suppression,
+   * le tableau rend lui-même le focus à la ligne voisine ; ailleurs (fiche
+   * supprimée, tableau rendu à la main), à fournir : le titre de la liste…
    */
   finalFocus?: DialogFinalFocus
   className?: string
@@ -70,37 +79,35 @@ export function DeleteButton({
   confirmation,
   verrou,
   avecTexte = false,
+  size,
   ouvert,
   onOuvertChange,
   finalFocus,
   className,
 }: DeleteButtonProps) {
   const nom = `Supprimer ${libelle}`
-  const bouton = avecTexte ? (
+  const bouton = (
     <TooltipButton
-      variant="destructive"
       aria-label={nom}
       verrou={verrou}
       className={className}
+      {...(avecTexte
+        ? { variant: "destructive", size }
+        : {
+            variant: "ghost",
+            size: size ?? "icon-sm",
+            infobulle: nom,
+            destructif: true,
+          })}
     >
-      <Trash2Icon data-icon="inline-start" />
-      Supprimer
-    </TooltipButton>
-  ) : (
-    <TooltipButton
-      variant="ghost"
-      size="icon-sm"
-      aria-label={nom}
-      infobulle={nom}
-      verrou={verrou}
-      className={cn(
-        "text-muted-foreground",
-        !verrou &&
-          "hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/20",
-        className
+      {avecTexte ? (
+        <>
+          <Trash2Icon data-icon="inline-start" />
+          Supprimer
+        </>
+      ) : (
+        <Trash2Icon />
       )}
-    >
-      <Trash2Icon />
     </TooltipButton>
   )
 

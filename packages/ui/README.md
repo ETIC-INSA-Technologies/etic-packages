@@ -432,18 +432,22 @@ La famille `DataTable` suit le [guide Data Table de shadcn](https://ui.shadcn.co
 sur [TanStack Table v9](https://tanstack.com/table/latest) : les colonnes se déclarent avec
 l'assistant typé, `useDataTable` crée l'instance, les composants la reçoivent en `table`.
 
-| Composant                  | Rôle                                                                                         |
-| -------------------------- | -------------------------------------------------------------------------------------------- |
-| `useDataTable`             | instance TanStack : tri (client, ou serveur avec `triManuel`), colonnes, sélection, dépliage |
-| `DataTable`                | la Table de shadcn ; état vide, lignes fantômes du chargement, clic de ligne, détail déplié  |
-| `DataTableColumnHeader`    | en-tête triable : un clic trie par ordre croissant, le suivant inverse le sens               |
-| `dataTableSelectionColumn` | colonne de cases ; Maj+clic sélectionne une plage ; raison d'une case verrouillée            |
-| `dataTableExpandColumn`    | colonne du chevron qui déplie une ligne (`aria-expanded`, `aria-controls`)                   |
-| `DataTableRowActions`      | menu « … » d'une ligne                                                                       |
-| `DataTableViewOptions`     | bouton « Colonnes » : afficher, masquer, réordonner (glisser-déposer, clavier compris)       |
-| `DataTableToolbar`         | recherche, filtres (`DataTableSelectFilter`), compteur (`DataTableCount`), commandes         |
-| `DataTablePagination`      | pagination par décalage (offset/limit, total connu), nombre de lignes par page               |
-| `DataTableBulkActions`     | barre d'actions groupées, collante en bas, avec la sélection ; Échap désélectionne           |
+| Composant                  | Rôle                                                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `useDataTable`             | instance TanStack : tri, filtre et pagination (côté client, ou serveur avec `triManuel`), colonnes, sélection, dépliage   |
+| `DataTable`                | la Table de shadcn ; état vide, lignes fantômes du chargement, bandeau d'erreur (`requete`), clic de ligne, détail déplié |
+| `DataTableColumnHeader`    | en-tête triable : un clic trie par ordre croissant, le suivant inverse le sens                                            |
+| `dataTableSelectionColumn` | colonne de cases ; Maj+clic sélectionne une plage ; raison d'une case verrouillée                                         |
+| `dataTableExpandColumn`    | colonne du chevron qui déplie une ligne (`aria-expanded`, `aria-controls`)                                                |
+| `dataTableActionsColumn`   | colonne des commandes d'une ligne : en-tête lu mais invisible, commandes à droite                                         |
+| `DataTableCellLink`        | titre d'une ligne : vrai lien (`href`, routeur par `lien`) ou bouton                                                      |
+| `DataTableRowActions`      | menu « … » d'une ligne                                                                                                    |
+| `DataTableViewOptions`     | bouton « Colonnes » : afficher, masquer, réordonner (glisser-déposer, clavier compris)                                    |
+| `DataTableToolbar`         | recherche, filtres (`DataTableSelectFilter`), compteur (`DataTableCount`), commandes                                      |
+| `DataTablePagination`      | pagination par décalage (offset/limit, total connu), ou celle du tableau (`table`)                                        |
+| `DataTableBulkActions`     | barre d'actions groupées, collante en bas, avec la sélection ; Échap désélectionne                                        |
+| `useColumnPrefs`           | colonnes affichées et leur ordre, gardés dans le navigateur par liste et par personne                                     |
+| `usePersistedState`        | `useState` gardé dans le navigateur (filtre choisi…), sous la portée `PorteeStockageLocal`                                |
 
 ```tsx
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
@@ -535,8 +539,9 @@ export function Etudes() {
 Chaque partie de l'état (`tri`, `visibiliteColonnes`, `ordreColonnes`, `selection`,
 `lignesDepliees`) est contrôlée si l'application la fournit avec son `on…Change` (pour la
 garder, en `localStorage` par exemple), interne sinon ; `etatInitial` donne la valeur de départ
-d'une partie interne. La sélection se limite par défaut aux lignes présentes dans `donnees`
-(changer de page ou de filtre la réduit) ; `conserverSelection` la garde. Sur mobile, le tableau
+d'une partie interne. La sélection se limite par défaut aux lignes affichées (changer de page
+ou de filtre la réduit) ; `conserverSelection` la garde ; `table.options.meta.deselectionner(ids)`
+en retire quelques lignes (refus d'une action groupée pour certaines). Sur mobile, le tableau
 garde ses colonnes et son cadre défile horizontalement. Une colonne se masque par « Colonnes »,
 pas depuis son en-tête ; la dernière colonne de données affichée ne se masque pas.
 
@@ -551,8 +556,20 @@ filtre est annoncé) ; `DataTablePagination` annonce la page atteinte. Quand un 
 sous le focus (« Réinitialiser », la croix de la recherche, le bandeau ou la barre de sélection),
 le focus passe à un élément stable (champ de recherche, premier filtre, case d'en-tête). Le clic
 de ligne (`onActiverLigne`) est un raccourci à la souris : une cellule doit aussi offrir un lien
-ou un bouton pour le clavier. Un bouton passé dans `vide` (« Réinitialiser les filtres »)
-disparaît avec l'état vide : l'application rend d'abord le focus au champ de recherche.
+ou un bouton pour le clavier (`DataTableCellLink`). Un bouton passé dans `vide` (« Réinitialiser
+les filtres ») disparaît avec l'état vide : l'application rend d'abord le focus au champ de
+recherche. Quand une ligne qui avait le focus disparaît (suppression par un `DeleteButton`, un
+menu « … » ou un dialogue de l'application ouvert depuis elle, liste rechargée), `DataTable`
+rend le focus à la même cellule de la ligne suivante (ou précédente), sinon au tableau ; pour un
+tableau rendu à la main, `focaliserTableau(cadre)` donne la même cible. `size` règle la taille
+du `DeleteButton` (`icon-lg`, ou `lg` avec `avecTexte`, dans un `DetailHeader`
+`tailleActions="lg"`). La recherche de `DataTableToolbar` porte `NO_AUTOFILL` ;
+`recherche.attributs` lui ajoute des attributs.
+
+L'en-tête du tableau ne se surligne pas au survol (seules les lignes de données le font). Quand
+le tableau se vide (filtre sans résultat, page suivante en chargement), ses colonnes gardent leur
+largeur. La colonne de sélection a la largeur de la zone de ses cases (40 px) ; une case
+verrouillée reste lisible (fond gris, ou gris foncé cochée) au lieu d'être estompée.
 
 #### Sélectionner tous les éléments
 
@@ -642,6 +659,115 @@ le total connu (`total > 0`) : un total à 0 pendant un chargement ne renvoie pa
 page. Avec TanStack Query, `placeholderData: keepPreviousData` garde la page précédente (et son
 total) pendant le chargement de la suivante. « Précédente » et « Suivante » restent focalisables
 en bout de liste.
+
+#### Liste chargée d'un bloc : filtre, tri et pagination côté client
+
+Comme dans le guide de shadcn (`getPaginationRowModel`, `getFilteredRowModel`), `useDataTable`
+filtre, trie et découpe lui-même une liste reçue en entier. `paginationClient` l'active (25
+lignes par page, `etatInitial.pagination` pour une autre taille) ; `DataTablePagination` et
+`DataTableCount` reçoivent alors `table` au lieu de leurs nombres. `filtreGlobal` cherche dans
+toutes les colonnes à accesseur, sans casse ni accents (« tresorerie » trouve « Trésorerie ») ;
+`filtresColonnes` applique la fonction de chaque colonne (`filterFn`). Le tri nommé
+`texteFr` (`sortFn: "texteFr"`) suit l'ordre alphabétique français de `comparerFr`, accents
+compris, et « Poste 2 » avant « Poste 10 » ; le filtre nommé `texteFr` est celui de la
+recherche (`normaliserRecherche`). Un changement de filtre ou de tri ramène à la première page
+(filtres et tri contrôlés : des références stables, sinon la page revient à 1 à chaque rendu) ;
+supprimer une ligne garde la page courante (la dernière page existante si elle disparaît).
+`DataTablePagination table={…}` sans `paginationClient` n'affiche rien et prévient dans la
+console : la table ne découpe pas de pages.
+
+```tsx
+const colonnes = aide.columns([
+  aide.accessor("nom", {
+    header: ({ column }) => <DataTableColumnHeader column={column} libelle="Poste" />,
+    sortFn: "texteFr",
+    cell: ({ row }) => (
+      <DataTableCellLink href={`/postes/${row.original.id}`} lien={RouterLink}>
+        {row.original.nom}
+      </DataTableCellLink>
+    ),
+  }),
+  aide.accessor("pole", { header: "Pôle", filterFn: "equalsString" }),
+  dataTableActionsColumn<Poste>({
+    actions: (p) => <DeleteButton libelle={`le poste ${p.nom}`} … />,
+    // enableHiding: true pour une colonne d'actions masquable et déplaçable.
+  }),
+])
+
+const [recherche, setRecherche] = useState("")
+const table = useDataTable({
+  donnees: data ?? AUCUN,
+  colonnes,
+  idLigne: (p) => p.id,
+  paginationClient: true,
+  filtreGlobal: recherche,
+  onFiltreGlobalChange: setRecherche,
+  filtresColonnes: useMemo(() => (pole ? [{ id: "pole", value: pole }] : []), [pole]),
+})
+<DataTableToolbar
+  recherche={{ valeur: recherche, onValeurChange: setRecherche }}
+  compteur={{ table, unite: { singulier: "poste", pluriel: "postes" } }}
+/>
+<DataTable table={table} libelle="Postes" requete={requetePostes} />
+<DataTablePagination table={table} />
+```
+
+#### Erreur de la requête
+
+`requete` (le résultat de `useQuery` convient tel quel) affiche en échec le `QueryErrorBanner`
+(« Réessayer ») au-dessus du tableau, rendu dans le parent comme pour `QueryBoundary` (le parent
+règle l'espacement : `flex flex-col gap-4`). L'état vide se tait alors : « Aucun résultat »
+contredirait le bandeau. Sans `enChargement`, `isFetching` en tient lieu.
+
+#### Colonnes gardées dans le navigateur
+
+`useColumnPrefs` garde, pour chaque liste et chaque personne, les colonnes affichées et leur
+ordre (`localStorage`, format `{ order, visible }`) ; `optionsTableau` s'étale dans
+`useDataTable`. Une colonne apparue depuis l'enregistrement s'ajoute à la fin, affichée si elle
+l'est par défaut ; une colonne non offerte ici (`disponibles` : droit manquant) garde son état et
+sa place ; `fixesEnTete` reste hors préférences ; `reinitialiser()` revient aux valeurs par
+défaut. `usePersistedState(cle, defaut, { accepter })` garde de même un réglage simple (un filtre
+choisi) ; rien n'est écrit tant que rien n'est choisi, et `accepter` écarte une valeur
+enregistrée devenue invalide. La portée (la personne connectée) se fournit une fois :
+`<PorteeStockageLocal portee={moi?.id}>` ; les clés écrites sont `<portée>:<clé>` (`anon:`
+sans personne), comme celles d'ETIC Members.
+
+```tsx
+const prefs = useColumnPrefs({
+  cle: "membres:personnes",
+  colonnes: ["email", "statut", "telephone"],
+  visiblesParDefaut: ["email", "statut"],
+  fixesEnTete: ["select", "nom"],
+})
+const table = useDataTable({
+  donnees,
+  colonnes,
+  idLigne,
+  ...prefs.optionsTableau,
+})
+```
+
+#### Tableau rendu à la main
+
+Un tableau que `DataTable` ne sait pas rendre (deux rangées d'en-tête, cellules éditables)
+garde le sélecteur de colonnes et la barre d'actions sans instance `useDataTable` :
+`DataTableViewOptions` reçoit `colonnes` (`{ id, libelle, masquable? }`) et les options de
+`useDataTable` qui règlent les colonnes (`visibiliteColonnes`, `onVisibiliteColonnesChange`,
+`ordreColonnes`, `onOrdreColonnesChange` ; sans ce dernier, pas de glisser-déposer), donc
+`prefs.optionsTableau` de `useColumnPrefs` tel quel ; `DataTableBulkActions` reçoit `nombre`,
+`onToutDeselectionner` et `racine` (le cadre du tableau, où Échap vide la sélection et où le
+focus revient).
+
+```tsx
+<DataTableViewOptions colonnes={COLONNES} {...prefs.optionsTableau} />
+<DataTableBulkActions
+  nombre={selection.size}
+  onToutDeselectionner={() => setSelection(new Set())}
+  racine={cadreRef}
+>
+  …
+</DataTableBulkActions>
+```
 
 ### Utilitaires et hooks
 
@@ -825,7 +951,9 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
     défile (`overflow-y-auto`), jamais à l'horizontale (`overflow-x-hidden`) ;
   - `alert-dialog.tsx` : à la taille par défaut et sans `AlertDialogMedia`, titre et
     description alignés à gauche dès le téléphone (shadcn les centre sous `sm`), comme la liste
-    et les champs du corps ; avec un média, la grille de shadcn reste telle quelle.
+    et les champs du corps ; avec un média, la grille de shadcn reste telle quelle ;
+  - `table.tsx` : la ligne d'en-tête ne se surligne pas au survol (`[&_tr:hover]:bg-transparent`
+    sur `TableHeader`) ; les lignes de données gardent le survol de shadcn.
 
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 

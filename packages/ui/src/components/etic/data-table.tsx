@@ -7,19 +7,36 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
+  type ComponentProps,
+  type FocusEvent,
   type MouseEvent,
   type ReactNode,
   type RefObject,
 } from "react"
 import {
+  columnFilteringFeature,
   columnOrderingFeature,
   columnVisibilityFeature,
+  constructFilterFn,
+  constructSortFn,
   createColumnHelper,
+  createFilteredRowModel,
+  createPaginatedRowModel,
   createSortedRowModel,
+  filterFn_arrIncludes,
+  filterFn_arrIncludesAll,
+  filterFn_arrIncludesSome,
+  filterFn_equals,
+  filterFn_equalsString,
+  filterFn_inDateRange,
+  filterFn_inNumberRange,
+  filterFn_includesString,
+  filterFn_weakEquals,
   functionalUpdate,
+  globalFilteringFeature,
   metaHelper,
   rowExpandingFeature,
+  rowPaginationFeature,
   rowSelectionFeature,
   rowSortingFeature,
   sortFn_alphanumeric,
@@ -30,10 +47,12 @@ import {
   useTable,
   type Column,
   type ColumnDef,
+  type ColumnFiltersState,
   type ColumnOrderState,
   type ColumnVisibilityState,
   type ExpandedStateList,
   type OnChangeFn,
+  type PaginationState,
   type ReactTable,
   type Row,
   type RowData,
@@ -77,6 +96,20 @@ import {
   participe,
   type DataTableUnite,
 } from "@etic-ui/components/etic/data-table-format"
+import type { AppShellLienComposant } from "@etic-ui/components/etic/app-shell"
+import {
+  focaliserTableau,
+  rendreFocusApresLigne,
+} from "@etic-ui/components/etic/data-table-focus"
+import {
+  QueryErrorBanner,
+  type QueryBoundaryRequete,
+} from "@etic-ui/components/etic/query-boundary"
+import {
+  comparerFr,
+  normaliser,
+  normaliserRecherche,
+} from "@etic-ui/lib/normalize"
 
 /** Métadonnées qu'une colonne peut porter (`meta` de sa définition). */
 export interface DataTableColumnMeta {
@@ -96,6 +129,9 @@ export interface DataTableMeta {
   /** Vide la sélection et met fin à « tous sélectionnés », en un seul appel
    *  à `onToutSelectionneChange`. */
   toutDeselectionner: () => void
+  /** Retire ces lignes de la sélection (les autres restent cochées) et met
+   *  fin à « tous sélectionnés ». */
+  deselectionner: (ids: readonly string[]) => void
   /**
    * Cadre du tableau. `DataTable` le pose sur le sien ; un tableau rendu à
    * la main avec les primitives `Table` le pose sur son conteneur
@@ -108,24 +144,103 @@ export interface DataTableMeta {
 }
 
 /**
- * Fonctions de TanStack Table v9 dont se sert `DataTable` : tri (côté client,
- * ou côté serveur avec `triManuel`), visibilité et ordre des colonnes,
- * sélection et dépliage de lignes. Comme dans le guide Data Table de shadcn,
- * les colonnes se déclarent avec ce registre :
- * `createDataTableColumnHelper<T>()`.
+ * Textes normalisés des cellules, par tableau de données (`donnees`) puis
+ * par ligne et colonne : une frappe dans la recherche ne renormalise pas
+ * toute la liste. Un nouveau tableau de données repart d'un cache vide.
+ */
+const textesNormalises = new WeakMap<object, Map<string, string | undefined>>()
+
+/** Ce que le filtre lit d'une ligne (sans le type de `dataTableFeatures`,
+ *  qui dépend de ce filtre). */
+interface LigneFiltree {
+  id: string
+  getValue: (colonne: string) => unknown
+  table: { options: { data: unknown } }
+}
+
+function texteNormaliseDe(
+  row: LigneFiltree,
+  colonne: string
+): string | undefined {
+  const donnees = row.table.options.data as object
+  let cache = textesNormalises.get(donnees)
+  if (!cache) textesNormalises.set(donnees, (cache = new Map()))
+  const cle = `${row.id}\u0000${colonne}`
+  if (cache.has(cle)) return cache.get(cle)
+  const valeur = row.getValue(colonne)
+  const texte =
+    valeur === null || valeur === undefined
+      ? undefined
+      : normaliser(String(valeur))
+  cache.set(cle, texte)
+  return texte
+}
+
+/** Filtre « contient », sans casse ni accents (« elo » trouve « Élodie ») :
+ *  celui de la recherche (`filtreGlobal`), à donner aussi à une colonne
+ *  (`filterFn: "texteFr"`). Une recherche vide ne filtre rien. */
+const filterFn_texteFr = constructFilterFn({
+  filter: (
+    _valeur: unknown,
+    cherche: string,
+    row: LigneFiltree,
+    colonne: string
+  ): boolean => texteNormaliseDe(row, colonne)?.includes(cherche) ?? false,
+  autoRemove: (cherche: unknown) =>
+    normaliserRecherche(String(cherche ?? "")) === "",
+  resolveFilterValue: (cherche: unknown) =>
+    normaliserRecherche(String(cherche ?? "")),
+})
+
+/** Tri alphabétique français (`comparerFr` : accents et casse ignorés,
+ *  « Poste 2 » avant « Poste 10 ») : `sortFn: "texteFr"`. */
+const sortFn_texteFr = constructSortFn({
+  resolveDataValue: (valeur: unknown) =>
+    valeur === null || valeur === undefined ? "" : String(valeur),
+  sort: comparerFr,
+})
+
+/**
+ * Fonctions de TanStack Table v9 dont se sert `DataTable` : tri, filtre et
+ * pagination (côté client ; côté serveur avec `triManuel` et sans
+ * `paginationClient`), visibilité et ordre des colonnes, sélection et
+ * dépliage de lignes. Comme dans le guide Data Table de shadcn, les colonnes
+ * se déclarent avec ce registre : `createDataTableColumnHelper<T>()`.
+ *
+ * Tris nommés (`sortFn`) : ceux de TanStack et `texteFr` (ordre
+ * alphabétique français). Filtres nommés (`filterFn`) : ceux de TanStack et
+ * `texteFr` (« contient », sans casse ni accents).
  */
 export const dataTableFeatures = tableFeatures({
+  columnFilteringFeature,
   columnOrderingFeature,
   columnVisibilityFeature,
+  globalFilteringFeature,
   rowExpandingFeature,
+  rowPaginationFeature,
   rowSelectionFeature,
   rowSortingFeature,
+  filteredRowModel: createFilteredRowModel(),
+  paginatedRowModel: createPaginatedRowModel(),
   sortedRowModel: createSortedRowModel(),
+  filterFns: {
+    arrIncludes: filterFn_arrIncludes,
+    arrIncludesAll: filterFn_arrIncludesAll,
+    arrIncludesSome: filterFn_arrIncludesSome,
+    equals: filterFn_equals,
+    equalsString: filterFn_equalsString,
+    inDateRange: filterFn_inDateRange,
+    inNumberRange: filterFn_inNumberRange,
+    includesString: filterFn_includesString,
+    texteFr: filterFn_texteFr,
+    weakEquals: filterFn_weakEquals,
+  },
   sortFns: {
     alphanumeric: sortFn_alphanumeric,
     basic: sortFn_basic,
     datetime: sortFn_datetime,
     text: sortFn_text,
+    texteFr: sortFn_texteFr,
   },
   columnMeta: metaHelper<DataTableColumnMeta>(),
   tableMeta: metaHelper<DataTableMeta>(),
@@ -163,18 +278,68 @@ export function libelleColonne<TData extends RowData>(
 }
 
 /**
- * Rend le focus à un élément stable du tableau avant qu'un contrôle qui l'a
- * ne disparaisse (bandeau ou barre de sélection) : la case d'en-tête, sinon
- * le cadre lui-même.
+ * L'état partagé d'un tableau de `useDataTable`, toujours posé par lui.
+ * Lève pour une instance créée autrement : les composants `DataTable*` en
+ * dépendent.
  */
-export function focaliserTableau(racine: HTMLElement | null) {
-  if (!racine) return
-  const caseEntete = racine.querySelector<HTMLElement>(
-    'thead [role="checkbox"]:not([data-disabled])'
-  )
-  if (caseEntete) return caseEntete.focus()
-  if (!racine.hasAttribute("tabindex")) racine.tabIndex = -1
-  racine.focus()
+export function metaDe<TData extends RowData>(
+  table: DataTableInstance<TData>
+): DataTableMeta {
+  const meta = table.options.meta
+  if (!meta)
+    throw new Error(
+      "DataTable : instance sans `meta`. Créez-la avec `useDataTable`."
+    )
+  return meta
+}
+
+/**
+ * La pagination d'un tableau, lue au même endroit pour `DataTablePagination`
+ * et `DataTableCount` : lignes après filtre (`getRowCount`), page courante.
+ * `manuelle` : le tableau ne découpe rien (sans
+ * `paginationClient`), ses pages ne se pilotent pas depuis la table.
+ */
+export function paginationDuTableau<TData extends RowData>(
+  table: DataTableInstance<TData>
+) {
+  const { pageIndex, pageSize } = table.state.pagination
+  return {
+    manuelle: !!table.options.manualPagination,
+    total: table.getRowCount(),
+    decalage: table.options.manualPagination ? 0 : pageIndex * pageSize,
+    limite: pageSize,
+    nombre: table.getRowModel().rows.length,
+  }
+}
+
+/** La phrase de « tous sélectionnés » : « Les 137 éléments sont
+ *  sélectionnés. » (zone annoncée et bandeau). */
+function phraseToutSelectionne(
+  total: number,
+  unite: DataTableUnite,
+  feminin: boolean
+): string {
+  return `Les ${nombreFr(total)} ${unite.pluriel} sont ${participe("sélectionné", 2, feminin)}.`
+}
+
+/**
+ * Valeur contrôlée par l'application (`valeur` fournie) ou interne, avec un
+ * seul point de changement : il ne signale qu'une valeur différente, met à
+ * jour l'état interne s'il n'est pas contrôlé et prévient `onChange`.
+ */
+function useControlable<T>(
+  valeur: T | undefined,
+  onChange: ((valeur: T) => void) | undefined,
+  initial: T
+): [T, (suivante: T) => void] {
+  const [interne, setInterne] = useState(initial)
+  const courante = valeur === undefined ? interne : valeur
+  const changer = (suivante: T) => {
+    if (Object.is(suivante, courante)) return
+    if (valeur === undefined) setInterne(suivante)
+    onChange?.(suivante)
+  }
+  return [courante, changer]
 }
 
 export interface UseDataTableOptions<TData extends RowData> {
@@ -194,6 +359,34 @@ export interface UseDataTableOptions<TData extends RowData> {
    *  réordonne rien, il signale seulement le tri demandé. */
   triManuel?: boolean
 
+  /**
+   * Pagination côté client : `donnees` contient toute la liste, le tableau
+   * n'en affiche qu'une page (25 lignes par défaut), après le filtre et le
+   * tri. `DataTablePagination table={table}` la pilote, et `DataTableCount
+   * table={table}` la compte. Sans elle, le tableau affiche toutes les
+   * lignes reçues (pagination côté serveur, ou pas de pagination).
+   */
+  paginationClient?: boolean
+  /** Page et taille contrôlées (`{ pageIndex, pageSize }`), avec
+   *  `paginationClient`. */
+  pagination?: PaginationState
+  onPaginationChange?: OnChangeFn<PaginationState>
+
+  /**
+   * Filtres par colonne, appliqués par le tableau (`{ id, value }` ; la
+   * colonne choisit sa fonction : `filterFn: "equals"`, `"texteFr"`…).
+   * Contrôlés avec `onFiltresColonnesChange`, internes sinon
+   * (`table.getColumn(id)?.setFilterValue(valeur)`). Un changement de filtre
+   * ou de tri ramène à la première page.
+   */
+  filtresColonnes?: ColumnFiltersState
+  onFiltresColonnesChange?: OnChangeFn<ColumnFiltersState>
+  /** Recherche sur toutes les colonnes à accesseur, sans casse ni accents
+   *  (`texteFr`). Contrôlée avec `onFiltreGlobalChange`, interne sinon
+   *  (`table.setGlobalFilter`). */
+  filtreGlobal?: string
+  onFiltreGlobalChange?: OnChangeFn<string>
+
   visibiliteColonnes?: ColumnVisibilityState
   onVisibiliteColonnesChange?: OnChangeFn<ColumnVisibilityState>
   /** Identifiants des colonnes dans l'ordre d'affichage. */
@@ -207,8 +400,8 @@ export interface UseDataTableOptions<TData extends RowData> {
    *  stable de préférence : elle est relue à chaque changement. */
   ligneSelectionnable?: (ligne: TData) => boolean
   /**
-   * Par défaut, la sélection ne garde que des lignes présentes dans
-   * `donnees` : changer de page, de filtre ou supprimer des lignes la
+   * Par défaut, la sélection ne garde que des lignes affichées : changer de
+   * page, de filtre (côté serveur ou côté client) ou supprimer des lignes la
    * réduit à ce qui est à l'écran. `true` la conserve d'une page à l'autre.
    */
   conserverSelection?: boolean
@@ -252,17 +445,25 @@ export interface UseDataTableOptions<TData extends RowData> {
     visibiliteColonnes?: ColumnVisibilityState
     ordreColonnes?: ColumnOrderState
     lignesDepliees?: ExpandedStateList
+    /** Taille de page (et page) de départ de `paginationClient`. */
+    pagination?: Partial<PaginationState>
+    filtresColonnes?: ColumnFiltersState
+    filtreGlobal?: string
   }
 }
 
-/** Réduit un état `{ [id]: booléen }` aux identifiants présents, chacun avec
+/** Lignes par page de `paginationClient` sans réglage : la valeur courante
+ *  des listes ETIC (et un choix de `DataTablePagination`). */
+const TAILLE_PAGE_CLIENT = 25
+
+/** Réduit un état `{ [id]: booléen }` aux identifiants gardés, chacun avec
  *  sa valeur d'origine (une entrée `false` reste `false`) ; même objet quand
  *  rien ne part (ni rendu ni `on…Change`). */
 function restreindre<T extends Record<string, boolean>>(
   avant: T,
-  presents: Set<string>
+  garder: (id: string) => boolean
 ): T {
-  const gardes = Object.entries(avant).filter(([id]) => presents.has(id))
+  const gardes = Object.entries(avant).filter(([id]) => garder(id))
   if (gardes.length === Object.keys(avant).length) return avant
   return Object.fromEntries(gardes) as T
 }
@@ -279,6 +480,13 @@ export function useDataTable<TData extends RowData>({
   tri,
   onTriChange,
   triManuel,
+  paginationClient = false,
+  pagination,
+  onPaginationChange,
+  filtresColonnes,
+  onFiltresColonnesChange,
+  filtreGlobal,
+  onFiltreGlobalChange,
   visibiliteColonnes,
   onVisibiliteColonnesChange,
   ordreColonnes,
@@ -296,12 +504,11 @@ export function useDataTable<TData extends RowData>({
   uneSeuleLigneDepliee = false,
   etatInitial,
 }: UseDataTableOptions<TData>): DataTableInstance<TData> {
-  const [toutInterne, setToutInterne] = useState(false)
-  const tout = toutSelectionne ?? toutInterne
-  const changerTout = (valeur: boolean) => {
-    if (toutSelectionne === undefined) setToutInterne(valeur)
-    onToutSelectionneChange?.(valeur)
-  }
+  const [tout, changerTout] = useControlable(
+    toutSelectionne,
+    onToutSelectionneChange,
+    false
+  )
   const racine = useRef<HTMLDivElement>(null)
   const prefixe = useId()
 
@@ -318,24 +525,27 @@ export function useDataTable<TData extends RowData>({
   if (ordreColonnes !== undefined) state.columnOrder = ordreColonnes
   if (onOrdreColonnesChange)
     controle.onColumnOrderChange = onOrdreColonnesChange
+  if (pagination !== undefined) state.pagination = pagination
+  if (onPaginationChange) controle.onPaginationChange = onPaginationChange
+  if (filtresColonnes !== undefined) state.columnFilters = filtresColonnes
+  if (onFiltresColonnesChange)
+    controle.onColumnFiltersChange = onFiltresColonnesChange
+  if (filtreGlobal !== undefined) state.globalFilter = filtreGlobal
+  if (onFiltreGlobalChange) controle.onGlobalFilterChange = onFiltreGlobalChange
 
-  const [selectionInterne, setSelectionInterne] = useState<RowSelectionState>(
-    {}
-  )
-  const selectionCourante = selection ?? selectionInterne
+  // Même objet : rien n'a changé, rien n'est signalé (`useControlable`).
+  const [selectionCourante, changerSelection] =
+    useControlable<RowSelectionState>(selection, onSelectionChange, {})
   state.rowSelection = selectionCourante
-  controle.onRowSelectionChange = (maj) => {
-    const suivante = functionalUpdate(maj, selectionCourante)
-    // Même objet : rien n'a changé, rien à signaler.
-    if (suivante === selectionCourante) return
-    if (selection === undefined) setSelectionInterne(suivante)
-    onSelectionChange?.(suivante)
-  }
+  controle.onRowSelectionChange = (maj) =>
+    changerSelection(functionalUpdate(maj, selectionCourante))
 
-  const [deplieesInternes, setDeplieesInternes] = useState<ExpandedStateList>(
-    etatInitial?.lignesDepliees ?? {}
-  )
-  const deplieesCourantes = lignesDepliees ?? deplieesInternes
+  const [deplieesCourantes, changerDepliees] =
+    useControlable<ExpandedStateList>(
+      lignesDepliees,
+      onLignesDeplieesChange,
+      etatInitial?.lignesDepliees ?? {}
+    )
   state.expanded = deplieesCourantes
   controle.onExpandedChange = (maj) => {
     const brute = functionalUpdate(maj, deplieesCourantes)
@@ -355,9 +565,7 @@ export function useDataTable<TData extends RowData>({
         .at(-1)
       if (ajoutee) suivante = { [ajoutee]: true }
     }
-    if (suivante === deplieesCourantes) return
-    if (lignesDepliees === undefined) setDeplieesInternes(suivante)
-    onLignesDeplieesChange?.(suivante)
+    changerDepliees(suivante)
   }
 
   const table: DataTableInstance<TData> = useTable({
@@ -366,6 +574,14 @@ export function useDataTable<TData extends RowData>({
     columns: colonnes,
     getRowId: idLigne,
     manualSorting: triManuel,
+    // Sans `paginationClient`, les lignes reçues sont la page : rien à
+    // découper.
+    manualPagination: !paginationClient,
+    // TanStack reviendrait aussi à la première page quand les données
+    // changent : supprimer une ligne de la page 3 ramènerait en page 1. Le
+    // retour se fait seulement au changement de filtre ou de tri (plus bas).
+    autoResetPageIndex: false,
+    globalFilterFn: "texteFr",
     enableMultiSort: false,
     enableRowSelection: ligneSelectionnable
       ? (row) => ligneSelectionnable(row.original)
@@ -380,6 +596,13 @@ export function useDataTable<TData extends RowData>({
       sorting: etatInitial?.tri ?? [],
       columnVisibility: etatInitial?.visibiliteColonnes ?? {},
       columnOrder: etatInitial?.ordreColonnes ?? [],
+      pagination: {
+        pageIndex: 0,
+        pageSize: TAILLE_PAGE_CLIENT,
+        ...etatInitial?.pagination,
+      },
+      columnFilters: etatInitial?.filtresColonnes ?? [],
+      globalFilter: etatInitial?.filtreGlobal ?? "",
     },
     state,
     ...controle,
@@ -389,7 +612,7 @@ export function useDataTable<TData extends RowData>({
       // précède la remise à `false` ci-dessous.
       // (getter : lu après la création de `table`, dont il interroge les lignes).
       get toutSelectionne(): boolean {
-        return tout && pageEntierementCochee()
+        return tout && pageCochee
       },
       changerToutSelectionne: (valeur) => {
         if (valeur) table.toggleAllPageRowsSelected(true)
@@ -397,52 +620,112 @@ export function useDataTable<TData extends RowData>({
       },
       toutDeselectionner: () => {
         table.resetRowSelection(true)
-        if (tout) changerTout(false)
+        changerTout(false)
+      },
+      deselectionner: (ids) => {
+        const retires = new Set(ids)
+        table.setRowSelection((avant) =>
+          restreindre(avant, (id) => !retires.has(id))
+        )
+        changerTout(false)
       },
       racine,
       idDetail: (id) => `${prefixe}detail-${encodeURIComponent(id)}`,
     },
   })
 
-  // Les identifiants viennent du modèle de lignes de TanStack, mémorisé sur
-  // `donnees` : `idLigne` n'est pas rappelé à chaque rendu.
-  const lignesPage = table.getCoreRowModel().rows
-  const clePage = lignesPage.map((row) => row.id).join("\u0000")
-  function pageEntierementCochee(): boolean {
-    const selectionnables = table
-      .getCoreRowModel()
-      .rows.filter((row) => row.getCanSelect())
-    return (
-      selectionnables.length > 0 &&
-      selectionnables.every((row) => selectionCourante[row.id])
-    )
-  }
-  const pageCochee = pageEntierementCochee()
+  // Les identifiants viennent des modèles de lignes de TanStack, mémorisés
+  // sur `donnees` (et le filtre, le tri, la page) : `idLigne` n'est pas
+  // rappelé à chaque rendu. Les lignes de la page sont celles affichées ;
+  // celles des données, toutes les lignes reçues.
+  const lignesDonnees = table.getCoreRowModel().rows
+  const lignesPage = table.getRowModel().rows
+  // Page entièrement cochée (lignes sélectionnables, au moins une) : la
+  // règle de TanStack, calculée une fois par rendu et lue par le getter
+  // `toutSelectionne` ci-dessus (appelé après ce rendu).
+  const pageCochee = table.getIsAllPageRowsSelected()
 
   // « Tous sélectionnés » ne vaut que pour la page où l'utilisateur l'a
   // demandé, entièrement cochée : il retombe quand la page change (même si
   // `conserverSelection` y garde des lignes cochées) et dès qu'une ligne de
   // la page n'est plus cochée, que ce soit par le tableau ou par
-  // l'application (sélection contrôlée remplacée).
-  const clePagePrecedente = useRef(clePage)
+  // l'application (sélection contrôlée remplacée). Le contenu de la page est
+  // comparé sans son ordre (trier ne la change pas), et seulement quand ses
+  // lignes changent.
+  const clePagePrecedente = useRef<string | null>(null)
   const finTout = useEffectEvent(() => changerTout(false))
   useEffect(() => {
-    const pageChangee = clePagePrecedente.current !== clePage
+    const clePage = lignesPage
+      .map((row) => row.id)
+      .sort()
+      .join("\u0000")
+    const pageChangee =
+      clePagePrecedente.current !== null &&
+      clePagePrecedente.current !== clePage
     clePagePrecedente.current = clePage
     if (tout && (pageChangee || !pageCochee)) finTout()
-  }, [clePage, pageCochee, tout])
+  }, [lignesPage, pageCochee, tout])
 
-  const restreindreEtat = useEffectEvent(() => {
-    const presents = new Set(lignesPage.map((row) => row.id))
-    if (!conserverSelection)
-      table.setRowSelection((avant) => restreindre(avant, presents))
-    table.setExpanded((avant) =>
-      avant === true ? avant : restreindre(avant, presents)
+  // La sélection se limite aux lignes affichées (page et filtre compris) ;
+  // le dépliage, aux lignes des données (un détail masqué par un filtre
+  // reste ouvert quand la ligne revient).
+  // Avant l'affichage (`useLayoutEffect`), pour ne pas peindre une ligne
+  // cochée ou dépliée qui n'est plus là. Rien à faire, ni `Set` à bâtir, tant
+  // que la sélection (ou le dépliage) est vide.
+  const restreindreSelection = useEffectEvent(() => {
+    if (conserverSelection || Object.keys(selectionCourante).length === 0)
+      return
+    const affichees = new Set(lignesPage.map((row) => row.id))
+    table.setRowSelection((avant) =>
+      restreindre(avant, (id) => affichees.has(id))
     )
   })
-  useEffect(() => {
-    restreindreEtat()
+  useLayoutEffect(() => {
+    restreindreSelection()
   }, [lignesPage])
+  // Le dépliage se limite aux lignes des données (un détail masqué par un
+  // filtre reste ouvert quand la ligne revient) : `rowsById` du modèle de
+  // base, sans `Set`.
+  const restreindreDepliees = useEffectEvent(() => {
+    if (Object.keys(deplieesCourantes).length === 0) return
+    const { rowsById } = table.getCoreRowModel()
+    table.setExpanded((avant) =>
+      avant === true ? avant : restreindre(avant, (id) => id in rowsById)
+    )
+  })
+  useLayoutEffect(() => {
+    restreindreDepliees()
+  }, [lignesDonnees])
+
+  // Un filtre ou un tri changé ramène à la première page (pagination côté
+  // client) : la page 4 d'une recherche qui n'en a plus qu'une serait vide.
+  // Comparés par référence : l'état de TanStack garde ses objets tant qu'ils
+  // ne changent pas (les valeurs contrôlées doivent être stables).
+  const { columnFilters, globalFilter, sorting, pagination: page } = table.state
+  const criteres = useRef([columnFilters, globalFilter, sorting])
+  const premierePage = useEffectEvent(() => {
+    if (paginationClient && table.state.pagination.pageIndex !== 0)
+      table.setPageIndex(0)
+  })
+  useLayoutEffect(() => {
+    const suivants = [columnFilters, globalFilter, sorting]
+    if (suivants.every((critere, i) => critere === criteres.current[i])) return
+    criteres.current = suivants
+    premierePage()
+  }, [columnFilters, globalFilter, sorting])
+
+  // Page au-delà de la fin (dernières lignes supprimées) : la dernière page
+  // existante, plutôt qu'une page vide sous un numéro surligné. Seul endroit
+  // qui le fait pour une pagination côté client, que `DataTablePagination`
+  // soit affichée ou non.
+  const nombrePages = table.getPageCount()
+  const ramener = useEffectEvent(() =>
+    table.setPageIndex(Math.max(0, nombrePages - 1))
+  )
+  useLayoutEffect(() => {
+    if (paginationClient && page.pageIndex > 0 && page.pageIndex >= nombrePages)
+      ramener()
+  }, [paginationClient, page.pageIndex, nombrePages])
 
   return table
 }
@@ -495,10 +778,25 @@ function estActivation(event: MouseEvent<HTMLElement>): boolean {
   return !window.getSelection()?.toString()
 }
 
+/** Ce que `DataTable` lit de la requête de ses lignes : le résultat de
+ *  `useQuery` de TanStack Query convient tel quel. */
+export type DataTableRequete = Pick<
+  QueryBoundaryRequete<unknown>,
+  "isError" | "error" | "isFetching" | "refetch"
+>
+
 export interface DataTableProps<TData extends RowData> {
   table: DataTableInstance<TData>
   /** Nom du tableau pour les lecteurs d'écran : « Membres ». */
   libelle: string
+  /**
+   * La requête des lignes. En échec, un bandeau d'erreur avec « Réessayer »
+   * s'affiche au-dessus du tableau (rendu dans le parent, qui règle
+   * l'espacement, comme `QueryBoundary`) et l'état vide se tait : il
+   * contredirait le bandeau. Sans `enChargement`, `isFetching` en tient
+   * lieu.
+   */
+  requete?: DataTableRequete
   /** Données en cours de chargement : lignes fantômes s'il n'y a encore
    *  rien, lignes actuelles atténuées sinon. */
   enChargement?: boolean
@@ -540,20 +838,23 @@ export interface DataTableProps<TData extends RowData> {
 export function DataTable<TData extends RowData>({
   table,
   libelle,
-  enChargement = false,
+  requete,
+  enChargement = requete?.isFetching ?? false,
   lignesChargement = 10,
-  vide = "Aucun résultat.",
+  vide: videDemande = "Aucun résultat.",
   onActiverLigne,
   rendreDetail,
   unite = UNITE_PAR_DEFAUT,
   feminin = false,
   className,
 }: DataTableProps<TData>) {
+  const enErreur = requete?.isError ?? false
+  const vide = enErreur ? null : videDemande
   const lignes = table.getRowModel().rows
   const colonnesVisibles = table.getVisibleLeafColumns()
   const cleColonnes = colonnesVisibles.map((colonne) => colonne.id).join(" ")
-  const meta = table.options.meta
-  const racine = meta?.racine
+  const meta = metaDe(table)
+  const { racine } = meta
 
   // Gestionnaire de clic stable : une fonction écrite en ligne par
   // l'application ne doit pas redessiner chaque ligne.
@@ -574,120 +875,188 @@ export function DataTable<TData extends RowData>({
 
   // Le détail et l'état vide suivent la largeur visible du cadre, pas celle
   // du tableau : sur mobile, ils restent lisibles (et centrés) pendant que
-  // les colonnes défilent.
-  const [largeurCadre, setLargeurCadre] = useState<number>()
+  // les colonnes défilent. La variable CSS est écrite directement, sans
+  // rendu React. (Une requête de conteneur ne suffit pas : `cqw` sur le
+  // cadre défilant mesurerait la largeur défilable, pas la partie visible.)
   useEffect(() => {
-    const cadre = racine?.current?.querySelector<HTMLElement>(
+    const cadre = racine.current
+    const defilant = cadre?.querySelector<HTMLElement>(
       '[data-slot="table-container"]'
     )
-    if (!cadre || typeof ResizeObserver === "undefined") return
+    if (!cadre || !defilant || typeof ResizeObserver === "undefined") return
     const observateur = new ResizeObserver(() =>
-      setLargeurCadre(cadre.clientWidth)
+      cadre.style.setProperty(
+        "--data-table-largeur",
+        `${defilant.clientWidth}px`
+      )
     )
-    observateur.observe(cadre)
+    observateur.observe(defilant)
     return () => observateur.disconnect()
   }, [racine])
+
+  useLargeursStables(racine, lignes.length > 0, cleColonnes)
 
   const annonce = useAnnonce(table, enChargement && lignes.length === 0, {
     unite,
     feminin,
   })
 
+  // Deux places fixes, comme `QueryBoundary` : le bandeau absent garde la
+  // sienne, et le tableau n'est pas remonté quand il apparaît.
   return (
-    <div
-      ref={racine}
-      data-slot="data-table"
-      className={cn("min-w-0 overflow-hidden rounded-md border", className)}
-      style={
-        largeurCadre
-          ? ({ "--data-table-largeur": `${largeurCadre}px` } as CSSProperties)
-          : undefined
-      }
-    >
-      {/* Toujours montée : une zone insérée avec son texte n'est pas lue de
+    <>
+      {requete ? <QueryErrorBanner requete={requete} /> : null}
+      <div
+        ref={racine}
+        data-slot="data-table"
+        className={cn("min-w-0 overflow-hidden rounded-md border", className)}
+      >
+        {/* Toujours montée : une zone insérée avec son texte n'est pas lue de
           façon fiable. */}
-      <p className="sr-only" aria-live="polite" aria-atomic="true">
-        {annonce}
-      </p>
-      <PropositionToutSelectionner
-        table={table}
-        unite={unite}
-        feminin={feminin}
-      />
-      <Table aria-label={libelle} aria-busy={enChargement || undefined}>
-        <TableHeader>
-          {table.getHeaderGroups().map((groupe) => (
-            <TableRow key={groupe.id}>
-              {groupe.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  colSpan={header.colSpan}
-                  aria-sort={triAria(header.column)}
-                  className={header.column.columnDef.meta?.className}
-                >
-                  {header.isPlaceholder ? null : (
-                    <table.FlexRender header={header} />
-                  )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody
-          className={cn(
-            enChargement && lignes.length > 0 && "opacity-60 transition-opacity"
-          )}
-        >
-          {lignes.length ? (
-            lignes.map((row) => (
-              <LigneTableau
-                key={row.id}
-                row={row}
-                selectionnee={row.getIsSelected()}
-                selectionnable={row.getCanSelect()}
-                depliee={row.getIsExpanded()}
-                depliable={row.getCanExpand()}
-                cleColonnes={cleColonnes}
-                colonnes={table.options.columns}
-                cliquable={
-                  onActiverLigne !== undefined ||
-                  (rendreDetail !== undefined && row.getCanExpand())
-                }
-                activer={activer}
-                rendreDetail={rendreDetail}
-                nombreColonnes={colonnesVisibles.length}
-                idDetail={meta?.idDetail(row.id)}
-              />
-            ))
-          ) : enChargement ? (
-            // Lignes fantômes muettes : la zone annoncée dit « Chargement… ».
-            Array.from({ length: lignesChargement }, (_, i) => (
-              <TableRow key={i} data-slot="data-table-skeleton" aria-hidden>
-                {colonnesVisibles.map((colonne) => (
-                  <TableCell key={colonne.id}>
-                    <Skeleton className="h-4 w-full max-w-32" />
-                  </TableCell>
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
+          {annonce}
+        </p>
+        <PropositionToutSelectionner
+          table={table}
+          unite={unite}
+          feminin={feminin}
+        />
+        <Table aria-label={libelle} aria-busy={enChargement || undefined}>
+          <TableHeader>
+            {table.getHeaderGroups().map((groupe) => (
+              <TableRow key={groupe.id}>
+                {groupe.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    colSpan={header.colSpan}
+                    aria-sort={triAria(header.column)}
+                    className={header.column.columnDef.meta?.className}
+                  >
+                    {header.isPlaceholder ? null : (
+                      <table.FlexRender header={header} />
+                    )}
+                  </TableHead>
                 ))}
               </TableRow>
-            ))
-          ) : (
-            <TableRow className="hover:bg-transparent">
-              <TableCell
-                colSpan={colonnesVisibles.length || 1}
-                className="h-24 p-0 text-center whitespace-normal text-muted-foreground"
-              >
-                {/* Centré sur la partie visible du cadre, pas sur la largeur
+            ))}
+          </TableHeader>
+          <TableBody
+            className={cn(
+              enChargement &&
+                lignes.length > 0 &&
+                "opacity-60 transition-opacity"
+            )}
+          >
+            {lignes.length ? (
+              lignes.map((row) => (
+                <LigneTableau
+                  key={row.id}
+                  row={row}
+                  selectionnee={row.getIsSelected()}
+                  selectionnable={row.getCanSelect()}
+                  depliee={row.getIsExpanded()}
+                  depliable={row.getCanExpand()}
+                  cleColonnes={cleColonnes}
+                  colonnes={table.options.columns}
+                  cliquable={
+                    onActiverLigne !== undefined ||
+                    (rendreDetail !== undefined && row.getCanExpand())
+                  }
+                  activer={activer}
+                  rendreDetail={rendreDetail}
+                />
+              ))
+            ) : enChargement ? (
+              // Lignes fantômes muettes : la zone annoncée dit « Chargement… ».
+              Array.from({ length: lignesChargement }, (_, i) => (
+                <TableRow key={i} data-slot="data-table-skeleton" aria-hidden>
+                  {colonnesVisibles.map((colonne) => (
+                    <TableCell key={colonne.id}>
+                      <Skeleton className="h-4 w-full max-w-32" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow className="hover:bg-transparent">
+                <TableCell
+                  colSpan={colonnesVisibles.length || 1}
+                  className="h-24 p-0 text-center whitespace-normal text-muted-foreground"
+                >
+                  {/* Centré sur la partie visible du cadre, pas sur la largeur
                     défilable. */}
-                <div className="sticky left-0 w-[var(--data-table-largeur,100%)] p-2">
-                  {vide}
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+                  <div className="sticky left-0 w-[var(--data-table-largeur,100%)] p-2">
+                    {vide}
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </>
   )
+}
+
+/**
+ * Largeurs des colonnes gardées quand le tableau se vide (filtre sans
+ * résultat, chargement de la page suivante) : en mise en page automatique,
+ * elles ne dépendraient plus que des en-têtes, et les colonnes sauteraient.
+ * Mesurées tant qu'il y a des lignes, posées sur les en-têtes sinon.
+ */
+function useLargeursStables(
+  racine: RefObject<HTMLDivElement | null>,
+  avecLignes: boolean,
+  cleColonnes: string
+) {
+  // Dernières largeurs vues avec des lignes, par en-tête : un
+  // `ResizeObserver` les relève quand elles changent (après la mise en page,
+  // sans la forcer), au lieu d'une mesure à chaque nouvelle page.
+  const largeurs = useRef(new WeakMap<Element, number>())
+  const avecLignesRef = useRef(avecLignes)
+  const posees = useRef(false)
+
+  const entetes = () =>
+    racine.current?.querySelectorAll<HTMLElement>(
+      '[data-slot="table-header"] [data-slot="table-head"]'
+    ) ?? []
+
+  // Observation par jeu de colonnes : de nouveaux en-têtes à suivre.
+  useLayoutEffect(() => {
+    if (typeof ResizeObserver === "undefined") return
+    const observateur = new ResizeObserver((entrees) => {
+      // Pendant le vide, les largeurs relevées sont celles qu'on a posées.
+      if (!avecLignesRef.current) return
+      for (const { target, borderBoxSize, contentRect } of entrees)
+        largeurs.current.set(
+          target,
+          borderBoxSize?.[0]?.inlineSize ?? contentRect.width
+        )
+    })
+    for (const th of entetes()) observateur.observe(th)
+    return () => observateur.disconnect()
+    // `entetes` lit le DOM du rendu courant : seules les colonnes comptent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [racine, cleColonnes])
+
+  useLayoutEffect(() => {
+    avecLignesRef.current = avecLignes
+    // Lignes revenues, ou colonnes changées : mise en page automatique, si
+    // on l'avait figée.
+    if (posees.current) {
+      for (const th of entetes()) th.style.removeProperty("width")
+      posees.current = false
+    }
+    if (avecLignes) return
+    for (const th of entetes()) {
+      const largeur = largeurs.current.get(th)
+      if (largeur) {
+        th.style.width = `${largeur}px`
+        posees.current = true
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avecLignes, cleColonnes])
 }
 
 /**
@@ -712,10 +1081,10 @@ function useAnnonce<TData extends RowData>(
     setAnnonceTri(messageTri)
   }
 
-  const meta = table.options.meta
+  const meta = metaDe(table)
   if (chargementInitial) return "Chargement…"
-  if (meta?.toutSelectionne && meta.total !== undefined)
-    return `Les ${nombreFr(meta.total)} ${unite.pluriel} sont ${participe("sélectionné", 2, feminin)}.`
+  if (meta.toutSelectionne && meta.total !== undefined)
+    return phraseToutSelectionne(meta.total, unite, feminin)
   return annonceTri
 }
 
@@ -730,8 +1099,60 @@ interface LigneTableauProps<TData extends RowData> {
   cliquable: boolean
   activer: (row: Row<DataTableFeatures, TData>) => void
   rendreDetail?: (ligne: TData) => ReactNode
-  nombreColonnes: number
-  idDetail?: string
+}
+
+/**
+ * Suit le focus d'une ligne pour le rendre quand elle disparaît (suppression,
+ * liste rechargée) alors qu'elle l'avait : une commande de la ligne, ou un
+ * dialogue ou un menu ouvert depuis elle (rendu dans un portail, dont les
+ * événements React remontent jusqu'à la ligne). Vaut pour toute commande :
+ * `DeleteButton`, menu « … », dialogue de l'application.
+ */
+interface FocusDeLaLigne {
+  /** La ligne, ou un dialogue ou un menu ouvert depuis elle, a le focus. */
+  actif: boolean
+  /** Cellule de la dernière commande focalisée dans la ligne elle-même. */
+  rang: number
+}
+
+function useFocusDeLaLigne(
+  ligneRef: RefObject<HTMLTableRowElement | null>,
+  focus: RefObject<FocusDeLaLigne>
+) {
+  useLayoutEffect(
+    () => () => {
+      // Démontage : la ligne est encore dans le document.
+      const ligne = ligneRef.current
+      if (ligne && focus.current.actif)
+        rendreFocusApresLigne(ligne, focus.current.rang)
+    },
+    [ligneRef, focus]
+  )
+}
+
+/** Suivi du focus d'une ligne (`onFocus`, qui remonte aussi des portails
+ *  React) : la ligne l'a, et dans quelle cellule. */
+function noterFocus(
+  event: FocusEvent<HTMLTableRowElement>,
+  focus: FocusDeLaLigne
+) {
+  focus.actif = true
+  const cellule = (event.target as Element).closest("td, th")
+  if (
+    cellule instanceof HTMLTableCellElement &&
+    event.currentTarget.contains(cellule)
+  )
+    focus.rang = cellule.cellIndex
+}
+
+/** Vers un élément hors de la ligne : elle n'a plus le focus. Le passage à
+ *  un dialogue ouvert depuis elle redonne aussitôt un `onFocus` ; vers rien
+ *  (élément retiré), l'état reste. */
+function noterPerte(
+  event: FocusEvent<HTMLTableRowElement>,
+  focus: FocusDeLaLigne
+) {
+  if (event.relatedTarget) focus.actif = false
 }
 
 function LigneTableauBrute<TData extends RowData>({
@@ -741,13 +1162,18 @@ function LigneTableauBrute<TData extends RowData>({
   cliquable,
   activer,
   rendreDetail,
-  nombreColonnes,
-  idDetail,
 }: LigneTableauProps<TData>) {
   const table = row.table as DataTableInstance<TData>
+  const ligneRef = useRef<HTMLTableRowElement>(null)
+  const focus = useRef<FocusDeLaLigne>({ actif: false, rang: -1 })
+  useFocusDeLaLigne(ligneRef, focus)
+  const cellules = row.getVisibleCells()
   return (
     <>
       <TableRow
+        ref={ligneRef}
+        onFocus={(event) => noterFocus(event, focus.current)}
+        onBlur={(event) => noterPerte(event, focus.current)}
         data-state={selectionnee ? "selected" : undefined}
         className={cn(cliquable && "cursor-pointer")}
         onClick={
@@ -758,7 +1184,7 @@ function LigneTableauBrute<TData extends RowData>({
             : undefined
         }
       >
-        {row.getVisibleCells().map((cell) => (
+        {cellules.map((cell) => (
           <TableCell
             key={cell.id}
             className={cell.column.columnDef.meta?.className}
@@ -773,8 +1199,8 @@ function LigneTableauBrute<TData extends RowData>({
           className="bg-muted/30 hover:bg-muted/30"
         >
           <TableCell
-            id={idDetail}
-            colSpan={nombreColonnes}
+            id={metaDe(table).idDetail(row.id)}
+            colSpan={cellules.length}
             className="p-0 whitespace-normal"
           >
             <div className="sticky left-0 w-[var(--data-table-largeur,100%)] p-3">
@@ -801,8 +1227,6 @@ const LigneTableau = memo(
     avant.colonnes === apres.colonnes &&
     avant.cliquable === apres.cliquable &&
     avant.activer === apres.activer &&
-    avant.nombreColonnes === apres.nombreColonnes &&
-    avant.idDetail === apres.idDetail &&
     (!apres.depliee || avant.rendreDetail === apres.rendreDetail)
 ) as typeof LigneTableauBrute
 
@@ -821,12 +1245,11 @@ function PropositionToutSelectionner<TData extends RowData>({
   unite: DataTableUnite
   feminin: boolean
 }) {
-  const meta = table.options.meta
+  const meta = metaDe(table)
   const lignes = table.getRowModel().rows
-  const total = meta?.total
+  const { total } = meta
   const surPage = lignes.filter((row) => row.getIsSelected()).length
   if (
-    !meta ||
     total === undefined ||
     lignes.length === 0 ||
     !table.getIsAllPageRowsSelected() ||
@@ -841,9 +1264,7 @@ function PropositionToutSelectionner<TData extends RowData>({
     >
       {meta.toutSelectionne ? (
         <>
-          <span>
-            {`Les ${nombreFr(total)} ${unite.pluriel} sont ${participe("sélectionné", 2, feminin)}.`}
-          </span>
+          <span>{phraseToutSelectionne(total, unite, feminin)}</span>
           <Button
             variant="link"
             className="h-auto px-0"
@@ -984,13 +1405,28 @@ export function dataTableSelectionColumn<TData extends RowData>({
     ),
     enableSorting: false,
     enableHiding: false,
-    meta: { className: "w-8" },
+    // La cellule a la largeur de la zone de la case (12 + 16 + 12 px) : avec
+    // `w-8` et sans marge droite, la zone débordait de 12 px sur la colonne
+    // suivante, dont un clic au début cochait la ligne.
+    meta: { className: COLONNE_CASE },
   })
 }
 
 /** Zone cliquable d'une case de tableau : 40 × 40 px autour du carré de
- *  16 px, soit la cellule entière, plus facile au doigt. */
+ *  16 px, plus facile au doigt. */
 const ZONE_CASE = "after:-inset-3"
+
+/** Cellule de la colonne de sélection : la largeur de sa zone cliquable. La
+ *  marge droite remplace le `pr-0` que `TableCell` donne à une case. */
+const COLONNE_CASE = "w-10 px-3 [&:has([role=checkbox])]:pr-3"
+
+/**
+ * Case verrouillée lisible : ni estompée (à 50 %, son bord tombait sous
+ * 3:1), ni confondue avec une case active. Vide, fond gris et bord plein ;
+ * cochée, gris foncé (`--muted-foreground`) au lieu de la couleur d'accent.
+ */
+export const CASE_VERROUILLEE =
+  "aria-disabled:cursor-not-allowed aria-disabled:opacity-100 aria-disabled:not-data-checked:bg-muted aria-disabled:data-checked:border-muted-foreground aria-disabled:data-checked:bg-muted-foreground aria-disabled:data-checked:text-background"
 
 function CaseLigne<TData extends RowData>({
   row,
@@ -1017,10 +1453,7 @@ function CaseLigne<TData extends RowData>({
       aria-disabled={!selectionnable || undefined}
       aria-describedby={verrou ? idVerrou : undefined}
       aria-label={libelle}
-      className={cn(
-        ZONE_CASE,
-        "aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
-      )}
+      className={cn(ZONE_CASE, CASE_VERROUILLEE)}
       onCheckedChange={(coche, details) =>
         basculer({
           target: { checked: coche },
@@ -1077,7 +1510,13 @@ export function dataTableExpandColumn<TData extends RowData>({
           deplie={row.getIsExpanded()}
           onBasculer={() => row.toggleExpanded()}
           libelle={libelleLigne?.(row.original) ?? "Détail de la ligne"}
-          idDetail={table.options.meta?.idDetail(row.id)}
+          // Seulement pour une ligne dépliée : `aria-controls` ne vise que
+          // le détail rendu.
+          idDetail={
+            row.getIsExpanded()
+              ? metaDe(table as DataTableInstance<TData>).idDetail(row.id)
+              : undefined
+          }
         />
       ) : null,
     enableSorting: false,
@@ -1159,5 +1598,106 @@ export function DataTableRowActions({
         {children}
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+export interface DataTableActionsColumnOptions<TData extends RowData> {
+  /** Les commandes d'une ligne : `DeleteButton`, `TooltipButton`,
+   *  `DataTableRowActions`… alignées à droite. */
+  actions: (ligne: TData) => ReactNode
+  /** Nom de la colonne, lu par les lecteurs d'écran (l'en-tête reste
+   *  vide à l'écran) et affiché dans le sélecteur de colonnes. « Actions »
+   *  par défaut. */
+  libelle?: string
+  /** Identifiant de la colonne. « actions » par défaut. */
+  id?: string
+  /** Colonne masquable et déplaçable par « Colonnes ». Non par défaut. */
+  enableHiding?: boolean
+  /** Classes ajoutées à l'en-tête et aux cellules, après `w-px`. */
+  className?: string
+}
+
+/**
+ * Colonne des commandes d'une ligne (`id: "actions"`, comme dans shadcn) :
+ * en-tête lu mais invisible, colonne aussi étroite que son contenu,
+ * commandes alignées à droite. Ni triable ni masquable. Comme toute colonne,
+ * à créer hors du composant ou mémorisée : un état de la page passe par un
+ * contexte ou un hook lu dans la cellule, pas par la fermeture de `actions`.
+ */
+export function dataTableActionsColumn<TData extends RowData>({
+  actions,
+  libelle = "Actions",
+  id = "actions",
+  enableHiding = false,
+  className,
+}: DataTableActionsColumnOptions<TData>): DataTableColumnDef<TData> {
+  return createDataTableColumnHelper<TData>().display({
+    id,
+    header: () => <span className="sr-only">{libelle}</span>,
+    cell: ({ row }) => (
+      <div className="flex items-center justify-end gap-1">
+        {actions(row.original)}
+      </div>
+    ),
+    enableSorting: false,
+    enableHiding,
+    meta: { libelle, className: cn("w-px", className) },
+  })
+}
+
+type DataTableCellLinkCommun = {
+  children: ReactNode
+  className?: string
+}
+
+/** Lien de cellule : une adresse, suivie par le lien du routeur. */
+export type DataTableCellLinkProps = DataTableCellLinkCommun &
+  Omit<ComponentProps<"a">, "children" | "className"> & {
+    href: string
+    /** Lien du routeur de l'application (comme celui d'`AppShell`) ; un
+     *  `<a>` par défaut. */
+    lien?: AppShellLienComposant
+  }
+
+/** Bouton de cellule : une action sur place (ouvrir la modification…). */
+export type DataTableCellButtonProps = DataTableCellLinkCommun &
+  Omit<ComponentProps<"button">, "children" | "className"> & {
+    href?: never
+    lien?: never
+  }
+
+/** Style du titre d'une ligne : texte en gras, souligné au survol, anneau
+ *  de focus de la bibliothèque. */
+const TITRE_DE_LIGNE =
+  "rounded-sm text-left font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+
+/**
+ * Titre d'une ligne qui mène à sa fiche : un vrai lien (`href`, routeur par
+ * `lien`), ou un bouton sans `href` (ouvrir la modification). Le clic de
+ * ligne (`onActiverLigne`) n'est qu'un raccourci à la souris : ce lien est
+ * le chemin du clavier et des lecteurs d'écran, et garde l'ouverture dans un
+ * nouvel onglet.
+ */
+export function DataTableCellLink(
+  props: DataTableCellLinkProps | DataTableCellButtonProps
+) {
+  if (props.href !== undefined) {
+    const { lien: Lien = "a", className, ...lienProps } = props
+    return (
+      <Lien
+        data-slot="data-table-cell-link"
+        className={cn(TITRE_DE_LIGNE, className)}
+        {...lienProps}
+      />
+    )
+  }
+  const { className, type = "button", ...boutonProps } = props
+  return (
+    <button
+      data-slot="data-table-cell-link"
+      type={type}
+      className={cn(TITRE_DE_LIGNE, "cursor-pointer", className)}
+      {...boutonProps}
+    />
   )
 }

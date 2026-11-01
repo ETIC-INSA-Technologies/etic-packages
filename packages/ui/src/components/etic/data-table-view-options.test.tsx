@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -7,8 +8,12 @@ import {
   DataTableViewOptions,
   createDataTableColumnHelper,
   dataTableSelectionColumn,
+  useColumnPrefs,
   useDataTable,
+  type ColumnOrderState,
+  type ColumnVisibilityState,
 } from "@etic-ui/index"
+import { CASE_VERROUILLEE } from "@etic-ui/components/etic/data-table"
 
 interface Ligne {
   id: string
@@ -228,5 +233,144 @@ describe("DataTableViewOptions", () => {
       "aria-expanded",
       "false"
     )
+  })
+
+  it("montre lisible la case verrouillée de la dernière colonne, sans l'estomper", async () => {
+    const user = userEvent.setup()
+    render(<Tableau />)
+    await user.click(screen.getByRole("button", { name: "Colonnes" }))
+    await user.click(await screen.findByRole("checkbox", { name: "Ville" }))
+    await user.click(screen.getByRole("checkbox", { name: "Pôle" }))
+    const nom = screen.getByRole("checkbox", { name: "Nom" })
+    expect(nom).toHaveAttribute("aria-disabled", "true")
+    expect(nom).toHaveClass(...CASE_VERROUILLEE.split(" "))
+  })
+})
+
+describe("DataTableViewOptions sans useDataTable", () => {
+  const COLONNES_MANUELLES = [
+    { id: "nom", libelle: "Nom", masquable: false },
+    { id: "ville", libelle: "Ville" },
+    { id: "pole", libelle: "Pôle" },
+  ]
+
+  function Manuel({ reordonnable = true }: { reordonnable?: boolean }) {
+    const [visibilite, setVisibilite] = useState<ColumnVisibilityState>({
+      pole: false,
+    })
+    const [ordre, setOrdre] = useState<ColumnOrderState>([])
+    return (
+      <>
+        <DataTableViewOptions
+          colonnes={COLONNES_MANUELLES}
+          visibiliteColonnes={visibilite}
+          onVisibiliteColonnesChange={setVisibilite}
+          ordreColonnes={ordre}
+          onOrdreColonnesChange={reordonnable ? setOrdre : undefined}
+        />
+        <output data-testid="etat">
+          {JSON.stringify({ visibilite, ordre })}
+        </output>
+      </>
+    )
+  }
+
+  const etat = () =>
+    JSON.parse(screen.getByTestId("etat").textContent!) as {
+      visibilite: ColumnVisibilityState
+      ordre: ColumnOrderState
+    }
+
+  it("coche les colonnes données, sans les non masquables", async () => {
+    const user = userEvent.setup()
+    render(<Manuel />)
+    await user.click(screen.getByRole("button", { name: "Colonnes" }))
+    const ville = await screen.findByRole("checkbox", { name: "Ville" })
+    expect(ville).toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "Pôle" })).not.toBeChecked()
+    expect(screen.queryByRole("checkbox", { name: "Nom" })).toBeNull()
+
+    await user.click(screen.getByRole("checkbox", { name: "Pôle" }))
+    expect(etat().visibilite).toEqual({ pole: true })
+  })
+
+  it("garde affichée la dernière colonne de données masquable", async () => {
+    const user = userEvent.setup()
+    function SansNom() {
+      const [visibilite, setVisibilite] = useState<ColumnVisibilityState>({
+        pole: false,
+      })
+      return (
+        <DataTableViewOptions
+          colonnes={COLONNES_MANUELLES.slice(1)}
+          visibiliteColonnes={visibilite}
+          onVisibiliteColonnesChange={setVisibilite}
+        />
+      )
+    }
+    render(<SansNom />)
+    await user.click(screen.getByRole("button", { name: "Colonnes" }))
+    const ville = await screen.findByRole("checkbox", { name: "Ville" })
+    expect(ville).toHaveAttribute("aria-disabled", "true")
+    await user.click(ville)
+    expect(ville).toBeChecked()
+  })
+
+  it("réordonne au clavier et rend l'ordre complet, colonnes fixes à leur place", async () => {
+    const user = userEvent.setup()
+    render(<Manuel />)
+    await user.click(screen.getByRole("button", { name: "Colonnes" }))
+    const poignee = await screen.findByRole("button", {
+      name: "Déplacer la colonne Ville",
+    })
+    poignee.focus()
+    fireEvent.keyDown(poignee, { code: "Space", key: " " })
+    await attendre()
+    fireEvent.keyDown(document, { code: "ArrowDown", key: "ArrowDown" })
+    await attendre()
+    fireEvent.keyDown(document, { code: "Space", key: " " })
+    await attendre()
+    expect(etat().ordre).toEqual(["nom", "pole", "ville"])
+    expect(screen.getAllByRole("listitem").map((li) => li.textContent)).toEqual(
+      ["Pôle", "Ville"]
+    )
+  })
+
+  it("sans onOrdreColonnesChange, ni poignée ni glisser", async () => {
+    const user = userEvent.setup()
+    render(<Manuel reordonnable={false} />)
+    await user.click(screen.getByRole("button", { name: "Colonnes" }))
+    await screen.findByRole("checkbox", { name: "Ville" })
+    expect(screen.queryByRole("button", { name: /Déplacer/ })).toBeNull()
+    expect(screen.getByText("Cochez pour afficher.")).toBeInTheDocument()
+  })
+
+  it("reçoit telles quelles les options de useColumnPrefs", async () => {
+    const user = userEvent.setup()
+    function AvecPrefs() {
+      const prefs = useColumnPrefs({
+        cle: "test:vue",
+        colonnes: ["ville", "pole"],
+        visiblesParDefaut: ["ville"],
+        fixesEnTete: ["nom"],
+      })
+      return (
+        <>
+          <DataTableViewOptions
+            colonnes={COLONNES_MANUELLES}
+            {...prefs.optionsTableau}
+          />
+          <output data-testid="visibles">{prefs.visibles.join(",")}</output>
+        </>
+      )
+    }
+    localStorage.clear()
+    render(<AvecPrefs />)
+    await user.click(screen.getByRole("button", { name: "Colonnes" }))
+    expect(
+      await screen.findByRole("checkbox", { name: "Pôle" })
+    ).not.toBeChecked()
+    await user.click(screen.getByRole("checkbox", { name: "Pôle" }))
+    expect(screen.getByTestId("visibles")).toHaveTextContent("ville,pole")
   })
 })

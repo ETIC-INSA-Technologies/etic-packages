@@ -23,8 +23,28 @@ export function normaliser(texte: string): string {
 export function correspondance(
   recherche: string
 ): (...textes: (string | null | undefined)[]) => boolean {
-  const cherche = normaliser(recherche).trim()
+  const cherche = normaliserRecherche(recherche)
   if (cherche === "") return () => true
   return (...textes) =>
     textes.some((texte) => texte != null && normaliser(texte).includes(cherche))
+}
+
+/** Une recherche saisie, prête à comparer : normalisée et rognée. Vide
+ *  (`""`), elle ne filtre rien. */
+export function normaliserRecherche(recherche: string): string {
+  return normaliser(recherche).trim()
+}
+
+const collationFr = new Intl.Collator("fr", {
+  sensitivity: "base",
+  numeric: true,
+})
+
+/**
+ * Comparateur alphabétique français, pour `Array.prototype.sort` : accents
+ * et casse ignorés, nombres dans le texte à leur valeur (« Poste 2 » avant
+ * « Poste 10 »). C'est le tri `texteFr` des tableaux.
+ */
+export function comparerFr(a: string, b: string): number {
+  return collationFr.compare(a, b)
 }

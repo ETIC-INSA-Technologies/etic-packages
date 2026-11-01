@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from "react"
 import type { RowData } from "@tanstack/react-table"
 import { cn } from "cn"
@@ -14,9 +15,10 @@ import { XIcon } from "lucide-react"
 import { Button } from "@etic-ui/components/ui/button"
 import { Separator } from "@etic-ui/components/ui/separator"
 import {
-  focaliserTableau,
+  metaDe,
   type DataTableInstance,
 } from "@etic-ui/components/etic/data-table"
+import { focaliserTableau } from "@etic-ui/components/etic/data-table-focus"
 import {
   UNITE_PAR_DEFAUT,
   nombreFr,
@@ -37,8 +39,7 @@ function echapPourUnChamp(event: KeyboardEvent): boolean {
   )
 }
 
-export interface DataTableBulkActionsProps<TData extends RowData> {
-  table: DataTableInstance<TData>
+interface DataTableBulkActionsCommun {
   /** Nom des éléments : « 3 personnes sélectionnées ». « élément »,
    *  « éléments » par défaut. */
   unite?: DataTableUnite
@@ -51,6 +52,58 @@ export interface DataTableBulkActionsProps<TData extends RowData> {
   className?: string
 }
 
+/** Barre branchée sur l'instance d'un `DataTable`. */
+export interface DataTableBulkActionsTableProps<
+  TData extends RowData,
+> extends DataTableBulkActionsCommun {
+  table: DataTableInstance<TData>
+}
+
+/**
+ * Barre d'un tableau rendu à la main, sans instance `useDataTable` : la
+ * sélection est celle de l'application.
+ */
+export interface DataTableBulkActionsSelectionProps extends DataTableBulkActionsCommun {
+  table?: never
+  /** Nombre d'éléments sélectionnés ; la barre s'affiche dès 1. */
+  nombre: number
+  /** « Tout désélectionner » et Échap. */
+  onToutDeselectionner: () => void
+  /** Cadre du tableau : Échap y vide la sélection, et le focus y revient
+   *  (sa case d'en-tête, sinon le cadre) quand la barre disparaît. */
+  racine?: RefObject<HTMLElement | null>
+}
+
+export type DataTableBulkActionsProps<TData extends RowData = RowData> =
+  DataTableBulkActionsTableProps<TData> | DataTableBulkActionsSelectionProps
+
+/** Nombre, remise à zéro et cadre, lus dans le tableau ou donnés. */
+function selectionDe<TData extends RowData>(
+  props: DataTableBulkActionsProps<TData>
+): {
+  nombre: number
+  toutDeselectionner: () => void
+  racine: () => HTMLElement | null
+} {
+  if (!props.table)
+    return {
+      nombre: props.nombre,
+      toutDeselectionner: props.onToutDeselectionner,
+      racine: () => props.racine?.current ?? null,
+    }
+  const { table } = props
+  const meta = metaDe(table)
+  return {
+    // « Tous sélectionnés » : le total, pas seulement les lignes de la page.
+    nombre:
+      meta.toutSelectionne && meta.total !== undefined
+        ? meta.total
+        : table.getSelectedRowIds().length,
+    toutDeselectionner: meta.toutDeselectionner,
+    racine: () => meta.racine.current,
+  }
+}
+
 /**
  * Barre d'actions groupées : apparaît avec la sélection, dit combien
  * d'éléments sont sélectionnés, porte les actions et « Tout désélectionner »
@@ -61,34 +114,34 @@ export interface DataTableBulkActionsProps<TData extends RowData> {
  * Quand elle disparaît avec le focus dedans (« Tout désélectionner », Échap,
  * action qui vide la sélection), le focus passe à la case d'en-tête du
  * tableau plutôt que de tomber sur `<body>`.
+ *
+ * Avec `table`, elle suit la sélection d'un `DataTable` ; avec `nombre`,
+ * `onToutDeselectionner` et `racine`, celle d'un tableau rendu à la main.
+ * Sur téléphone, le compte et « × » restent ensemble sur la première ligne,
+ * les actions passent dessous.
  */
-export function DataTableBulkActions<TData extends RowData>({
-  table,
-  unite = UNITE_PAR_DEFAUT,
-  feminin = false,
-  children,
-  className,
-}: DataTableBulkActionsProps<TData>) {
+export function DataTableBulkActions<TData extends RowData>(
+  props: DataTableBulkActionsProps<TData>
+) {
+  const {
+    unite = UNITE_PAR_DEFAUT,
+    feminin = false,
+    children,
+    className,
+  } = props
   const idResume = useId()
-  const meta = table.options.meta
   const barreRef = useRef<HTMLDivElement>(null)
-  // « Tous sélectionnés » : le total, pas seulement les lignes de la page.
-  const nombre =
-    meta?.toutSelectionne && meta.total !== undefined
-      ? meta.total
-      : table.getSelectedRowIds().length
+  const { nombre, toutDeselectionner: vider, racine } = selectionDe(props)
   const visible = nombre > 0
   const resume = `${uniteAccordee(nombre, unite)} ${participe("sélectionné", nombre, feminin)}`
 
   // Dernier élément de la barre qui a eu le focus, tant que le focus n'est
   // pas parti ailleurs : s'il disparaît avec la barre, on rattrape le focus.
   const focusDansBarre = useRef<HTMLElement | null>(null)
-  const racine = () => meta?.racine.current ?? null
   const toutDeselectionner = () => {
     if (barreRef.current?.contains(document.activeElement))
       focaliserTableau(racine())
-    if (meta) meta.toutDeselectionner()
-    else table.resetRowSelection(true)
+    vider()
   }
   useLayoutEffect(() => {
     if (visible) return
@@ -102,14 +155,10 @@ export function DataTableBulkActions<TData extends RowData>({
       focaliserTableau(racine())
   })
 
-  // Une sélection effacée est dite, une seule fois : la zone garde sinon le
-  // dernier compte, ou rien avant la première sélection.
-  const [etaitVisible, setEtaitVisible] = useState(visible)
-  const [effacee, setEffacee] = useState(false)
-  if (visible !== etaitVisible) {
-    setEtaitVisible(visible)
-    setEffacee(!visible)
-  }
+  // Une sélection effacée est dite : la zone garderait sinon le dernier
+  // compte. Rien avant la première sélection.
+  const [dejaVisible, setDejaVisible] = useState(visible)
+  if (visible && !dejaVisible) setDejaVisible(true)
 
   const surTouche = useEffectEvent((event: KeyboardEvent) => {
     if (event.key !== "Escape" || echapPourUnChamp(event)) return
@@ -140,7 +189,7 @@ export function DataTableBulkActions<TData extends RowData>({
       >
         {visible
           ? `${nombreFr(nombre)} ${resume}`
-          : effacee
+          : dejaVisible
             ? "Sélection effacée"
             : null}
       </div>

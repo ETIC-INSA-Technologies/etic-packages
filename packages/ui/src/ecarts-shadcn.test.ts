@@ -23,6 +23,7 @@ import {
   ComboboxContent,
   ComboboxInput,
   ComboboxList,
+  DataTable,
   Dialog,
   DialogBody,
   DialogContent,
@@ -37,6 +38,10 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
+  Table,
+  TableHeader,
+  TableRow,
+  useDataTable,
 } from "@etic-ui/index"
 
 const lire = (chemin: string) =>
@@ -501,5 +506,43 @@ describe("écarts avec shadcn", () => {
 
   it("imports par sous-chemin (Base UI, date-fns, locale du calendrier), gardés par ESLint", () => {
     expect(lire("../eslint.config.js")).toContain('"no-restricted-imports"')
+  })
+
+  it("tableau : la ligne d'en-tête ne se surligne pas au survol", () => {
+    // `TableRow` garde le survol de shadcn pour les lignes de données ;
+    // l'en-tête, qui ne se clique pas, l'annule.
+    render(
+      createElement(
+        Table,
+        null,
+        createElement(TableHeader, null, createElement(TableRow))
+      )
+    )
+    expect(document.querySelector('[data-slot="table-header"]')).toHaveClass(
+      "[&_tr:hover]:bg-transparent"
+    )
+  })
+
+  it("DataTable : bandeau d'erreur et cadre côte à côte, `className` sur le cadre", () => {
+    // Comme `QueryBoundary`, le bandeau est rendu dans le parent, avant le
+    // cadre bordé du tableau, et non dans le cadre.
+    function Tableau() {
+      const table = useDataTable({
+        donnees: [] as { id: string }[],
+        colonnes: [],
+        idLigne: (l) => l.id,
+      })
+      return createElement(DataTable<{ id: string }>, {
+        table,
+        libelle: "Vide",
+        className: "mon-cadre",
+        requete: { isError: true, error: new Error("Échec.") },
+      })
+    }
+    const { container } = render(createElement(Tableau))
+    const [bandeau, cadre] = [...container.children]
+    expect(bandeau).toHaveAttribute("role", "alert")
+    expect(cadre).toHaveAttribute("data-slot", "data-table")
+    expect(cadre).toHaveClass("mon-cadre")
   })
 })
