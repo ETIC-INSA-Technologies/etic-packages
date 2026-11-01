@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
-  ApiError,
   chaineRequete,
   CODE_DELAI_DEPASSE,
   CODE_REDIRECTION_REFUSEE,
@@ -108,7 +107,7 @@ function sansJeton(erreur: unknown) {
 }
 
 describe("client HTTP commun", () => {
-  it("ApiError est ErreurApi : statut, code et détails de l'enveloppe", async () => {
+  it("ErreurApi : statut, code et détails de l'enveloppe", async () => {
     simulerFetch(() => ({
       status: 409,
       corps: {
@@ -122,8 +121,7 @@ describe("client HTTP commun", () => {
     const erreur = await creerClientHttp({ base: "/api/v1" })
       .delete("/poles/p1")
       .then(rate, echec)
-    expect(ApiError).toBe(ErreurApi)
-    expect(erreur).toBeInstanceOf(ApiError)
+    expect(erreur).toBeInstanceOf(ErreurApi)
     expect(erreur.status).toBe(409)
     expect(erreur.code).toBe("confirm_required")
     expect(erreur.message).toBe("Confirmer la suppression.")
@@ -136,6 +134,28 @@ describe("client HTTP commun", () => {
     expect(erreur.code).toBe("not_found")
     expect(erreur.message).toBe("Ressource introuvable.")
     expect(erreur.details).toBeNull()
+  })
+
+  it("repli par statut : table, puis 5xx et autres 4xx", async () => {
+    const attendus: [number, string][] = [
+      [401, "unauthenticated"],
+      [403, "forbidden"],
+      [409, "conflict"],
+      [422, "validation_error"],
+      [501, "not_implemented"],
+      [502, "external_service_unavailable"],
+      [503, "external_service_unavailable"],
+      [500, "internal_error"],
+      [504, "internal_error"],
+      [400, "http_400"],
+      [418, "http_418"],
+    ]
+    for (const [status, code] of attendus) {
+      simulerFetch(() => ({ status }))
+      const erreur = await creerClientHttp().get("/x").then(rate, echec)
+      expect(erreur.code).toBe(code)
+      expect(erreur.message).not.toBe("")
+    }
   })
 
   it("envoie le jeton fourni par l'application, lu à chaque requête", async () => {
@@ -154,7 +174,29 @@ describe("client HTTP commun", () => {
     await client.get("/me")
     const init2 = initDe(espion, 1)
     expect(new Headers(init2.headers).has("Authorization")).toBe(false)
-    expect(init2.redirect).toBeUndefined()
+  })
+
+  it("refuse les redirections par défaut avec un jeton, les suit sinon", async () => {
+    const espion = simulerFetch(() => ({ corps: {} }))
+    await creerClientHttp({ jeton: () => JETON }).get("/a")
+    await creerClientHttp().get("/b")
+    await creerClientHttp({
+      jeton: () => JETON,
+      redirections: "suivies",
+    }).get("/c")
+    await creerClientHttp({ redirections: "refusees" }).get("/d")
+    expect(initDe(espion, 0).redirect).toBe("manual")
+    expect(initDe(espion, 1).redirect).toBe("follow")
+    expect(initDe(espion, 2).redirect).toBe("follow")
+    expect(initDe(espion, 3).redirect).toBe("manual")
+  })
+
+  it("construit une URL complète pour une navigation", () => {
+    const client = creerClientHttp({ base: "https://api.exemple.org/v1/" })
+    expect(client.url("/login", { suivant: "/a?b=1", vide: "" })).toBe(
+      "https://api.exemple.org/v1/login?suivant=%2Fa%3Fb%3D1"
+    )
+    expect(() => client.url("//evil.example")).toThrow(TypeError)
   })
 
   it("ne laisse pas un en-tête de l'appelant poser un jeton", async () => {
@@ -234,14 +276,10 @@ describe("client HTTP commun", () => {
   })
 
   it("signale une page HTML reçue à la place de JSON", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response("<!doctype html><html></html>", {
-          headers: { "content-type": "text/html; charset=utf-8" },
-        })
-      )
-    )
+    simulerFetch(() => ({
+      texte: "<!doctype html><html></html>",
+      enTetes: { "content-type": "text/html; charset=utf-8" },
+    }))
     const erreur = await creerClientHttp().get("/membres").then(rate, echec)
     expect(erreur.code).toBe(CODE_REPONSE_NON_JSON)
     expect(erreur.message).toMatch(/page HTML/)
@@ -250,30 +288,33 @@ describe("client HTTP commun", () => {
     })
   })
 
+  it("signale un corps non JSON qui n'est pas du HTML", async () => {
+    simulerFetch(() => ({
+      texte: "ok",
+      enTetes: { "content-type": "text/plain" },
+    }))
+    const erreur = await creerClientHttp().get("/x").then(rate, echec)
+    expect(erreur.code).toBe(CODE_REPONSE_NON_JSON)
+    expect(erreur.message).not.toMatch(/HTML/)
+  })
+
   it("signale une page HTML reçue à la place d'un fichier", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response("<!doctype html>", {
-          headers: { "content-type": "text/html" },
-        })
-      )
-    )
+    simulerFetch(() => ({
+      texte: "<!doctype html>",
+      enTetes: { "content-type": "text/html" },
+    }))
     const erreur = await creerClientHttp()
       .lireBlob("/membres/m1/photo")
       .then(rate, echec)
     expect(erreur.code).toBe(CODE_REPONSE_NON_JSON)
+    expect(erreur.message).toMatch(/page HTML/)
   })
 
   it("lit un fichier", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(new Uint8Array([1, 2, 3]), {
-          headers: { "content-type": "image/png" },
-        })
-      )
-    )
+    simulerFetch(() => ({
+      texte: "abc",
+      enTetes: { "content-type": "image/png" },
+    }))
     const blob = await creerClientHttp().lireBlob("/photo")
     expect(blob.size).toBe(3)
   })
@@ -283,7 +324,7 @@ describe("client HTTP commun", () => {
     await expect(creerClientHttp().delete("/x")).resolves.toBeUndefined()
   })
 
-  it("sérialise le corps JSON et passe un FormData tel quel", async () => {
+  it("sérialise le corps en JSON, sauf FormData, Blob, URLSearchParams…", async () => {
     const espion = simulerFetch(() => ({ corps: {} }))
     const client = creerClientHttp()
     await client.post("/a", { nom: "Ada" })
@@ -294,11 +335,18 @@ describe("client HTTP commun", () => {
       "application/json"
     )
 
-    const formulaire = new FormData()
-    await client.post("/b", undefined, { corpsBrut: formulaire })
-    const init2 = initDe(espion, 1)
-    expect(init2.body).toBe(formulaire)
-    expect(new Headers(init2.headers).has("Content-Type")).toBe(false)
+    const bruts = [
+      new FormData(),
+      new Blob(["x"]),
+      new URLSearchParams("a=1"),
+      new ArrayBuffer(2),
+    ]
+    for (const [i, corps] of bruts.entries()) {
+      await client.post("/b", corps)
+      const init2 = initDe(espion, i + 1)
+      expect(init2.body).toBe(corps)
+      expect(new Headers(init2.headers).has("Content-Type")).toBe(false)
+    }
   })
 
   it("passe la politique de cookie du client ou de la requête", async () => {

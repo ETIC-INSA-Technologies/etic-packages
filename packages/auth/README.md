@@ -199,14 +199,14 @@ import {
 } from "@etic-insa/auth"
 
 // Application satellite : session par cookie.
-export const api = creerClientHttp({
+const api = creerClientHttp({
   base: "/api/v1",
   credentials: "include",
   surNonAuthentifie: signalerNonAuthentifie,
 })
 
-// ETIC Members : jeton Bearer gardé par l'application.
-export const api = creerClientHttp({
+// Ou, comme ETIC Members : jeton Bearer gardé par l'application.
+const apiMembers = creerClientHttp({
   base: API_BASE_URL,
   jeton: () => lireJeton(),
   surNonAuthentifie: () => effacerJeton(),
@@ -214,13 +214,23 @@ export const api = creerClientHttp({
 
 await api.get<Membre[]>("/membres", { query: { statut: ["active", "alumni"] } })
 await api.post("/membres", { nom: "Ada" })
-await api.post("/fichiers", undefined, { corpsBrut: formulaire })
+await api.post("/fichiers", formulaire) // FormData : envoyé tel quel
+await api.delete("/poles/p1", { query: { confirm: true } })
 const photo = await api.lireBlob(`/membres/${id}/photo`)
+location.assign(api.url("/auth/login", { suivant: "/" }))
 ```
 
+- Verbes : `get(chemin, options?)`, `post`, `put` et `patch(chemin, corps?, options?)`,
+  `delete(chemin, options?)` ; options `query`, `signal`, `credentials`, `enTetes`. Ils rendent
+  le JSON de la réponse, `undefined` pour une réponse vide (204 compris). `corps` part tel quel
+  s'il est un `FormData`, un `Blob`, un `URLSearchParams` ou un `ArrayBuffer` (ou une vue), en
+  JSON sinon. `lireBlob(chemin, { query, signal })` lit un fichier ; `url(chemin, query?)`
+  rend l'URL complète, pour une navigation.
 - Toute requête qui n'aboutit pas lève une `ErreurApi` (`status`, `code`, `message`,
   `details`) : celle de l'enveloppe `{"error": {…}}` du backend, ou un code et un texte lisibles
-  déduits du statut. `ApiError` est la même classe, sous le nom des anciennes copies.
+  déduits du statut : `unauthenticated` (401), `forbidden` (403), `not_found` (404), `conflict`
+  (409), `validation_error` (422), `not_implemented` (501), `external_service_unavailable`
+  (502, 503), `internal_error` (autre 5xx), `http_<statut>` (autre 4xx).
 - Codes propres au client, avec `status` 0 : `network_error` (`CODE_RESEAU`, pas de réponse) et
   `delai_depasse` (`CODE_DELAI_DEPASSE`, 30 s par défaut, réglable par `delaiMax`).
   L'annulation demandée par l'appelant (`signal`) reste une annulation.
@@ -228,10 +238,42 @@ const photo = await api.lireBlob(`/membres/${id}/photo`)
   `reponse_non_json` (`CODE_REPONSE_NON_JSON`) : en pratique, `/api` n'est pas routé vers le
   backend et le proxy a servi l'`index.html`. `lireBlob` refuse de même une page HTML.
 - Le jeton, lu à chaque requête, ne sert qu'à l'en-tête `Authorization` : il n'apparaît dans
-  aucune erreur ni aucun journal. Une requête qui le porte ne suit aucune redirection
-  (`redirection_refusee`, `CODE_REDIRECTION_REFUSEE`), et un chemin doit commencer par un seul
-  `/` : `//hote` mènerait le jeton vers une autre origine.
+  aucune erreur ni aucun journal.
+- `redirections` : `"refusees"` (le défaut quand `jeton` est fourni) fait d'une redirection une
+  erreur `redirection_refusee` (`CODE_REDIRECTION_REFUSEE`) au lieu de la suivre, pour que le
+  jeton ne parte pas ailleurs ; `"suivies"` (le défaut sans jeton) les suit. Avec FastAPI, un
+  chemin qui diffère de la route par la barre oblique finale reçoit une 307
+  (`redirect_slashes`) : l'écrire exactement comme la route.
 - `surNonAuthentifie` est appelé sur tout 401, avant que l'erreur soit levée.
+- Un chemin doit commencer par un seul `/` (`//hote` mènerait vers une autre origine). Sinon,
+  `TypeError` : c'est une erreur de programmation, hors du contrat `ErreurApi`, qu'aucun écran
+  n'a à traiter.
+
+#### Migrer depuis le client d'ETIC Members ou d'ETIC Docs
+
+| Avant                                                                 | Avec `@etic-insa/auth`                                                    |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `ApiError`                                                            | `ErreurApi` (ou `import { ErreurApi as ApiError }`)                       |
+| `estServiceExterneIndisponible` (Docs)                                | `serviceIndisponible`                                                     |
+| `analyserEnveloppeErreur` (Docs)                                      | `analyserErreur`                                                          |
+| `queryString` (Docs)                                                  | `chaineRequete`                                                           |
+| `urlApi(chemin)` (Docs)                                               | `api.url(chemin, query?)`                                                 |
+| `apiFetch(chemin, { body, bodyBrut })` (Docs)                         | verbe, `corps` (un `FormData` part tel quel)                              |
+| `api.get(chemin, query, signal)` (Members)                            | `api.get(chemin, { query, signal })`                                      |
+| `api.delete(chemin, query)` (Members)                                 | `api.delete(chemin, { query })`                                           |
+| `api.postForm(chemin, formData)` (Members)                            | `api.post(chemin, formData)`                                              |
+| `api.getBlob`, `apiFetchBlob` (Members)                               | `api.lireBlob(chemin, { signal })`                                        |
+| 401 : événement `eticdocs:non-authentifie`, `etic-admin:unauthorized` | `surNonAuthentifie` (`signalerNonAuthentifie`, ou celui de l'application) |
+
+Codes qui changent :
+
+- Members : sans enveloppe, `http_<statut>` et « Erreur inattendue (HTTP n). » laissent la place
+  aux codes ci-dessus ; un 200 qui n'est pas du JSON lève `reponse_non_json` au lieu d'une
+  `SyntaxError`.
+- Docs : sans enveloppe, un 4xx hors table donne `http_<statut>` au lieu d'`internal_error` ;
+  une réponse vide rend `undefined` au lieu de `null` ; l'erreur réseau ne porte plus
+  `details.cause`.
+- Les deux : `delai_depasse` distingue le délai dépassé de la panne réseau.
 
 ## Développer
 

@@ -2,7 +2,6 @@ export { AuthProvider, type AuthProviderProps } from "./AuthProvider"
 export {
   ACTION_RECONNEXION,
   analyserErreur,
-  ApiError,
   chaineRequete,
   CODE_DELAI_DEPASSE,
   CODE_REDIRECTION_REFUSEE,
@@ -10,17 +9,13 @@ export {
   CODE_REPONSE_NON_JSON,
   creerClientAuth,
   creerClientHttp,
-  DELAI_MAX_PAR_DEFAUT_MS,
   ErreurApi,
   PREFIXE_PAR_DEFAUT,
   type ClientAuth,
   type ClientHttp,
-  type MethodeHttp,
   type OptionsClientHttp,
   type OptionsRequete,
-  type OptionsSansMethode,
   type ParametresRequete,
-  type ValeurParametre,
 } from "./client"
 export {
   SessionRequise,
