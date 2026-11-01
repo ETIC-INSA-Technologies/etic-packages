@@ -2,8 +2,6 @@ name: Publication
 
 # Sur main : s'il reste des changesets, ouvre (ou met à jour) la PR « Versions des paquets » ;
 # une fois cette PR fusionnée, publie sur npm les versions qu'elle a calculées.
-# À la demande (bouton « Run workflow ») : publie une préversion, sous l'étiquette npm
-# `preview`, des paquets qui ont un changeset en attente — jamais installée par défaut.
 #
 # Sécurité de la publication :
 # - sans jeton npm (trusted publishing) : npm vérifie l'identité OIDC de ce workflow, déclaré
@@ -20,11 +18,9 @@ name: Publication
 on:
   push:
     branches: [main]
-  workflow_dispatch:
 
 concurrency:
-  # Les préversions (workflow_dispatch) n'attendent ni n'annulent une publication (push).
-  group: publication-${{ github.event_name }}-${{ github.ref }}
+  group: publication-${{ github.ref }}
   cancel-in-progress: false
 
 permissions: {}
@@ -32,7 +28,6 @@ permissions: {}
 jobs:
   mode:
     name: Versionner ou publier ?
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -177,66 +172,3 @@ jobs:
           path: dist
       # Épinglée par commit : ce job détient le jeton OIDC de PyPI.
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
-
-  preversion-paquets:
-    name: Préversion — vérifier et empaqueter
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      # Version 0.0.0-preview-<date> calculée sur place, jamais commitée.
-      - run: npx changeset version --snapshot preview
-      - run: npm run build
-      # Seuls les paquets passés en préversion partent. Sans changeset en attente, `changeset
-      # version` ne change rien : publier quand même mettrait la VRAIE version sous
-      # l'étiquette preview et en grillerait le numéro pour toujours.
-      - name: Empaqueter les préversions
-        run: |
-          mkdir preversions
-          for dossier in packages/*/; do
-            version=$(node -p "require('./${dossier}package.json').version")
-            case "$version" in
-              *-preview-*) npm pack --workspace "$dossier" --pack-destination preversions ;;
-            esac
-          done
-          if ! ls preversions/*.tgz > /dev/null 2>&1; then
-            echo "::error::Aucun changeset en attente sur cette branche : rien à publier en préversion."
-            exit 1
-          fi
-      - uses: actions/upload-artifact@v7
-        with:
-          name: preversions
-          path: preversions/*.tgz
-          retention-days: 1
-
-  preversion-publier:
-    name: Préversion — publier sur npm
-    needs: preversion-paquets
-    runs-on: ubuntu-latest
-    environment: npm
-    permissions:
-      contents: read
-      id-token: write # trusted publishing
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-      - uses: actions/download-artifact@v8
-        with:
-          name: preversions
-          path: preversions
-      - run: |
-          for archive in preversions/*.tgz; do
-            npm publish "$archive" --tag preview
-          done

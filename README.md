@@ -38,17 +38,16 @@ Les versions sont calculées par [Changesets](https://changesets.dev) et publié
 3. Fusionner cette PR publie les nouvelles versions sur npm, avec leur provenance, et
    `etic-insa-auth` sur PyPI quand le numéro de `@etic-insa/auth` y est nouveau.
 
-**Préversion** pour tester une modification sur un serveur avant de la publier : onglet
-_Actions_ → _Publication_ → _Run workflow_ sur la branche voulue. Les paquets qui ont un
-changeset en attente partent en `0.0.0-preview-<date>` sous l'étiquette npm `preview` ; seule
-une application qui demande `npm i @etic-insa/ui@preview` les reçoit.
+Pour tester une modification dans une application avant de la publier : `npm pack --workspace
+packages/ui` (ou `packages/auth`), puis `npm install /chemin/vers/l-archive.tgz` dans
+l'application.
 
 ### Mise en place (une fois)
 
 - **GitHub, actions** : _Settings_ → _Actions_ → _General_ → cocher « Allow GitHub Actions to
   create and approve pull requests » (pour la PR « Versions des paquets »).
 - **GitHub, environnement `npm`** : _Settings_ → _Environments_ → _New environment_ `npm` →
-  _Required reviewers_ : un ou deux mainteneurs. Toute publication, préversion comprise, attend
+  _Required reviewers_ : un ou deux mainteneurs. Toute publication attend
   alors leur approbation dans l'onglet _Actions_.
 - **GitHub, environnement `pypi`** : idem, pour la publication du côté Python de l'auth.
 - **PyPI, `etic-insa-auth`** : sur pypi.org, compte de l'organisation (double
