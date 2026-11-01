@@ -349,6 +349,7 @@ export {
   type DetailItemProps,
   DetailList,
   type DetailListProps,
+  type DetailListDisposition,
 } from "./components/etic/detail-list"
 export {
   Disclosure,

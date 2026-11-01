@@ -559,6 +559,7 @@ const ICONES: Record<string, LucideIcon> = {
   "confirm-dialog": OctagonAlertIcon,
   "page-header": HeadingIcon,
   "section-card": LayoutTemplateIcon,
+  "detail-list-dispositions": LayoutListIcon,
   "error-banner": BellIcon,
   "alert-variantes": LayersIcon,
   "empty-state": PackageOpenIcon,

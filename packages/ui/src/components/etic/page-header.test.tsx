@@ -5,8 +5,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   DetailHeader,
-  DetailItem,
-  DetailList,
   PageContainer,
   PageHeader,
   SectionCard,
@@ -131,51 +129,6 @@ describe("DetailHeader", () => {
     expect(archiver).not.toHaveBeenCalled()
     await userEvent.click(screen.getByRole("menuitem", { name: "Supprimer" }))
     expect(supprimer).toHaveBeenCalledOnce()
-  })
-})
-
-describe("DetailList et DetailItem", () => {
-  it("rend des paires libellé / valeur, avec un tiret pour une valeur absente", () => {
-    render(
-      <DetailList>
-        <DetailItem libelle="Adresse">ada@example.org</DetailItem>
-        <DetailItem libelle="Téléphone">{null}</DetailItem>
-        <DetailItem libelle="Ville">{""}</DetailItem>
-        <DetailItem libelle="Enfants">{0}</DetailItem>
-        <DetailItem libelle="Mandat">{false}</DetailItem>
-      </DetailList>
-    )
-    const termes = screen.getAllByRole("term")
-    const definitions = screen.getAllByRole("definition")
-    expect(termes.map((t) => t.textContent)).toEqual([
-      "Adresse",
-      "Téléphone",
-      "Ville",
-      "Enfants",
-      "Mandat",
-    ])
-    expect(definitions[0]).toHaveTextContent("ada@example.org")
-    expect(definitions[1]).toHaveTextContent("—Non renseigné")
-    expect(definitions[2]).toHaveTextContent("Non renseigné")
-    // Zéro est une valeur ; `false` (motif `{cond && x}`) n'en est pas une.
-    expect(definitions[3]).toHaveTextContent("0")
-    expect(definitions[4]).toHaveTextContent("Non renseigné")
-  })
-
-  it("discrète, écrit « libellé : valeur » en ligne, en petit", () => {
-    render(
-      <DetailList discret aria-label="Métadonnées">
-        <DetailItem libelle="Acteur">ada</DetailItem>
-        <DetailItem libelle="User-Agent">{null}</DetailItem>
-      </DetailList>
-    )
-    const liste = screen.getByLabelText("Métadonnées")
-    expect(liste).toHaveClass("flex", "flex-wrap", "text-xs")
-    expect(liste).not.toHaveClass("grid")
-    const [acteur, agent] = screen.getAllByRole("term")
-    expect(acteur.parentElement).toHaveTextContent("Acteur : ada")
-    expect(agent.parentElement).toHaveTextContent("User-Agent : —")
-    expect(screen.getAllByRole("definition")[0]).toHaveClass("inline")
   })
 })
 

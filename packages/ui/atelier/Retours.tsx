@@ -568,6 +568,42 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
       ),
     },
     {
+      id: "detail-list-dispositions",
+      titre: "DetailList : pile et ligne",
+      rendu: () => (
+        <div className="flex flex-col gap-6">
+          <SectionCard
+            titre="Compte"
+            description="Disposition « pile » : une colonne, même en large ; en dessous, « ligne »."
+          >
+            <DetailList disposition="pile">
+              <DetailItem libelle="Adresse e-mail">Vérifiée</DetailItem>
+              <DetailItem libelle="Dernière connexion">
+                samedi 31 octobre 2026 à 18:42
+              </DetailItem>
+              <DetailItem libelle="Identifiant Slack">{null}</DetailItem>
+              <DetailItem libelle="Chiffrement">
+                AES-256-GCM avant l'envoi, avec une clé qui ne quitte jamais les
+                secrets du serveur : l'hébergeur ne voit jamais un octet en
+                clair, et sans cette clé rien n'est restaurable.
+              </DetailItem>
+            </DetailList>
+          </SectionCard>
+          <DetailList disposition="ligne" aria-label="Métadonnées">
+            <DetailItem libelle="Acteur (id)">
+              <span className="font-mono">8f14e45f-ceea-467a-9575</span>
+            </DetailItem>
+            <DetailItem libelle="Ressource">member (id : 42)</DetailItem>
+            <DetailItem libelle="User-Agent">
+              Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like
+              Gecko) Chrome/130.0 Safari/537.36
+            </DetailItem>
+            <DetailItem libelle="Adresse IP">{null}</DetailItem>
+          </DetailList>
+        </div>
+      ),
+    },
+    {
       id: "error-banner",
       titre: "ErrorBanner, ErrorBoundary",
       rendu: () => (

@@ -6,35 +6,46 @@ import {
 } from "react"
 import { cn } from "cn"
 
-const DetailListDiscrete = createContext(false)
+/** Mise en page des paires d'une `DetailList` :
+ *  - `grille` : libellé au-dessus de la valeur, une colonne sur téléphone,
+ *    autant que la largeur en permet au-delà ;
+ *  - `pile` : libellé au-dessus de la valeur, une seule colonne sur toute la
+ *    largeur quelle que soit la place (carte étroite, dialogue, valeurs
+ *    longues) ;
+ *  - `ligne` : métadonnées secondaires (identifiants, User-Agent…), « libellé :
+ *    valeur » en petit et en discret, l'une après l'autre sur toute la largeur,
+ *    avec passage à la ligne au besoin. */
+export type DetailListDisposition = "grille" | "pile" | "ligne"
 
-export interface DetailListProps extends ComponentProps<"dl"> {
-  /** Métadonnées secondaires (identifiants, User-Agent…) : les paires
-   *  s'écrivent « libellé : valeur » en petit et en discret, l'une après
-   *  l'autre sur toute la largeur, et passent à la ligne au besoin. */
-  discret?: boolean
+const DispositionContext = createContext<DetailListDisposition>("grille")
+
+const CLASSES_LISTE: Record<DetailListDisposition, string> = {
+  grille:
+    "grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]",
+  pile: "grid grid-cols-1 gap-y-4",
+  ligne: "flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground",
 }
 
-/** Grille de paires libellé / valeur (`<dl>`) : une colonne sur téléphone,
- *  autant que la largeur en permet au-delà. */
+export interface DetailListProps extends ComponentProps<"dl"> {
+  /** `grille` par défaut ; voir `DetailListDisposition`. */
+  disposition?: DetailListDisposition
+}
+
+/** Liste de paires libellé / valeur (`<dl>`), disposée selon `disposition`. */
 export function DetailList({
-  discret = false,
+  disposition = "grille",
   className,
   ...props
 }: DetailListProps) {
   return (
-    <DetailListDiscrete.Provider value={discret}>
+    <DispositionContext.Provider value={disposition}>
       <dl
         data-slot="detail-list"
-        className={cn(
-          discret
-            ? "flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground"
-            : "grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]",
-          className
-        )}
+        data-disposition={disposition}
+        className={cn(CLASSES_LISTE[disposition], className)}
         {...props}
       />
-    </DetailListDiscrete.Provider>
+    </DispositionContext.Provider>
   )
 }
 
@@ -48,7 +59,7 @@ export interface DetailItemProps {
 
 /** Une paire libellé / valeur, dans une `DetailList`. */
 export function DetailItem({ libelle, children, className }: DetailItemProps) {
-  const discret = useContext(DetailListDiscrete)
+  const enLigne = useContext(DispositionContext) === "ligne"
   const vide =
     children === null ||
     children === undefined ||
@@ -58,15 +69,15 @@ export function DetailItem({ libelle, children, className }: DetailItemProps) {
     <div
       data-slot="detail-item"
       className={cn(
-        discret ? "min-w-0" : "flex min-w-0 flex-col gap-0.5",
+        enLigne ? "min-w-0" : "flex min-w-0 flex-col gap-0.5",
         className
       )}
     >
-      <dt className={discret ? "inline" : "text-xs text-muted-foreground"}>
+      <dt className={enLigne ? "inline" : "text-xs text-muted-foreground"}>
         {libelle}
-        {discret ? " : " : null}
+        {enLigne ? " : " : null}
       </dt>
-      <dd className={cn("break-words", discret ? "inline" : "text-sm")}>
+      <dd className={cn("break-words", enLigne ? "inline" : "text-sm")}>
         {vide ? (
           <span className="text-muted-foreground">
             <span aria-hidden>—</span>
