@@ -8,7 +8,8 @@ import {
   type DayButton,
   type Locale,
 } from "react-day-picker"
-import { fr } from "react-day-picker/locale"
+// La seule locale française : `react-day-picker/locale` les charge toutes.
+import { fr } from "react-day-picker/locale/fr"
 
 import { Button, buttonVariants } from "@etic-ui/components/ui/button"
 import {

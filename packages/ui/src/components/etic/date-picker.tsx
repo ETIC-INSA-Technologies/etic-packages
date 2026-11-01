@@ -8,7 +8,11 @@ import {
   type ReactNode,
   type Ref,
 } from "react"
-import { format, isValid, parse, startOfDay } from "date-fns"
+// Par sous-chemin : la racine de date-fns fait charger ses ~250 fonctions.
+import { format } from "date-fns/format"
+import { isValid } from "date-fns/isValid"
+import { parse } from "date-fns/parse"
+import { startOfDay } from "date-fns/startOfDay"
 import { CalendarIcon, XIcon } from "lucide-react"
 
 import { Calendar } from "@etic-ui/components/ui/calendar"
@@ -32,6 +36,7 @@ import {
   attributsDuChamp,
   useFormField,
 } from "@etic-ui/components/etic/form-field-context"
+import { NO_AUTOFILL } from "@etic-ui/lib/autofill"
 
 const FORMAT = "dd/MM/yyyy"
 // Formats acceptés à la saisie, du plus au moins précis : « 05/03/2026 »,
@@ -66,6 +71,10 @@ function messageBornes(dateMin: Date | undefined, dateMax: Date | undefined) {
   return `Date hors limites\u00a0: jusqu'au ${afficher(dateMax)}.`
 }
 
+/** Clé d'un mois (année et mois), ou `undefined`. */
+const cleMois = (date: Date | undefined) =>
+  date ? date.getFullYear() * 12 + date.getMonth() : undefined
+
 /** Une seule ref pour celle de l'application et celle du composant. */
 function fusionner<T>(...refs: (Ref<T> | undefined)[]) {
   return (element: T | null) => {
@@ -96,6 +105,10 @@ export interface DatePickerProps extends Omit<
   /** Listes déroulantes du mois et de l'année dans le calendrier, pour les
    *  dates lointaines (naissance…). */
   listesMoisAnnee?: boolean
+  /** Mois montré à l'ouverture du calendrier tant qu'aucune date n'est
+   *  choisie (le mois courant par défaut) : vingt ans plus tôt pour une date
+   *  de naissance, par exemple. */
+  moisInitial?: Date
   /** Bouton d'effacement quand une date est choisie. */
   effacable?: boolean
 }
@@ -117,6 +130,7 @@ export function DatePicker({
   dateMin,
   dateMax,
   listesMoisAnnee = false,
+  moisInitial,
   effacable = true,
   placeholder = "jj/mm/aaaa",
   disabled,
@@ -144,10 +158,25 @@ export function DatePicker({
   const champRef = useRef<HTMLInputElement>(null)
   const refChamp = useMemo(() => fusionner(ref, champRef), [ref])
   const [ouvert, setOuvert] = useState(false)
+  // Raison de la dernière fermeture du calendrier par Base UI (clic
+  // ailleurs, Échap…) ; `null` quand le composant le ferme lui-même (jour
+  // choisi). Lue une fois par `finalFocus`.
+  const raisonFermeture = useRef<string | null>(null)
   const [texte, setTexte] = useState(() => afficher(valeur))
   // Pourquoi la saisie est refusée, ou `null`.
   const [refus, setRefus] = useState<string | null>(null)
-  const [mois, setMois] = useState<Date | undefined>(valeur)
+  // Mois proposé sans date. Le calendrier le ramène lui-même entre les
+  // bornes (`startMonth` / `endMonth` de react-day-picker).
+  const moisPropose = moisInitial
+  const [mois, setMois] = useState<Date | undefined>(valeur ?? moisPropose)
+  // Tant qu'il n'y a pas de date, le calendrier suit un `moisInitial` qui
+  // change. Comparé au mois près : un `moisInitial` écrit en ligne est un
+  // nouvel objet à chaque rendu, sans changer de mois.
+  const [moisProposeVu, setMoisProposeVu] = useState(cleMois(moisPropose))
+  if (cleMois(moisPropose) !== moisProposeVu) {
+    setMoisProposeVu(cleMois(moisPropose))
+    if (valeur === undefined && moisPropose) setMois(moisPropose)
+  }
   // Dernière valeur vue (reçue ou émise) : une autre valeur, venue de
   // l'application (réinitialisation du formulaire…), remplace la saisie.
   // Après un refus, l'application peut enregistrer le `undefined` émis ou
@@ -159,7 +188,8 @@ export function DatePicker({
     if (!(refus && valeur === undefined)) {
       setTexte(afficher(valeur))
       setRefus(null)
-      if (valeur) setMois(valeur)
+      // Sans date, le calendrier revient au mois proposé.
+      if (valeur ?? moisPropose) setMois(valeur ?? moisPropose)
     }
   }
 
@@ -176,7 +206,7 @@ export function DatePicker({
     setTexte(afficher(date))
     setRefus(null)
     setValeurVue(date)
-    if (date) setMois(date)
+    if (date ?? moisPropose) setMois(date ?? moisPropose)
     if (date?.getTime() !== valeur?.getTime() || refus)
       onValeurChange(date, { invalide: false })
   }
@@ -200,7 +230,13 @@ export function DatePicker({
     .join(" ")
 
   return (
-    <Popover open={ouvert} onOpenChange={setOuvert}>
+    <Popover
+      open={ouvert}
+      onOpenChange={(suivant, details) => {
+        raisonFermeture.current = suivant ? null : details.reason
+        setOuvert(suivant)
+      }}
+    >
       <InputGroup className={className}>
         <InputGroupInput
           {...props}
@@ -215,7 +251,9 @@ export function DatePicker({
           placeholder={placeholder}
           disabled={disabled}
           inputMode="numeric"
-          autoComplete="off"
+          // `autoComplete="off"` seul n'arrête pas les gestionnaires de mots
+          // de passe : ils proposaient un identifiant dans une date.
+          {...NO_AUTOFILL}
           aria-invalid={Boolean(refus) || champ["aria-invalid"] || undefined}
           onChange={(event) => {
             setTexte(event.target.value)
@@ -296,6 +334,20 @@ export function DatePicker({
         align="end"
         alignOffset={-8}
         sideOffset={10}
+        // Fermé au clavier ou par un jour choisi, le calendrier rend le
+        // focus au champ et non au bouton : son infobulle, rouverte par ce
+        // focus, aurait absorbé l'Échap suivant (celui qui ferme le dialogue
+        // englobant). Après un clic ailleurs ou un focus parti ailleurs, il
+        // reste où il est : une ref seule le ramènerait de force au champ.
+        // Base UI ne donne ici que le type de pointeur, d'où la raison
+        // retenue par `onOpenChange`.
+        finalFocus={() => {
+          const raison = raisonFermeture.current
+          raisonFermeture.current = null
+          return raison === "outside-press" || raison === "focus-out"
+            ? false
+            : champRef.current
+        }}
       >
         <Calendar
           mode="single"

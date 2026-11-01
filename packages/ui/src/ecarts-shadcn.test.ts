@@ -18,10 +18,19 @@ import {
   AvatarFallback,
   Button,
   Calendar,
+  Checkbox,
+  Combobox,
+  ComboboxContent,
+  ComboboxInput,
+  ComboboxList,
   Dialog,
   DialogBody,
   DialogContent,
   DialogTitle,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
   SidebarProvider,
   SidebarTrigger,
   Slider,
@@ -414,5 +423,83 @@ describe("écarts avec shadcn", () => {
     expect(entete).not.toHaveClass(
       "group-data-[size=default]/alert-dialog-content:text-left"
     )
+  })
+
+  it("case à cocher : estompée d'après son propre état, pas celui du champ", () => {
+    render(createElement(Checkbox, { "aria-label": "Case" }))
+    const caseACocher = screen.getByRole("checkbox", { name: "Case" })
+    expect(caseACocher).not.toHaveClass("group-has-disabled/field:opacity-50")
+    expect(caseACocher).toHaveClass("data-disabled:opacity-50")
+  })
+
+  /** Un Select ouvert, ses options passées en `children`. */
+  async function selectOuvert(...options: ReturnType<typeof createElement>[]) {
+    render(
+      createElement(
+        Select,
+        { defaultOpen: true },
+        createElement(SelectTrigger, { "aria-label": "Pôle" }),
+        createElement(SelectContent, null, ...options)
+      )
+    )
+    return screen.findByRole("listbox")
+  }
+
+  it("select : liste sous le champ, alignée à gauche, sans s'y superposer", async () => {
+    await selectOuvert(createElement(SelectItem, { value: "a" }, "Alpha"))
+    const liste = document.querySelector('[data-slot="select-content"]')
+    expect(liste).toHaveAttribute("data-align-trigger", "false")
+    expect(liste).toHaveAttribute("data-align", "start")
+  })
+
+  it("select : options sans SelectGroup à la marge d'un groupe", async () => {
+    const liste = await selectOuvert(
+      createElement(SelectItem, { value: "a" }, "Alpha")
+    )
+    expect(liste).toHaveClass("has-[>[data-slot=select-item]]:p-1")
+  })
+
+  it("select : liste sans option annoncée", async () => {
+    await selectOuvert()
+    expect(screen.getByRole("status")).toHaveTextContent("Aucune option.")
+  })
+
+  it("select : description d'une option sous son libellé", async () => {
+    await selectOuvert(
+      createElement(
+        SelectItem,
+        { value: "a", description: "Précision." },
+        "Alpha"
+      )
+    )
+    expect(
+      screen.getByRole("option", { name: "Alpha" })
+    ).toHaveAccessibleDescription("Précision.")
+  })
+
+  it("combobox : la liste s'ancre sur le cadre du ComboboxInput, à sa largeur", async () => {
+    // L'ancrage lui-même est mesuré dans combobox.test.tsx.
+    render(
+      createElement(
+        Combobox,
+        { items: ["Lyon"], defaultOpen: true },
+        createElement(ComboboxInput, { "aria-label": "Ville" }),
+        createElement(
+          ComboboxContent,
+          null,
+          createElement(ComboboxList, { children: () => null })
+        )
+      )
+    )
+    await screen.findByRole("listbox")
+    const liste = document.querySelector('[data-slot="combobox-content"]')
+    expect(liste).toHaveClass("min-w-(--anchor-width)")
+    expect(liste).not.toHaveClass(
+      "min-w-[calc(var(--anchor-width)+--spacing(7))]"
+    )
+  })
+
+  it("imports par sous-chemin (Base UI, date-fns, locale du calendrier), gardés par ESLint", () => {
+    expect(lire("../eslint.config.js")).toContain('"no-restricted-imports"')
   })
 })

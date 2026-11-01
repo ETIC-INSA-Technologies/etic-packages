@@ -5,7 +5,7 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react"
-import { Combobox as ComboboxPrimitive } from "@base-ui/react"
+import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox"
 import { cn } from "cn"
 import { SearchIcon, XIcon } from "lucide-react"
 
@@ -270,6 +270,7 @@ export function SearchSelect<T>({
           </InputGroupAddon>
         ) : null}
       </ComboboxInput>
+      {/* Ancrée sur le cadre du champ, loupe comprise (ComboboxInput). */}
       <ComboboxContent>
         {/* Zone annoncée, montée avec la liste : chargement et échec. */}
         <ComboboxPrimitive.Status

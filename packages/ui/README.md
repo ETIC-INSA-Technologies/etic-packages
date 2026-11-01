@@ -336,12 +336,24 @@ obligatoire, invalide }`, ou `null` hors d'un `FormField`. `RequiredMark` existe
   mois et de l'année (`listesMoisAnnee`, pour une date de naissance), bouton d'effacement.
   Valeur : `Date`. Une saisie illisible ou hors bornes dit pourquoi sous le champ, bloque
   l'envoi d'un formulaire natif, et `onValeurChange(undefined, { invalide: true })` prévient
-  l'application (à bloquer avant l'envoi).
+  l'application (à bloquer avant l'envoi). `moisInitial` : mois montré à l'ouverture tant
+  qu'aucune date n'est choisie (une date de naissance s'ouvre ainsi vingt ans plus tôt, pas
+  sur le mois courant), et où il revient quand la date est effacée. Fermé au clavier ou par
+  un jour choisi, le calendrier rend le focus au champ (un Échap de plus ferme le dialogue
+  englobant, sans infobulle à fermer d'abord) ; après un clic ailleurs, le focus reste où
+  l'on a cliqué.
 - `PhoneInput` : sélecteur de pays (Combobox : drapeau et indicatif, recherche sur le nom du
   pays ou l'indicatif) et numéro, lus et validés par
   libphonenumber-js. `onValeurChange(valeur, { valide, pays })` reçoit l'E.164
   (`+33612345678`) dès que la longueur est possible ; un numéro tapé avec « + » choisit le
-  pays.
+  pays. En erreur (`aria-invalid` du numéro), le groupe est traité comme un seul champ :
+  bordure rouge sur le sélecteur de pays comme sur le numéro, un seul halo autour des deux.
+  `formaterTelephone(numero, { paysParDefaut = "FR" })` écrit un numéro pour l'affichage
+  hors d'un champ (fiche, liste), sans drapeau : national pour le pays par défaut
+  (`06 55 18 92 45`), international pour tout autre, pour que son pays se lise
+  (`+44 20 7946 0958`), tel quel s'il est illisible. Le `PhoneInput`, lui, écrit toujours le
+  format national, le pays étant montré par son drapeau. Chaque appel relit le numéro :
+  dans une longue liste, mémoïser le résultat.
 - `SearchSelect` : choix dans une longue liste cherchée par l'application.
   `rechercher(texte, signal)` renvoie une promesse (texte vide : premières suggestions) ;
   `libelleElement`, `idElement` et `rendreOption` décrivent un élément. Anti-rebond,
@@ -350,7 +362,16 @@ obligatoire, invalide }`, ou `null` hors d'un `FormField`. `RequiredMark` existe
   à la console ; au clavier, Entrée dans le champ relance la recherche, même identique),
   liste vide (`vide`) et effacement sont gérés. Sans élément choisi, le texte tapé reste
   quand la liste se ferme (Entrée, Tab), et la recherche reprend à la réouverture. `form`
-  va, comme `name`, à l'entrée cachée qui porte la valeur.
+  va, comme `name`, à l'entrée cachée qui porte la valeur. La liste s'aligne sur le cadre du
+  champ, loupe comprise (comme toute liste d'un `ComboboxInput`).
+- `Select` (shadcn) : la liste s'ouvre sous le champ, alignée à gauche, sans jamais le
+  recouvrir (`alignItemWithTrigger` et `align` restent réglables sur `SelectContent`).
+  Les options vont dans un `SelectGroup`, comme chez shadcn ; posées directement dans
+  `SelectContent`, elles ont la même marge. Sans option (y compris un `SelectGroup` vide),
+  la liste dit « Aucune option. » (`vide` de `SelectContent`), dans une zone de statut
+  annoncée aux lecteurs d'écran. `SelectItem` prend une `description` sous son libellé,
+  reliée à l'option : la raison d'une option figée (`disabled`), qui reste lisible quand le
+  libellé s'estompe ; le libellé passe alors à la ligne plutôt que d'être coupé.
 - `FileUploadButton` et `FileDropZone` : bouton, ou zone de glisser-déposer avec bouton, sur
   react-dropzone. Types (`accepter={{ "text/csv": [".csv"] }}`) et taille (`tailleMax`, en
   octets) vérifiés, refus en français : à `onRefuser` pour les deux, et affichés dans la zone
@@ -364,7 +385,7 @@ obligatoire, invalide }`, ou `null` hors d'un `FormField`. `RequiredMark` existe
   du `ton` de son option (celle de l'état que produit le choix). L'`infobulle`
   d'une option nomme un segment à icône seule, sans masquer un libellé texte.
 - `CheckboxList` : plusieurs valeurs parmi une liste de cases (`CheckboxGroup` de Base UI) ;
-  la `description` d'une option est reliée à sa case.
+  la `description` d'une option est reliée à sa case. Une case figée n'estompe que sa ligne.
 - `useDraftAutosave({ contenu, enregistrer })` : sauvegarde automatique d'un brouillon là où
   l'application le range (API ou stockage du navigateur) — anti-rebond, sans doublon, une
   écriture à la fois, version pour un verrou optimiste, `erreur` et `reessayer()`, alerte à la
@@ -753,6 +774,33 @@ npm run build      # dist/ : un module par composant, types, styles.css
   - déclencheurs de `select.tsx` et `native-select.tsx` en `text-base md:text-sm`, comme
     `Input` (en 14 px sur téléphone, iOS zoome à la sélection) ;
   - bouton qui ouvre la liste de `combobox.tsx` nommé « Afficher les options » ;
+  - `select.tsx` : liste sous le champ et alignée à gauche par défaut
+    (`alignItemWithTrigger={false}`, `align="start"`) au lieu d'être posée sur le champ et
+    centrée (elle le masquait, et débordait des deux côtés d'un champ étroit) ; options
+    posées sans `SelectGroup` à la même marge que dans un groupe ; `vide` de `SelectContent`
+    (« Aucune option. » en `role="status"` au lieu d'une fenêtre vide) ; `description` de
+    `SelectItem`, sous le libellé, qui reste lisible quand l'option est figée, avec un
+    libellé qui passe à la ligne ;
+  - `checkbox.tsx` : la case s'estompe d'après son propre état (`data-disabled`,
+    `aria-disabled`, `fieldset` désactivé) et non par `group-has-disabled/field`, qui
+    estompait toutes les cases d'un champ dès qu'une seule y était figée ; variantes
+    `disabled:` retirées (la racine est un `<span>`, jamais `:disabled`). Dans un
+    `<fieldset disabled>`, la case est réellement inactive (Base UI la coche par son entrée
+    cachée, que le fieldset désactive) et en a l'air ;
+  - `combobox.tsx` : la liste s'ancre sur le cadre (`InputGroup`) du `ComboboxInput`, et
+    non sur le seul champ que décale un addon de tête. `Combobox` porte une ref vers ce
+    cadre, que `ComboboxInput` remplit et que `ComboboxContent` passe à `anchor` (juste dès
+    l'ouverture, `defaultOpen` compris) ; une `anchor` explicite (puces,
+    `useComboboxAnchor`) l'emporte ; sans `ComboboxInput` hors de la liste, l'ancre reste
+    le déclencheur ; un `ComboboxInput` placé dans la liste (recherche d'un sélecteur
+    ouvert par un bouton) ne s'enregistre pas. Largeur minimale : celle de l'ancre
+    (`min-w-(--anchor-width)`), au lieu de l'ancre + 28 px de shadcn, qui couvraient
+    l'addon d'un champ seul ;
+  - imports par sous-chemin, imposés par la règle ESLint `no-restricted-imports`
+    (`eslint.config.js`) : Base UI (`@base-ui/react/combobox` dans `combobox.tsx`, que
+    shadcn importe par la racine), date-fns, et la seule locale `react-day-picker/locale/fr`
+    dans `calendar.tsx`. Les racines chargent tous les composants, toutes les fonctions ou
+    toutes les locales aux outils sans tree-shaking (vitest des applications) ;
   - `alert.tsx` : `role="status"` pour `info` et `success` (messages d'état, annoncés sans
     interrompre), `role="alert"` gardé pour les autres variantes ;
   - onglets `variant="line"` de `tabs.tsx` qui passent à la ligne sous 640 px (`max-sm:` :

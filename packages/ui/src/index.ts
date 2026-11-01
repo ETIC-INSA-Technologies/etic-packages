@@ -458,6 +458,7 @@ export {
 } from "./components/etic/date-picker"
 export {
   type CountryCode,
+  formaterTelephone,
   PhoneInput,
   type PhoneInputDetails,
   type PhoneInputProps,

@@ -55,20 +55,30 @@ function SelectTrigger({
   )
 }
 
+// Écart avec shadcn : la liste s'ouvre sous le champ, alignée à gauche
+// (`alignItemWithTrigger={false}`, `align="start"`), et ne recouvre jamais
+// la zone de saisie. Les défauts de shadcn (option choisie posée sur le
+// champ, liste centrée) masquaient le champ et débordaient des deux côtés
+// d'un champ étroit. Les deux restent surchargeables.
 function SelectContent({
   className,
   children,
   side = "bottom",
   sideOffset = 4,
-  align = "center",
+  align = "start",
   alignOffset = 0,
-  alignItemWithTrigger = true,
+  alignItemWithTrigger = false,
+  vide = "Aucune option.",
   ...props
 }: SelectPrimitive.Popup.Props &
   Pick<
     SelectPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
-  >) {
+  > & {
+    /** Affiché à la place des options quand il n'y en a aucune (la liste
+     *  serait sinon une fenêtre vide). */
+    vide?: React.ReactNode
+  }) {
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Positioner
@@ -89,7 +99,22 @@ function SelectContent({
           {...props}
         >
           <SelectScrollUpButton />
-          <SelectPrimitive.List>{children}</SelectPrimitive.List>
+          {/* Toujours rendu, masqué dès que la liste contient une option :
+              décidé sur le contenu réel (un `SelectGroup` vide compris), pas
+              sur les `children`. Zone de statut : annoncée à l'ouverture d'une
+              liste vide, muette (masquée) quand il y a des options. */}
+          <div
+            role="status"
+            data-slot="select-empty"
+            className="px-2.5 py-1.5 text-sm text-muted-foreground in-[[data-slot=select-content]:has([data-slot=select-item])]:hidden"
+          >
+            {vide}
+          </div>
+          {/* Écart avec shadcn : des options posées sans `SelectGroup`
+              reçoivent la même marge que dans un groupe. */}
+          <SelectPrimitive.List className="has-[>[data-slot=select-item]]:p-1">
+            {children}
+          </SelectPrimitive.List>
           <SelectScrollDownButton />
         </SelectPrimitive.Popup>
       </SelectPrimitive.Positioner>
@@ -113,20 +138,57 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  description,
   ...props
-}: SelectPrimitive.Item.Props) {
+}: SelectPrimitive.Item.Props & {
+  /** Précision sous le libellé (raison d'une option figée…), reliée à
+   *  l'option par `aria-describedby`. Écart avec shadcn. */
+  description?: React.ReactNode
+}) {
+  const idDescription = React.useId()
+  const texte = (
+    <SelectPrimitive.ItemText
+      className={cn(
+        "flex flex-1 shrink-0 gap-2 whitespace-nowrap",
+        // Avec une description, le libellé passe à la ligne au lieu d'être
+        // coupé ou recouvert par la coche.
+        description &&
+          "shrink whitespace-normal group-data-disabled/select-item:opacity-50"
+      )}
+    >
+      {children}
+    </SelectPrimitive.ItemText>
+  )
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
+      aria-describedby={description ? idDescription : undefined}
       className={cn(
         "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        // Option figée : seul le libellé s'estompe, sa raison reste lisible.
+        description && "group/select-item data-disabled:opacity-100",
         className
       )}
       {...props}
     >
-      <SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
-        {children}
-      </SelectPrimitive.ItemText>
+      {description ? (
+        <div className="flex min-w-0 flex-1 flex-col">
+          {texte}
+          {/* Masquée : le nom accessible de l'option reste son libellé, et
+              `aria-describedby` lit quand même la raison (un texte masqué
+              compte pour la description), annoncée après le nom. */}
+          <div
+            id={idDescription}
+            aria-hidden="true"
+            data-slot="select-item-description"
+            className="text-xs whitespace-normal text-muted-foreground"
+          >
+            {description}
+          </div>
+        </div>
+      ) : (
+        texte
+      )}
       <SelectPrimitive.ItemIndicator
         render={
           <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />

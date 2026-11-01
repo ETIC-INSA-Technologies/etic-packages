@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   DatePicker,
@@ -204,6 +204,196 @@ describe("DatePicker", () => {
     )
   })
 
+  it("sans date, le calendrier s'ouvre sur moisInitial (date de naissance)", async () => {
+    const user = userEvent.setup()
+    render(<Demo moisInitial={new Date(2004, 5, 1)} listesMoisAnnee />)
+    await user.click(
+      screen.getByRole("button", { name: "Choisir dans le calendrier" })
+    )
+    expect(await screen.findByRole("grid")).toHaveAccessibleName("juin 2004")
+  })
+
+  it("une date choisie l'emporte sur moisInitial", async () => {
+    const user = userEvent.setup()
+    render(
+      <Demo
+        initiale={new Date(2026, 9, 1)}
+        moisInitial={new Date(2004, 5, 1)}
+      />
+    )
+    await user.click(
+      screen.getByRole("button", { name: "Choisir dans le calendrier" })
+    )
+    expect(await screen.findByRole("grid")).toHaveAccessibleName("octobre 2026")
+  })
+
+  it("Échap ferme le calendrier et rend le focus au champ, pas au bouton à infobulle", async () => {
+    const user = userEvent.setup()
+    render(<Demo initiale={new Date(2026, 9, 1)} />)
+    await user.click(
+      screen.getByRole("button", { name: "Choisir dans le calendrier" })
+    )
+    await screen.findByRole("grid")
+    await user.keyboard("{Escape}")
+    expect(screen.queryByRole("grid")).toBeNull()
+    expect(document.activeElement).toBe(
+      screen.getByRole("textbox", { name: "Date" })
+    )
+    // Aucune infobulle ouverte n'attend un second Échap.
+    expect(screen.queryByRole("tooltip")).toBeNull()
+  })
+
+  it("un jour choisi rend aussi le focus au champ", async () => {
+    const user = userEvent.setup()
+    render(<Demo initiale={new Date(2026, 9, 1)} />)
+    await user.click(
+      screen.getByRole("button", { name: "Choisir dans le calendrier" })
+    )
+    await user.click(
+      await screen.findByRole("button", { name: / 15 octobre 2026/ })
+    )
+    expect(document.activeElement).toBe(
+      screen.getByRole("textbox", { name: "Date" })
+    )
+  })
+
+  describe("clic ailleurs : le focus reste où l'on a cliqué", () => {
+    // Base UI ne rend le focus après un clic ailleurs que si le navigateur
+    // lit `focus({ preventScroll })`, ce que jsdom ne fait pas : on le lit
+    // ici, comme un vrai navigateur.
+    const focus = HTMLElement.prototype.focus
+    beforeEach(() => {
+      vi.spyOn(HTMLElement.prototype, "focus").mockImplementation(function (
+        this: HTMLElement,
+        options?: FocusOptions
+      ) {
+        void options?.preventScroll
+        focus.call(this, options)
+      })
+    })
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    async function ouvrirPuisCliquer(cible: () => HTMLElement) {
+      const user = userEvent.setup()
+      render(
+        <>
+          <Demo initiale={new Date(2026, 9, 1)} />
+          <input aria-label="Lieu" />
+          <p>Ailleurs</p>
+        </>
+      )
+      await user.click(
+        screen.getByRole("button", { name: "Choisir dans le calendrier" })
+      )
+      await screen.findByRole("grid")
+      await user.click(cible())
+      expect(screen.queryByRole("grid")).toBeNull()
+      // Le retour du focus suit la fermeture (micro-tâche).
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    }
+
+    it("dans un autre champ", async () => {
+      await ouvrirPuisCliquer(() =>
+        screen.getByRole("textbox", { name: "Lieu" })
+      )
+      expect(document.activeElement).toBe(
+        screen.getByRole("textbox", { name: "Lieu" })
+      )
+    })
+
+    it("sur une zone sans contrôle : pas ramené dans la date", async () => {
+      await ouvrirPuisCliquer(() => screen.getByText("Ailleurs"))
+      expect(document.activeElement).not.toBe(
+        screen.getByRole("textbox", { name: "Date" })
+      )
+      expect(document.activeElement).toBe(document.body)
+    })
+  })
+
+  it("effacée, la date rend le calendrier à moisInitial", async () => {
+    const user = userEvent.setup()
+    render(
+      <Demo
+        initiale={new Date(2026, 9, 1)}
+        moisInitial={new Date(2004, 5, 1)}
+      />
+    )
+    await user.click(screen.getByRole("button", { name: "Effacer la date" }))
+    await user.click(
+      screen.getByRole("button", { name: "Choisir dans le calendrier" })
+    )
+    expect(await screen.findByRole("grid")).toHaveAccessibleName("juin 2004")
+  })
+
+  it("sans date, suit un moisInitial qui change", async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<Demo moisInitial={new Date(2004, 5, 1)} />)
+    rerender(<Demo moisInitial={new Date(1999, 1, 1)} />)
+    await user.click(
+      screen.getByRole("button", { name: "Choisir dans le calendrier" })
+    )
+    expect(await screen.findByRole("grid")).toHaveAccessibleName("février 1999")
+  })
+
+  it("une date choisie n'est pas déplacée par un moisInitial qui change", async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <Demo
+        initiale={new Date(2026, 9, 1)}
+        moisInitial={new Date(2004, 5, 1)}
+      />
+    )
+    rerender(
+      <Demo
+        initiale={new Date(2026, 9, 1)}
+        moisInitial={new Date(1999, 1, 1)}
+      />
+    )
+    await user.click(
+      screen.getByRole("button", { name: "Choisir dans le calendrier" })
+    )
+    expect(await screen.findByRole("grid")).toHaveAccessibleName("octobre 2026")
+  })
+
+  it("moisInitial est ramené entre dateMin et dateMax", async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(
+      <Demo
+        moisInitial={new Date(1990, 0, 1)}
+        dateMin={new Date(2020, 2, 15)}
+      />
+    )
+    await user.click(
+      screen.getByRole("button", { name: "Choisir dans le calendrier" })
+    )
+    expect(await screen.findByRole("grid")).toHaveAccessibleName("mars 2020")
+    unmount()
+
+    render(
+      <Demo
+        moisInitial={new Date(2040, 0, 1)}
+        dateMax={new Date(2026, 9, 20)}
+      />
+    )
+    await user.click(
+      screen.getByRole("button", { name: "Choisir dans le calendrier" })
+    )
+    expect(await screen.findByRole("grid")).toHaveAccessibleName("octobre 2026")
+  })
+
+  it("un moisInitial écrit en ligne (nouvel objet à chaque rendu) garde le mois parcouru", async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<Demo moisInitial={new Date(2004, 5, 1)} />)
+    await user.click(
+      screen.getByRole("button", { name: "Choisir dans le calendrier" })
+    )
+    await user.click(screen.getByRole("button", { name: /mois suivant/ }))
+    rerender(<Demo moisInitial={new Date(2004, 5, 1)} />)
+    expect(screen.getByRole("grid")).toHaveAccessibleName("juillet 2004")
+  })
+
   it("s'efface en gardant le focus dans le champ, et suit une valeur changée par l'application", async () => {
     const user = userEvent.setup()
     const surChangement = vi.fn()
@@ -235,5 +425,14 @@ describe("DatePicker", () => {
     )
     const donnees = new FormData(container.querySelector("form")!)
     expect(donnees.getAll("naissance")).toEqual(["2026-03-05"])
+  })
+
+  it("tient les gestionnaires de mots de passe à l'écart", () => {
+    render(<Demo />)
+    const champ = screen.getByRole("textbox", { name: "Date" })
+    expect(champ).toHaveAttribute("autocomplete", "off")
+    expect(champ).toHaveAttribute("data-1p-ignore")
+    expect(champ).toHaveAttribute("data-lpignore", "true")
+    expect(champ).toHaveAttribute("data-bwignore")
   })
 })

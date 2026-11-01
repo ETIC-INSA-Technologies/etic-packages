@@ -1,5 +1,7 @@
 import * as React from "react"
-import { Combobox as ComboboxPrimitive } from "@base-ui/react"
+// Écart avec shadcn : import par sous-chemin, pas par la racine de Base UI
+// (qui fait charger tous ses composants aux outils sans tree-shaking).
+import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox"
 import { cn } from "cn"
 
 import { Button } from "@etic-ui/components/ui/button"
@@ -11,7 +13,31 @@ import {
 } from "@etic-ui/components/ui/input-group"
 import { ChevronDownIcon, XIcon, CheckIcon } from "lucide-react"
 
-const Combobox = ComboboxPrimitive.Root
+// Écart avec shadcn : la liste s'ancre sur le cadre (`InputGroup`) du
+// `ComboboxInput`, et non sur le seul champ, que décale un addon de tête
+// (loupe…). `Combobox` porte une ref vers ce cadre, que `ComboboxInput`
+// remplit et que `ComboboxContent` passe à `anchor` : Base UI la lit à
+// l'ouverture, `defaultOpen` compris, sans rendu de plus. Une `anchor`
+// explicite (puces) l'emporte ; sans `ComboboxInput` hors de la liste, la
+// ref reste vide et Base UI ancre sur le déclencheur, comme shadcn. Un
+// `ComboboxInput` placé dans la liste (recherche d'un sélecteur ouvert par
+// un bouton) ne s'enregistre pas.
+const CadreContext =
+  React.createContext<React.RefObject<HTMLDivElement | null> | null>(null)
+const DansLaListeContext = React.createContext(false)
+
+function Combobox<
+  Value,
+  Multiple extends boolean | undefined = false,
+  Item = Value,
+>(props: ComboboxPrimitive.Root.Props<Value, Multiple, Item>) {
+  const cadre = React.useRef<HTMLDivElement | null>(null)
+  return (
+    <CadreContext.Provider value={cadre}>
+      <ComboboxPrimitive.Root {...props} />
+    </CadreContext.Provider>
+  )
+}
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
   return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />
@@ -60,8 +86,13 @@ function ComboboxInput({
   showTrigger?: boolean
   showClear?: boolean
 }) {
+  const dansLaListe = React.useContext(DansLaListeContext)
+  const cadre = React.useContext(CadreContext)
   return (
-    <InputGroup className={cn("w-auto", className)}>
+    <InputGroup
+      ref={dansLaListe ? undefined : (cadre ?? undefined)}
+      className={cn("w-auto", className)}
+    >
       <ComboboxPrimitive.Input
         render={<InputGroupInput disabled={disabled} />}
         {...props}
@@ -97,6 +128,7 @@ function ComboboxContent({
     ComboboxPrimitive.Positioner.Props,
     "side" | "align" | "sideOffset" | "alignOffset" | "anchor"
   >) {
+  const cadre = React.useContext(CadreContext)
   return (
     <ComboboxPrimitive.Portal>
       <ComboboxPrimitive.Positioner
@@ -104,18 +136,23 @@ function ComboboxContent({
         sideOffset={sideOffset}
         align={align}
         alignOffset={alignOffset}
-        anchor={anchor}
+        anchor={anchor ?? cadre}
         className="isolate z-50"
       >
-        <ComboboxPrimitive.Popup
-          data-slot="combobox-content"
-          data-chips={!!anchor}
-          className={cn(
-            "group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[chips=true]:min-w-(--anchor-width) data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:border-input/30 *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-            className
-          )}
-          {...props}
-        />
+        <DansLaListeContext.Provider value={true}>
+          <ComboboxPrimitive.Popup
+            data-slot="combobox-content"
+            data-chips={!!anchor}
+            className={cn(
+              // Écart : `min-w-(--anchor-width)` au lieu de l'ancre + 28 px
+              // de shadcn, qui couvraient l'addon d'un champ seul ; ancrée
+              // sur le cadre entier, la liste en prend la largeur exacte.
+              "group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-(--anchor-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[chips=true]:min-w-(--anchor-width) data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-8 *:data-[slot=input-group]:border-input/30 *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+              className
+            )}
+            {...props}
+          />
+        </DansLaListeContext.Provider>
       </ComboboxPrimitive.Positioner>
     </ComboboxPrimitive.Portal>
   )

@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
-import { CheckboxList, FormField } from "@etic-ui/index"
+import { Checkbox, CheckboxList, FormField } from "@etic-ui/index"
 
 describe("CheckboxList", () => {
   it("coche et décoche, et respecte les cases figées", async () => {
@@ -66,6 +66,68 @@ describe("CheckboxList", () => {
     // Une case n'est pas obligatoire à elle seule.
     expect(screen.getByRole("checkbox", { name: "DSI" })).not.toHaveAttribute(
       "aria-required"
+    )
+  })
+
+  it("dans un FormField, une case figée n'estompe que sa ligne", () => {
+    render(
+      <FormField libelle="Groupes">
+        <CheckboxList
+          options={[
+            { valeur: "bureau", libelle: "Bureau" },
+            { valeur: "membres", libelle: "Membres", disabled: true },
+          ]}
+          valeurs={["membres"]}
+          onValeursChange={vi.fn()}
+        />
+      </FormField>
+    )
+    const libre = screen.getByRole("checkbox", { name: "Bureau" })
+    const figee = screen.getByRole("checkbox", { name: "Membres" })
+    // jsdom ne calcule pas les variantes Tailwind : la case s'estompe
+    // d'après son propre état (data-disabled), plus d'après le champ
+    // englobant, qui contient l'entrée désactivée de sa voisine.
+    expect(libre).not.toHaveClass("group-has-disabled/field:opacity-50")
+    expect(libre).toHaveClass("data-disabled:opacity-50")
+    expect(libre).not.toHaveAttribute("data-disabled")
+    expect(libre).not.toHaveAttribute("aria-disabled")
+    expect(figee).toHaveAttribute("data-disabled")
+    // Le libellé suit sa ligne seule.
+    expect(libre.closest('[data-slot="field"]')).not.toHaveAttribute(
+      "data-disabled"
+    )
+    expect(figee.closest('[data-slot="field"]')).toHaveAttribute(
+      "data-disabled",
+      "true"
+    )
+  })
+
+  it("une case aria-disabled (lecture seule) a l'apparence figée", () => {
+    render(<Checkbox aria-label="Importer" aria-disabled="true" readOnly />)
+    expect(screen.getByRole("checkbox", { name: "Importer" })).toHaveClass(
+      "aria-disabled:opacity-50",
+      "aria-disabled:cursor-not-allowed"
+    )
+  })
+
+  it("dans un fieldset désactivé, la case est vraiment inactive, et en a l'air", async () => {
+    // Base UI coche par son entrée cachée, que le fieldset désactive : ni
+    // clic ni Espace n'y font rien. L'apparence suit cet état réel.
+    const user = userEvent.setup()
+    render(
+      <fieldset disabled>
+        <Checkbox aria-label="Envoi en cours" />
+      </fieldset>
+    )
+    const caseFigee = screen.getByRole("checkbox", { name: "Envoi en cours" })
+    await user.click(caseFigee)
+    expect(caseFigee).not.toBeChecked()
+    caseFigee.focus()
+    await user.keyboard(" ")
+    expect(caseFigee).not.toBeChecked()
+    expect(caseFigee).toHaveClass(
+      "in-[fieldset:disabled]:opacity-50",
+      "in-[fieldset:disabled]:cursor-not-allowed"
     )
   })
 

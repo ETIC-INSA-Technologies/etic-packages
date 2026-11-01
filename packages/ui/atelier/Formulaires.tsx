@@ -8,6 +8,7 @@ import {
   DatePicker,
   FileDropZone,
   FileUploadButton,
+  formaterTelephone,
   FormField,
   FormSection,
   Input,
@@ -20,6 +21,7 @@ import {
   SegmentedControl,
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -46,6 +48,8 @@ const POLES = [
   { value: "commercial", label: "Commercial" },
   { value: "qualite", label: "Qualité" },
 ]
+
+const VINGT_ANS_PLUS_TOT = new Date(new Date().getFullYear() - 20, 0, 1)
 
 /** Recherche simulée : 400 ms de réseau, sans accent ni casse. */
 function rechercherPersonnes(texte: string, signal: AbortSignal) {
@@ -98,11 +102,13 @@ function DemoChamps() {
             onChange={(event) => setNom(event.target.value)}
           />
         </FormField>
+        {/* Sans date, le calendrier s'ouvre vingt ans plus tôt. */}
         <FormField libelle="Date de naissance">
           <DatePicker
             valeur={naissance}
             onValeurChange={(date) => setNaissance(date)}
             dateMax={new Date()}
+            moisInitial={VINGT_ANS_PLUS_TOT}
             listesMoisAnnee
           />
         </FormField>
@@ -117,11 +123,13 @@ function DemoChamps() {
               <SelectValue placeholder="Choisir un pôle" />
             </SelectTrigger>
             <SelectContent>
-              {POLES.map((p) => (
-                <SelectItem key={p.value} value={p.value}>
-                  {p.label}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                {POLES.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
         </FormField>
@@ -130,7 +138,11 @@ function DemoChamps() {
         <FormField
           libelle="Téléphone"
           erreur={telephoneValide ? undefined : "Numéro incomplet ou invalide."}
-          description={telephone ? `Valeur : ${telephone}` : undefined}
+          description={
+            telephone
+              ? `Valeur : ${telephone} ; affiché : ${formaterTelephone(telephone)}`
+              : undefined
+          }
         >
           <PhoneInput
             valeur={telephone}
@@ -226,7 +238,8 @@ function DemoChoix() {
           },
         ]}
       />
-      <FormSection titre="Groupes">
+      {/* Dans un FormField, la case figée n'estompe que sa ligne. */}
+      <FormField libelle="Groupes">
         <CheckboxList
           options={[
             { valeur: "bureau", libelle: "Bureau" },
@@ -242,7 +255,81 @@ function DemoChoix() {
           valeurs={groupes}
           onValeursChange={setGroupes}
         />
-      </FormSection>
+      </FormField>
+    </div>
+  )
+}
+
+const STATUTS = [
+  { value: "actif", label: "Actif" },
+  { value: "ancien", label: "Ancien" },
+  { value: "desactive", label: "Désactivé" },
+]
+
+function DemoSelect() {
+  const [statut, setStatut] = useState<string | null>("actif")
+  const [filtre, setFiltre] = useState<string | null>(null)
+  return (
+    <div className="flex max-w-md flex-col gap-6">
+      {/* Option figée : sa raison, sous le libellé, reste lisible. */}
+      <FormField libelle="Statut">
+        <Select
+          items={STATUTS}
+          value={statut}
+          onValueChange={(valeur) => setStatut(valeur)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {STATUTS.map((s) => (
+                <SelectItem
+                  key={s.value}
+                  value={s.value}
+                  disabled={s.value === "desactive"}
+                  description={
+                    s.value === "desactive"
+                      ? "Nul ne désactive son propre compte."
+                      : undefined
+                  }
+                >
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </FormField>
+      {/* Champ étroit : la liste, plus large, déborde à droite seulement, et
+          s'ouvre sous le champ sans le recouvrir. Options sans SelectGroup :
+          même marge. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Select
+          items={[{ value: null, label: "Tous" }, ...POLES]}
+          value={filtre}
+          onValueChange={(valeur) => setFiltre(valeur)}
+        >
+          <SelectTrigger aria-label="Pôle" size="sm" className="w-24">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={null}>Tous</SelectItem>
+            {POLES.map((p) => (
+              <SelectItem key={p.value} value={p.value}>
+                {p.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {/* Sans option : la liste le dit, au lieu d'une fenêtre vide. */}
+        <Select>
+          <SelectTrigger aria-label="Poste" size="sm" className="w-40">
+            <SelectValue placeholder="Aucun poste" />
+          </SelectTrigger>
+          <SelectContent vide="Aucun poste ouvert cette année." />
+        </Select>
+      </div>
     </div>
   )
 }
@@ -332,6 +419,11 @@ export const FORMULAIRES: {
     id: "choix",
     titre: "SegmentedControl, CheckboxList",
     rendu: () => <DemoChoix />,
+  },
+  {
+    id: "select",
+    titre: "Select : sous le champ, option figée, liste vide",
+    rendu: () => <DemoSelect />,
   },
   {
     id: "fichiers",

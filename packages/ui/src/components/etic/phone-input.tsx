@@ -7,6 +7,7 @@ import {
   type CountryCode,
 } from "libphonenumber-js"
 import exemples from "libphonenumber-js/mobile/examples"
+import { cn } from "cn"
 
 import { Button } from "@etic-ui/components/ui/button"
 import { ButtonGroup } from "@etic-ui/components/ui/button-group"
@@ -96,6 +97,31 @@ function enTexte(valeur: string, pays: CountryCode) {
 }
 
 /**
+ * Numéro à afficher hors d'un champ (fiche, liste), sans drapeau ni
+ * sélecteur de pays : au format national pour un numéro du pays par défaut
+ * (« 06 55 18 92 45 »), au format international pour tout autre, pour que
+ * son pays se lise (« +44 20 7946 0958 »). Le `PhoneInput`, lui, écrit
+ * toujours le numéro au format national, son pays étant montré par le
+ * drapeau. Un numéro illisible ou invalide est rendu tel quel ; `null`,
+ * `undefined` et "" donnent "". Affichage seulement : la valeur E.164 reste
+ * celle des liens `tel:` et des recherches.
+ *
+ * Chaque appel relit le numéro (libphonenumber-js) : dans une longue liste,
+ * mémoïser le résultat (`useMemo` sur les lignes, ou au chargement).
+ */
+export function formaterTelephone(
+  numero: string | null | undefined,
+  { paysParDefaut = "FR" }: { paysParDefaut?: CountryCode } = {}
+): string {
+  if (!numero) return ""
+  const lu = lire(numero, paysParDefaut)
+  if (!lu?.isValid()) return numero
+  return lu.country === paysParDefaut
+    ? lu.formatNational()
+    : lu.formatInternational()
+}
+
+/**
  * Numéro de téléphone avec sélecteur de pays (Combobox de shadcn : drapeau et
  * indicatif, recherche sur le nom du pays ou l'indicatif) : lu, validé et mis
  * en forme par libphonenumber-js, rendu en E.164. Le numéro se tape
@@ -165,7 +191,18 @@ export function PhoneInput({
 
   return (
     <>
-      <ButtonGroup className={className}>
+      <ButtonGroup
+        className={cn(
+          // En erreur, tout le groupe est traité comme un seul champ, à la
+          // manière d'`InputGroup` : bordure rouge sur le sélecteur de pays
+          // comme sur le numéro, et un seul halo, celui du groupe (le numéro
+          // perd le sien, qui chevauchait le bouton). Dérivé en CSS de
+          // l'`aria-invalid` du numéro ; `aria-invalid` sur un bouton
+          // n'aurait pas de sens.
+          "rounded-lg has-[[data-slot=input][aria-invalid=true]]:ring-3 has-[[data-slot=input][aria-invalid=true]]:ring-destructive/20 has-[[data-slot=input][aria-invalid=true]]:*:data-[slot=combobox-trigger]:border-destructive *:data-[slot=input]:aria-invalid:ring-0 dark:has-[[data-slot=input][aria-invalid=true]]:ring-destructive/40 dark:has-[[data-slot=input][aria-invalid=true]]:*:data-[slot=combobox-trigger]:border-destructive/50",
+          className
+        )}
+      >
         <Combobox<OptionPays>
           items={options}
           value={options.find((option) => option.value === etat.pays) ?? null}

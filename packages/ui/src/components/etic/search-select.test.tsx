@@ -186,6 +186,43 @@ describe("SearchSelect", () => {
     expect(await screen.findByText("Aucun membre.")).toBeVisible()
   })
 
+  it("la liste s'ancre sur le cadre, loupe comprise, et non sur le champ", async () => {
+    // jsdom ne mesure rien : le cadre mesure 320 px depuis x = 100, le
+    // champ, décalé par la loupe, 280 px depuis x = 128. La largeur et la
+    // position calculées pour la liste disent sur quoi elle s'ancre.
+    const mesurer = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        const [x, largeur] =
+          this.dataset.slot === "input-group"
+            ? [100, 320]
+            : this.dataset.slot === "input-group-control"
+              ? [128, 280]
+              : [0, 0]
+        return DOMRect.fromRect({ x, y: 40, width: largeur, height: 32 })
+      })
+    try {
+      const user = utilisateur()
+      render(<Demo rechercher={chercherDans(PERSONNES)} />)
+      await user.click(screen.getByRole("combobox"))
+      await screen.findByRole("option", { name: "Ada Lovelace" })
+      const positionneur = document.querySelector<HTMLElement>(
+        '[data-slot="combobox-content"]'
+      )!.parentElement!
+      await waitFor(() =>
+        expect(positionneur.style.getPropertyValue("--anchor-width")).toBe(
+          "320px"
+        )
+      )
+      // Exactement la largeur du cadre, sans les 28 px de shadcn.
+      expect(
+        document.querySelector('[data-slot="combobox-content"]')
+      ).toHaveClass("min-w-(--anchor-width)")
+    } finally {
+      mesurer.mockRestore()
+    }
+  })
+
   it("un échec se voit, se signale à l'application et se réessaie", async () => {
     const user = utilisateur()
     const onErreur = vi.fn()
