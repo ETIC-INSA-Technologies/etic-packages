@@ -176,7 +176,7 @@ function PaginationParDecalage({
             <SelectTrigger className="w-[4.5rem]" aria-labelledby={idTaille}>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent side="top" alignItemWithTrigger={false}>
+            <SelectContent side="top">
               {tailles.map((taille) => (
                 <SelectItem key={taille} value={String(taille)}>
                   {taille}
