@@ -169,13 +169,23 @@ export function DataTableBulkActions<TData extends RowData>({
             </strong>{" "}
             {resume}
           </span>
-          <Separator orientation="vertical" className="h-5 self-center!" />
-          <div className="flex flex-wrap items-center gap-1.5">{children}</div>
+          <Separator
+            orientation="vertical"
+            className="h-5 self-center! max-sm:hidden"
+          />
+          {/* Sur mobile, le compte et « Tout désélectionner » forment la
+              première ligne, les actions la suivante : la barre ne finit
+              plus sur une croix seule. L'ordre du DOM (celui de la
+              tabulation) reste celui du bureau. */}
+          <div className="flex flex-wrap items-center gap-1.5 max-sm:order-last max-sm:basis-full">
+            {children}
+          </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={toutDeselectionner}
             aria-keyshortcuts="Escape"
+            className="max-sm:ml-auto"
           >
             <XIcon data-icon="inline-start" />
             {/* Sur mobile, l'icône seule garde la barre sur une ligne. */}
