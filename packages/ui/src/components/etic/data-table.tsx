@@ -943,7 +943,10 @@ export function DataTable<TData extends RowData>({
       <div
         ref={racine}
         data-slot="data-table"
-        className={cn("min-w-0 overflow-hidden rounded-md border", className)}
+        className={cn(
+          "min-w-0 overflow-hidden rounded-md border bg-card",
+          className
+        )}
       >
         {/* Toujours montée : une zone insérée avec son texte n'est pas lue de
           façon fiable. */}

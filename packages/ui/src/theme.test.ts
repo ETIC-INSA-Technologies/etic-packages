@@ -82,8 +82,9 @@ const REGISTRE_GRAY = {
 const ECARTS = {
   // La barre latérale suit le contrat d'accent de l'application.
   commun: ["sidebar-primary", "sidebar-primary-foreground", "sidebar-ring"],
-  // Lisibilité : ≥ 4,5:1 sur --muted, sur la teinte de --destructive.
-  clair: ["muted-foreground", "destructive"],
+  // Fond de page gray-50 (cartes blanches qui s'en détachent) ; lisibilité :
+  // ≥ 4,5:1 sur --muted, sur la teinte de --destructive.
+  clair: ["background", "muted-foreground", "destructive"],
   sombre: ["destructive"],
 }
 
@@ -187,10 +188,11 @@ const css = lire("src/styles.css")
 const racineCss = variables(css, ":root")
 const sombreCss = variables(css, ".dark")
 
-// Fonds de la page, lus dans le thème.
+// Fonds de la page et des cartes (tableaux compris), lus dans le thème.
 const CLAIR = {
   fond: racineCss.valeur("background"),
   muted: racineCss.valeur("muted"),
+  card: racineCss.valeur("card"),
 }
 const SOMBRE = {
   fond: sombreCss.valeur("background"),
@@ -199,7 +201,11 @@ const SOMBRE = {
 }
 
 const THEMES = [
-  { nom: "clair", vars: racineCss, fonds: [CLAIR.fond, CLAIR.muted] },
+  {
+    nom: "clair",
+    vars: racineCss,
+    fonds: [CLAIR.fond, CLAIR.card, CLAIR.muted],
+  },
   {
     nom: "sombre",
     vars: sombreCss,
@@ -252,6 +258,19 @@ describe("couleur de base", () => {
       for (const [jeton, base] of memes) {
         expect(vars.brute(jeton), `${nom} : --${jeton} = --${base}`).toBe(
           vars.brute(base)
+        )
+      }
+    }
+  )
+
+  // Cartes, menus et tableaux (bg-card) se détachent du fond de la même
+  // façon dans les deux thèmes : un cran plus clairs que lui.
+  it.each(THEMES)(
+    "$nom : les cartes sont plus claires que le fond",
+    ({ vars }) => {
+      for (const surface of ["card", "popover"]) {
+        expect(luminance(vars.valeur(surface))).toBeGreaterThan(
+          luminance(vars.valeur("background"))
         )
       }
     }
@@ -334,8 +353,10 @@ describe("couleurs sémantiques", () => {
     const couleur = racineCss.valeur(nom)
     for (const fond of [
       CLAIR.fond,
+      CLAIR.card,
       CLAIR.muted,
       teinte(couleur, CLAIR.fond, 0.2),
+      teinte(couleur, CLAIR.card, 0.2),
     ]) {
       lisible(couleur, fond, TEXTE, nom)
     }
@@ -348,6 +369,7 @@ describe("couleurs sémantiques", () => {
       SOMBRE.card,
       SOMBRE.muted,
       teinte(couleur, SOMBRE.fond, 0.2),
+      teinte(couleur, SOMBRE.card, 0.2),
     ]) {
       lisible(couleur, fond, TEXTE, nom)
     }
@@ -359,7 +381,7 @@ describe("couleurs sémantiques", () => {
     "Alert %s : la description à 90 % se lit sur la carte",
     (nom) => {
       const clair = racineCss.valeur(nom)
-      lisible(teinte(clair, CLAIR.fond, 0.9), CLAIR.fond, TEXTE, nom)
+      lisible(teinte(clair, CLAIR.card, 0.9), CLAIR.card, TEXTE, nom)
       const sombre = sombreCss.valeur(nom)
       lisible(teinte(sombre, SOMBRE.card, 0.9), SOMBRE.card, TEXTE, nom)
     }
@@ -370,11 +392,11 @@ describe("couleurs sémantiques", () => {
   // une carte ou un pied de dialogue (bg-muted/50 sur la carte).
   it("destructive se lit sur sa teinte, en clair", () => {
     const couleur = racineCss.valeur("destructive")
-    const pied = teinte(CLAIR.muted, CLAIR.fond, 0.5)
-    for (const fond of [CLAIR.fond, CLAIR.muted]) {
+    const pied = teinte(CLAIR.muted, CLAIR.card, 0.5)
+    for (const fond of [CLAIR.fond, CLAIR.card, CLAIR.muted]) {
       lisible(couleur, fond, TEXTE, "destructive")
     }
-    for (const fond of [CLAIR.fond, CLAIR.muted, pied]) {
+    for (const fond of [CLAIR.fond, CLAIR.card, CLAIR.muted, pied]) {
       lisible(couleur, teinte(couleur, fond, 0.1), TEXTE, "destructive teinté")
     }
   })
@@ -406,14 +428,14 @@ describe("contrats d'accent des applications", () => {
       {
         nom: "clair",
         selecteur,
-        fond: CLAIR.fond,
-        fonds: [CLAIR.fond, CLAIR.muted],
+        fonds: [CLAIR.fond, CLAIR.card, CLAIR.muted],
+        surfaces: [CLAIR.fond, CLAIR.card],
       },
       {
         nom: "sombre",
         selecteur: `${selecteur}.dark`,
-        fond: SOMBRE.fond,
         fonds: [SOMBRE.fond, SOMBRE.card, SOMBRE.muted],
+        surfaces: [SOMBRE.fond, SOMBRE.card],
       },
     ]
     for (const theme of themes) {
@@ -423,8 +445,9 @@ describe("contrats d'accent des applications", () => {
 
       lisible(foreground, primary, TEXTE, `${theme.nom}, texte sur l'accent`)
       // L'accent en texte : sur les fonds, et sur la teinte de l'accent
-      // (bg-primary/10) posée sur le fond, comme dans l'atelier.
-      for (const fond of [...theme.fonds, teinte(primary, theme.fond, 0.1)]) {
+      // (bg-primary/10) posée sur le fond ou une carte, comme dans l'atelier.
+      const teintes = theme.surfaces.map((s) => teinte(primary, s, 0.1))
+      for (const fond of [...theme.fonds, ...teintes]) {
         lisible(texte, fond, TEXTE, `${theme.nom}, accent en texte`)
       }
       for (const fond of theme.fonds) {

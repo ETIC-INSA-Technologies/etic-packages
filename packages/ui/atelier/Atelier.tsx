@@ -149,6 +149,7 @@ import {
   TabsTrigger,
   Textarea,
   type ThemePreference,
+  appliquerTheme,
 } from "@etic-ui/index"
 import { BOUTONS } from "./Boutons"
 import { COQUILLE } from "./Coquille"
@@ -599,7 +600,8 @@ const VARIANTES = [
 ] as const
 const TAILLES = ["xs", "sm", "default", "lg"] as const
 
-// Contrats d'accent définis dans accents.css ; « aucun » = gris de Nova.
+// Contrats d'accent définis dans accents.css ; « aucun » = gris foncé de la
+// base gray (styles.css).
 const ACCENTS = [
   { id: "", nom: "Aucun" },
   { id: "members", nom: "ETIC Members" },
@@ -633,17 +635,9 @@ export function Atelier() {
     else delete racine.dataset.accent
   }, [accent])
 
-  useEffect(() => {
-    const systeme = window.matchMedia("(prefers-color-scheme: dark)")
-    const appliquer = () =>
-      document.documentElement.classList.toggle(
-        "dark",
-        theme === "dark" || (theme === "system" && systeme.matches)
-      )
-    appliquer()
-    systeme.addEventListener("change", appliquer)
-    return () => systeme.removeEventListener("change", appliquer)
-  }, [theme])
+  // Comme une application : classe `dark` posée par la bibliothèque, qui
+  // suit le système en « system ».
+  useEffect(() => appliquerTheme(theme), [theme])
 
   useEffect(() => {
     const suivre = () => setSection(location.hash || "#button")

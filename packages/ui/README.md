@@ -69,8 +69,10 @@ Le thème sombre s'active par la classe `dark` sur `<html>`.
 
 Les neutres (fonds, panneaux, bordures, textes) sont ceux de la couleur de base `gray` de
 shadcn (palette `gray` de Tailwind 4, légèrement bleutée), communs à toute la suite : une
-application ne les redéfinit pas. Seul écart, vérifié par `src/theme.test.ts` avec les
-contrastes : `--muted-foreground` un peu plus foncé en clair (≥ 4,5:1 sur `--muted`).
+application ne les redéfinit pas. Écarts, vérifiés par `src/theme.test.ts` avec les
+contrastes : en clair, le fond de page est gray-50 (cartes, menus et tableaux restent blancs
+et s'en détachent, comme les cartes gray-900 sur le fond gray-950 en sombre) et
+`--muted-foreground` est un peu plus foncé (≥ 4,5:1 sur `--muted`).
 `color-scheme` suit le thème (`light`, `dark`) : barres de défilement et contrôles natifs
 compris.
 
@@ -1040,7 +1042,11 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 
   Thème : couleur de base `gray` de shadcn (registre `colors/gray.json`, `cssVarsV4`) au lieu
-  de `neutral` ; `--muted-foreground` clair `oklch(0.54 0.027 264.364)` au lieu de gray-500
+  de `neutral` ; `--background` clair gray-50 (`oklch(0.985 0.002 247.839)`) au lieu du blanc,
+  `--card` et `--popover` restant blancs ; cadre de `Table` (`table-container`) et de
+  `DataTable` en `bg-card` (blanc sur ce fond, comme une carte ; survol et sélection de
+  shadcn inchangés) ; `--success` clair `#146c3d` (≥ 4,5:1 sur sa teinte à 20 % posée sur
+  gray-50) ; `--muted-foreground` clair `oklch(0.54 0.027 264.364)` au lieu de gray-500
   (4,39:1 sur `--muted`) ; `--control-border` (`--muted-foreground` à 80 %) en sombre aussi, au
   lieu de `--input` (sous 2:1) ; `color-scheme` dans `:root` et `.dark`. `theme.test.ts`
   compare chaque jeton au registre, écarts exceptés. Hors `ui/`, `CenteredScreen` est posé sur

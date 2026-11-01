@@ -276,6 +276,24 @@ describe("écarts avec shadcn", () => {
     )
   })
 
+  it("thème : fond de page gray-50 en clair, cartes blanches", () => {
+    const css = lire("styles.css")
+    const clair = css.slice(css.indexOf(":root {"))
+    const bloc = clair.slice(0, clair.indexOf("}"))
+    expect(bloc).toContain("--background: oklch(0.985 0.002 247.839);")
+    expect(bloc).toContain("--card: oklch(1 0 0);")
+  })
+
+  it("tableaux : cadre en bg-card, blanc sur le fond comme une carte", () => {
+    const { container } = render(createElement(Table))
+    expect(
+      container.querySelector('[data-slot="table-container"]')
+    ).toHaveClass("bg-card")
+    expect(lire("components/etic/data-table.tsx")).toContain(
+      '"min-w-0 overflow-hidden rounded-md border bg-card"'
+    )
+  })
+
   it("CenteredScreen : fond bg-muted/40, pas bg-muted", () => {
     const ecran = lire("components/etic/centered-screen.tsx")
     // Dans la chaîne de classes (le commentaire cite bg-muted).

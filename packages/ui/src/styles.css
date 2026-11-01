@@ -85,7 +85,10 @@
 
 :root {
   color-scheme: light;
-  --background: oklch(1 0 0);
+  /* Fond de page gray-50 au lieu du blanc du registre : cartes, menus et
+     tableaux (bg-card) restent blancs et s'en détachent, comme en sombre où
+     les cartes (gray-900) sont plus claires que le fond (gray-950). */
+  --background: oklch(0.985 0.002 247.839);
   --foreground: oklch(0.13 0.028 261.692);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.13 0.028 261.692);
@@ -109,8 +112,9 @@
   /* Plus foncé que le registre (oklch(0.577 0.245 27.325)) : ≥ 4,5:1 sur sa
      teinte à 10 % (bouton et badge destructive). */
   --destructive: #c10007;
-  /* Texte sur le fond, sur --muted et sur leur teinte à 20 % : ≥ 4,5:1. */
-  --success: #15703f;
+  /* Texte sur le fond, les cartes, --muted et sur leur teinte à 20 % :
+     ≥ 4,5:1 (--success un cran plus foncé depuis le fond gray-50). */
+  --success: #146c3d;
   --warning: #8a5300;
   /* Information (Alert info) : même exigence. */
   --info: #1f5aa8;
