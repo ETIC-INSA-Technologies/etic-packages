@@ -9,6 +9,19 @@ import {
   TooltipTrigger,
 } from "@etic-ui/components/ui/tooltip"
 import { useRaisonVerrou } from "@etic-ui/components/etic/tooltip-button"
+import type { StatusTon } from "@etic-ui/components/etic/status-badge"
+
+/** Couleur du bouton actif, selon le ton (survol compris : le Toggle passe
+ *  sinon en texte normal). */
+const TONS_ACTIFS: Record<StatusTon, string> = {
+  neutral: "aria-pressed:text-foreground",
+  success:
+    "aria-pressed:bg-success/10 aria-pressed:text-success aria-pressed:hover:bg-success/15 aria-pressed:hover:text-success dark:aria-pressed:bg-success/20 dark:aria-pressed:hover:bg-success/25",
+  warning:
+    "aria-pressed:bg-warning/10 aria-pressed:text-warning aria-pressed:hover:bg-warning/15 aria-pressed:hover:text-warning dark:aria-pressed:bg-warning/20 dark:aria-pressed:hover:bg-warning/25",
+  destructive:
+    "aria-pressed:bg-destructive/10 aria-pressed:text-destructive aria-pressed:hover:bg-destructive/15 aria-pressed:hover:text-destructive dark:aria-pressed:bg-destructive/20 dark:aria-pressed:hover:bg-destructive/25",
+}
 
 export interface IconToggleProps extends Omit<
   ComponentProps<typeof Toggle>,
@@ -32,12 +45,15 @@ export interface IconToggleProps extends Omit<
   /** Bascule impossible : le bouton reste focalisable, et son infobulle dit
    *  pourquoi. */
   verrou?: string
+  /** Couleur du bouton actif : `warning` (jaune) par défaut, le marqueur
+   *  signale un élément sensible ; `neutral` pour le fond gris du Toggle. */
+  ton?: StatusTon
 }
 
 /**
  * Bouton à icône qui pose ou retire un marqueur sensible (élément critique,
  * protégé…), sur le `Toggle` de shadcn : sans libellé visible, il porte son
- * état (`aria-pressed`, fond marqué quand il est actif), et son infobulle
+ * état (`aria-pressed`, en couleur de son `ton` quand il est actif), et son infobulle
  * dit ce que ferait un clic.
  */
 export function IconToggle({
@@ -48,6 +64,7 @@ export function IconToggle({
   infobulles,
   enCours = false,
   verrou,
+  ton = "warning",
   size = "sm",
   className,
   ...props
@@ -79,7 +96,10 @@ export function IconToggle({
               aria-label={libelle}
               aria-describedby={describedBy}
               className={cn(
-                "aria-pressed:text-foreground",
+                // Inactif, en gris comme les icônes d'action voisines : seul
+                // l'état actif attire l'œil.
+                "text-muted-foreground",
+                TONS_ACTIFS[ton],
                 verrou && "cursor-not-allowed opacity-50",
                 enCours && "cursor-progress opacity-50",
                 className

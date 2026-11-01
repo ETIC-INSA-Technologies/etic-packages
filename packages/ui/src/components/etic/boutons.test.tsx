@@ -168,6 +168,40 @@ describe("IconToggle", () => {
     )
   })
 
+  it("actif, prend la couleur de son ton : jaune par défaut", () => {
+    const props = {
+      actif: true,
+      onActifChange: () => {},
+      icone: LockIcon,
+    }
+    render(
+      <>
+        <IconToggle {...props} libelle="Critique" />
+        <IconToggle {...props} libelle="Neutre" ton="neutral" />
+      </>
+    )
+    expect(screen.getByRole("button", { name: "Critique" })).toHaveClass(
+      "aria-pressed:text-warning"
+    )
+    const neutre = screen.getByRole("button", { name: "Neutre" })
+    expect(neutre).toHaveClass("aria-pressed:text-foreground")
+    expect(neutre.className).not.toContain("warning")
+  })
+
+  it("inactif, est gris", () => {
+    render(
+      <IconToggle
+        actif={false}
+        onActifChange={() => {}}
+        icone={LockIcon}
+        libelle="Critique"
+      />
+    )
+    expect(screen.getByRole("button", { name: "Critique" })).toHaveClass(
+      "text-muted-foreground"
+    )
+  })
+
   it("verrouillé, ne bascule pas et dit pourquoi", async () => {
     render(<Bascule verrou="Indispensable à l'application" />)
     const bouton = screen.getByRole("button", { name: "Groupe critique" })
