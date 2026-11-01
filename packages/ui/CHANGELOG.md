@@ -1,5 +1,129 @@
 # @etic-insa/ui
 
+## 0.3.0
+
+### Minor Changes
+
+- c593249: Boutons et infobulles :
+
+  - `TooltipButton` à icône seule (`size` `icon…`) est nommé par son `infobulle` (`aria-label`), comme le promettait sa documentation, même verrouillé (la raison reste sa description) ; un `aria-label` ou `aria-labelledby` donné par l'application est gardé, et un bouton à texte garde son texte pour nom. L'application peut retirer l'`aria-label` qu'elle recopiait de l'infobulle.
+  - Un `Button` `aria-disabled` (désactivé mais focalisable : `focusableWhenDisabled`, `TooltipButton` verrouillé, validation d'un `ConfirmDialog` à `saisie`, boutons d'un dialogue pendant son action) prend l'allure désactivée : estompé, curseur interdit, sans enfoncement au clic. Il reste survolable pour son infobulle. Les règles CSS ajoutées par les applications pour ce cas peuvent disparaître.
+  - `Button` accepte `enCours` et `libelleEnCours` (même nom que l'`enCours` d'`IconToggle` ou d'`ErrorBanner`) : la roue muette prend la place de ses icônes (marges inchangées ; un bouton à texte sans icône s'élargit de la roue), `aria-busy`, curseur d'attente et pas de survol, clics ignorés, focus gardé. `SpinnerDecoratif` (roue sans rôle ni nom) est exporté, ainsi que `fermerSaufEnCours(enCours, setOuvert)`, l'`onOpenChange` d'un dialogue qui s'ouvre normalement mais refuse de se fermer pendant son action.
+  - `Button` a une taille `inline` (`variant="link" size="inline"`) : lien dans une phrase ou une cellule, sans hauteur ni marge de bouton, cible de 24 px gardée.
+  - `TooltipButton` accepte `destructif` : gris au repos, rouge au survol seulement (gris aussi verrouillé).
+  - Nouveau `ButtonLink` : lien à l'allure de bouton (`variant`, `size`), annoncé comme un lien ; `lien` reçoit le composant de lien du routeur de l'application, comme pour `AppShell` (`<a>` par défaut).
+  - `CopyButton` dans un `InputGroupAddon` passe à 24 px, comme le bouton de shadcn dans un groupe : à 28 px, il touchait presque la bordure du champ et son anneau de focus en sortait. Une `size` donnée par l'application est respectée.
+
+- da7fd59: Champs et sélection.
+
+  - `Select` : la liste s'ouvre désormais sous le champ, alignée à gauche, et ne recouvre plus jamais la zone de saisie (défauts de `SelectContent` : `alignItemWithTrigger={false}`, `align="start"`, au lieu de l'option choisie posée sur le champ et d'une liste centrée). **Changement visible** pour tout `Select` ; les deux réglages restent surchargeables. Une application qui enveloppait `SelectContent` pour obtenir ce comportement (et recopiait `DataTableSelectFilter` pour la même raison) peut retirer son enveloppe.
+  - `SelectContent` : sans option, y compris avec un `SelectGroup` vide, la liste affiche « Aucune option. » au lieu d'une fenêtre vide, dans une zone de statut annoncée aux lecteurs d'écran (`vide` pour un autre texte) ; des options posées sans `SelectGroup` ont la même marge que dans un groupe.
+  - `SelectItem` accepte `description` : une précision sous le libellé, reliée à l'option (`aria-describedby`), par exemple la raison d'une option `disabled`, qui reste lisible quand le libellé s'estompe. Le nom de l'option reste son libellé, qui passe à la ligne au lieu d'être coupé.
+  - `Checkbox` : une case s'estompe d'après son propre état (`data-disabled`, `aria-disabled`, `fieldset` désactivé, où elle est réellement inactive). Dans une `CheckboxList` posée dans un `FormField`, une case figée n'estompe plus toutes les autres ; une case `aria-disabled` (lecture seule) prend l'apparence figée.
+  - `ComboboxInput` ancre lui-même la liste de son `Combobox` sur son cadre, et non plus sur le seul champ que décale un addon de tête : la liste de `SearchSelect` s'aligne sur le bord du champ, loupe comprise, à sa largeur exacte, dès l'ouverture (`defaultOpen` compris). Rien à câbler ; une `anchor` explicite (puces) l'emporte toujours. La largeur minimale d'une liste de `Combobox` est celle de son ancre, sans les 28 px ajoutés par shadcn.
+  - `DatePicker` : `moisInitial` choisit le mois montré à l'ouverture tant qu'aucune date n'est choisie (une date de naissance ne s'ouvre plus sur le mois courant) ; le calendrier le suit s'il change, y revient quand la date est effacée, et le ramène entre `dateMin` et `dateMax`. Fermé au clavier ou par un jour choisi, le calendrier rend le focus au champ : un seul Échap de plus ferme le dialogue englobant. Après un clic ailleurs, le focus reste où l'on a cliqué. Le champ porte `NO_AUTOFILL` : les gestionnaires de mots de passe n'y proposent plus d'identifiant.
+  - `PhoneInput` : en erreur (`aria-invalid` du numéro), le groupe est traité comme un seul champ : bordure rouge sur le sélecteur de pays comme sur le numéro, et un seul halo autour des deux.
+  - `formaterTelephone(numero, { paysParDefaut = "FR" })` : un numéro E.164 écrit pour l'affichage hors d'un champ, sans drapeau : national pour le pays par défaut (`06 55 18 92 45`), international pour tout autre, pour que son pays se lise, tel quel s'il est illisible. Pour une application qui affichait jusqu'ici l'E.164 brut hors de France métropolitaine, **l'affichage change** : un numéro d'outre-mer ou étranger s'écrit désormais au format international espacé (`+590 590 12 34 56`, `+44 20 7946 0958`) au lieu de `+590590123456`. Dans une longue liste, mémoïser le résultat.
+  - Base UI, date-fns et la locale française du calendrier sont importés par sous-chemin, ce qu'impose désormais une règle ESLint : les outils sans tree-shaking (vitest) ne chargent plus tous les composants de Base UI, toutes les fonctions de date-fns ni toutes les locales.
+
+- 2adbdf0: Coquille, fiches et requêtes.
+
+  - `AppShell` : le `bandeau` reçoit les gouttières de `PageContainer` ; l'application le passe nu, sans enveloppe de marges. Un bandeau absent ou qui ne rend rien ne laisse pas d'espace. Il sert aux messages de toute l'application : il prend la largeur du contenu, pas celle d'une page étroite ; un message propre à une page va dans son `PageContainer`. Sur mobile, le bouton du menu n'a plus qu'un nom, « Ouvrir le menu ».
+  - `SidebarTrigger` : `libelle` est ajouté, le nom lu du bouton (« Afficher ou masquer le menu » par défaut), au lieu d'un `aria-label` qui masquait ce texte. Rien n'est retiré : des `children` remplacent toujours l'icône et le libellé.
+  - `useAuthObjectUrlEtat(src, charger, cle?)` donne `{ url, enCours, echec, erreur }` : une page peut dire « aperçu indisponible » au lieu de charger sans fin. `useAuthObjectUrl` ne change pas. `AuthImage` accepte `secoursEchec`, affiché en cas d'échec.
+  - `Avatar` et `AuthAvatar` acceptent `diametre` (en px), au-delà de 40 px : les initiales suivent (36 % du diamètre) et prennent la graisse de la racine (`className="font-semibold"`). Avec un diamètre, `size` ne s'applique plus ; un diamètre de 0 est ignoré.
+  - `QueryErrorBanner({ requete })` est exporté : le bandeau d'erreur de `QueryBoundary`, avec « Réessayer », pour une page qui place elle-même ses données.
+  - `QueryBoundary` accepte `introuvable` (texte ou nœud, avec un lien de retour) : affiché à la place du bandeau quand l'erreur porte un `status` 404 (`ErreurApi` de `@etic-insa/auth`, ou toute erreur de même forme), sans « Réessayer ». Les autres échecs, et `introuvable` à `null` ou `false`, gardent le bandeau.
+  - Nouveaux `Disclosure` et `DisclosureTrigger` : section repliable à chevron tournant, `variante` `lien`, `discret` ou `carte`, `compteur` en pastille, ouverte ou non d'emblée, ou contrôlée ; `classNameDeclencheur` et `classNameContenu` pour aligner le déclencheur et le panneau. Le « Détails » d'`ErrorBanner` l'emploie : son chevron passe à gauche du libellé et pointe à droite, fermé.
+  - Nouveau `CenteredScreen` : écran hors de la coquille (connexion, page introuvable), contenu centré sur toute la hauteur.
+  - Onglets `variant="line"` : sous 640 px, ils passent à la ligne au lieu de déborder, chacun à la largeur de son libellé. Au-delà, rien ne change.
+
+- da66f79: Dans `AppShell`, la validation de la déconnexion est en rouge (variante `destructive`), comme celle d'un `ConfirmDialog`.
+
+  `Checkbox` : le bord d'une case vide se voit en clair (`--control-border`, `--muted-foreground` à 80 %, ≥ 3:1 ; inchangé en sombre).
+
+  `IconToggle` accepte `ton` (`neutral`, `success`, `warning`, `destructive`) : actif, le bouton prend cette couleur, `warning` (jaune) par défaut, puisqu'il signale un élément sensible ; `ton="neutral"` garde le fond gris du `Toggle`. Inactif, il est gris (`--muted-foreground`), comme les icônes d'action voisines.
+
+- b4f35d3: `DetailHeader` accepte `tailleActions` (`"default"` ou `"lg"`) : le bouton « Plus d'actions » prend la taille des boutons d'action (`icon-lg` à côté de boutons `size="lg"`) au lieu de rester à 32 px, et son menu s'ouvre à 6 px du bouton au lieu de 4, à l'échelle.
+- 6f181ac: `DetailList` accepte `disposition` (type exporté `DetailListDisposition`) : `grille` (défaut, rendu inchangé : une colonne sur téléphone, autant que la largeur en permet au-delà), `pile` (une seule colonne à toute largeur, libellé au-dessus de la valeur, pour une carte étroite, un dialogue ou des valeurs longues : remplace `className="sm:grid-cols-1"`) ou `ligne` (métadonnées secondaires : « libellé : valeur » en petit et en discret, l'une après l'autre sur toute la largeur). La liste porte `data-disposition`.
+- 5ff92ac: Dialogues : `DialogContent` et `AlertDialogContent` plafonnent leur hauteur à l'écran (`max-h-[calc(100dvh-2rem)]`) : sur téléphone, le bas d'un long dialogue et ses boutons ne sortent plus de l'écran, et rien ne défile à l'horizontale. Le contenu est une colonne ; le nouveau `DialogBody` est la zone qui défile seule, titre, croix et pied restant visibles (`FormDialog`, `ConfirmDialog` et `DraftResumeDialog` s'en servent ; sans lui, tout le contenu défile). Une règle locale sur `[data-slot="dialog-content"]` devient inutile. Les titres et descriptions d'`AlertDialog` (et donc de `ConfirmDialog`) sont alignés à gauche dès le téléphone, comme leur contenu, sauf avec un `AlertDialogMedia`.
+
+  `ConfirmDialog` vide la saisie de `saisie` quand `saisie.attendu` change pendant l'ouverture (nombre d'éléments changé côté serveur), sans remonter le dialogue : le focus reste dans le champ, et la `key` forcée pour le vider n'est plus nécessaire. Ce champ porte `NO_AUTOFILL` : les gestionnaires de mots de passe ne s'y invitent plus. Nouvelles options : `verrou` (confirmation impossible, la raison en infobulle et en description du bouton, qui reste focalisable et garde le focus quand le verrou tombe), `libelleAnnuler`, `taille` (`"sm"` par défaut, `"md"` ou `"lg"` pour un récapitulatif, sur toute la largeur du téléphone), `elements` avec `libelleElements` (liste nommée des éléments concernés, qui défile ; une adresse sans espace passe à la ligne) et `onAnnuler`, appelé seulement quand la personne renonce (« Annuler » ou Échap), alors que `onOuvertChange(false)` suit aussi une confirmation réussie.
+
+  `TooltipButton` garde le même bouton quand son `verrou` ou son `infobulle` apparaît ou disparaît : il n'est plus remonté, et garde le focus.
+
+  `FormDialog` s'ouvre sur le premier contrôle actif et affiché (case, liste, choix segmenté…) quand le formulaire n'a pas de champ où l'on tape (le focus allait à « Annuler ») ; un champ masqué (panneau replié) n'est plus visé. Nouvelles options : `libelleAnnuler` et `actionSecondaire` (`libelle`, `onChoisir`, `destructif`), une troisième sortie discrète en tête du pied, occupée pendant l'envoi.
+
+  Nouveaux : `DraftResumeDialog`, le dialogue « un brouillon existe » qui accompagne `useDraftAutosave` (quitter, repartir de zéro avec suppression attendue, reprendre au même point ; sans croix ; `erreur` affiche l'échec d'une suppression lancée ailleurs, jusqu'à ce que la personne la relance) ; `useUnsavedChangesWarning(modifie)`, qui retient la fermeture de l'onglet tant que la page est modifiée (`modifie` : un booléen, ou une fonction lue au moment de quitter ; `useDraftAutosave` s'en sert), et `UnsavedChangesDialog`, qui confirme une navigation retenue par le routeur de l'application (`blocage` : le `useBlocker` de react-router se passe tel quel).
+
+- 437c61c: Harmonisation des boutons occupés, des liens et des explications.
+
+  - Un seul état « en cours » : la confirmation de `ConfirmDialog`, l'envoi de `FormDialog`, « Repartir de zéro » de `DraftResumeDialog`, « Réessayer » d'`ErrorBanner`, `FileUploadButton` et `IconToggle` sont tous le `Button` en cours (roue muette à la place de l'icône, `aria-busy`, `data-en-cours`, focus gardé). La roue de `FileUploadButton` n'a plus de nom « Chargement » lu en double.
+  - `IconToggle` est rendu en `Button` à icône et change d'allure : en `sm` (par défaut), il passe de 34 × 28 px avec une icône de 14 px à un carré de 28 × 28 px avec une icône de 16 px, la géométrie de la corbeille de `DeleteButton` et des `TooltipButton` `icon-sm` qui l'entourent (`default` : 32 px, `lg` : 36 px). Son API ne change pas.
+  - `FormDialog` : `actionSecondaire.onChoisir` peut renvoyer une promesse, attendue comme un envoi (bouton en cours, dialogue figé, erreur en tête) ; une action qui aboutit après la fermeture du dialogue est ignorée (pas d'erreur périmée à la réouverture, ici comme dans `ConfirmDialog` et `DraftResumeDialog`) ; une action secondaire `destructif` est grise et rouge au survol, comme `TooltipButton destructif`, au lieu d'un texte rouge.
+  - `LienProvider lien={RouterLink}` (et `useLien`, type `LienComposant`) : `AppShell`, `DetailHeader`, `ButtonLink` et `DataTableCellLink` prennent le lien du routeur sans `lien={…}` à chaque appel ; la prop `lien` reste prioritaire (`lien="a"` pour un téléchargement ou une adresse externe). `RouterLink` doit être une référence stable, définie au niveau du module. `AppShellLienComposant` reste un alias, déprécié. Migration d'une application qui avait son propre `ButtonLink` sur le `Link` de son routeur : `to` devient `href` (le `LienRouteur` le traduit : `({ href, ...props }) => <Link to={href} {...props} />`).
+  - `ErrorBoundary` : « Retour à l'accueil » est un `ButtonLink` (`lien="a"`, rechargement complet gardé).
+  - `Toggletip` : explication sur `Popover`, ouverte au toucher, au clic, au survol et au focus, fermée au toucher ailleurs, à Échap ou quand le focus part ; son clic ne remonte pas à une ligne ou une carte cliquable, et les props de son élément `render` (gestionnaires, `ref`, classes) sont fusionnées. `ExplainedBadge` en est fait (même API) : son explication s'ouvre maintenant au toucher.
+  - `PopoverContent` (écart shadcn) accepte `anchor`, pour un popover sans `PopoverTrigger`.
+  - Infobulles (écart shadcn) : `TooltipTrigger` ne s'ouvre plus sur le focus qu'un popup (menu, calendrier, dialogue) rend à son déclencheur en se fermant, par Échap ou par un choix. L'Échap suivant ferme bien le dialogue englobant (`ThemeMenu`, « Plus d'actions » de `DetailHeader`). Tout autre focus clavier l'ouvre comme avant, y compris le focus initial d'un dialogue ouvert par Entrée.
+
+- 30076b3: Statuts et indicateurs :
+
+  - `StatusTon` gagne `info` (bleu, pour un changement sans gravité) : `StatusBadge`, `StatTile`, `IconToggle` et la nouvelle variante `info` de `Badge` l'acceptent.
+  - `Progress` accepte `ton` (piste et remplissage de la couleur de l'état : `warning` au-delà d'un seuil, `destructive` quand c'est plein) et `size="lg"` (piste de 8 px) : plus besoin de viser `[data-slot=progress-track]` par `className`.
+  - `SegmentedControlOption` accepte `ton` : le segment choisi prend la couleur de l'état que produit le choix (fond, texte, liseré), sans `className`.
+  - `Badge` accepte `size="lg"` (28 px), et `RemovableBadge` est un badge de cette taille terminé par une croix « Retirer » (`onRetirer`, `libelleRetirer` qui nomme l'élément, `enCours` occupé sans perdre le focus, `verrou` qui dit pourquoi le retrait est impossible).
+  - Nouveaux `ExplainedBadge` (badge dont l'explication s'ouvre au survol et au focus et se lit après le badge), `SaveBar` (« Enregistrer », « Annuler » au besoin, statut annoncé « Enregistré » ou, avec `modifie`, « Modifications non enregistrées », variante `collante` en bas d'un long formulaire) et `StatGrid` (rangée de `StatTile` en colonnes de `largeurMin` au moins, une seule sur téléphone).
+
+  `StatusTon` s'importe toujours de la racine du paquet.
+
+  Seul point de compatibilité : une application qui associe une valeur à chaque ton par un `Record<StatusTon, …>` doit y ajouter `info` (erreur de type sinon). Rien ne change à l'exécution.
+
+- 3eaf2a2: Tableaux : `useDataTable` filtre, trie et pagine côté client. `paginationClient` découpe la liste en pages de 25 lignes, que `DataTablePagination table={table}` pilote et que `DataTableCount` (ou le `compteur` de `DataTableToolbar`) compte avec `{ table }`. `filtreGlobal` cherche sans casse ni accents, `filtresColonnes` applique le `filterFn` de chaque colonne, et le tri `sortFn: "texteFr"` suit l'ordre alphabétique français (`comparerFr`, exporté avec `normaliserRecherche`). Un changement de filtre ou de tri ramène à la première page ; une suppression garde la page courante. Les tableaux paginés côté serveur ne changent pas.
+
+  `DataTable` accepte `requete` (le résultat de `useQuery`) : en échec, le `QueryErrorBanner` (« Réessayer ») s'affiche au-dessus du tableau, sans état vide qui le contredise. Les colonnes gardent leur largeur quand le tableau se vide. Quand une ligne qui avait le focus disparaît, quelle que soit la commande (corbeille, menu, dialogue), le tableau rend le focus à la ligne voisine, sinon à lui-même. Nouveaux : `dataTableActionsColumn` (colonne « Actions » prête à l'emploi, `enableHiding` pour la rendre masquable), `DataTableCellLink` (titre de ligne en lien, routeur compris, ou en bouton) et `table.options.meta.deselectionner(ids)` (retirer quelques lignes de la sélection). `focaliserTableau` est exporté.
+
+  `DataTableViewOptions` et `DataTableBulkActions` servent aussi un tableau rendu à la main, sans `useDataTable` : `colonnes` et les options de colonnes de `useDataTable` (`visibiliteColonnes`, `ordreColonnes` et leurs `on…Change`) pour l'un ; `nombre`, `onToutDeselectionner` et `racine` pour l'autre.
+
+  `useColumnPrefs` et `usePersistedState` (sous la portée `PorteeStockageLocal`) gardent dans le navigateur, par personne, les colonnes d'une liste et un réglage simple. Les clés et le format sont ceux d'ETIC Members : ses réglages sont repris tels quels. `prefs.optionsTableau` s'étale dans `useDataTable` comme dans `DataTableViewOptions` ; avec `colonnesReglables`, le panneau « Colonnes » ne propose plus que les colonnes des préférences (ni les colonnes fixes en tête, ni les autres).
+
+  Correctifs :
+
+  - L'en-tête d'un tableau ne se surligne plus au survol.
+  - La recherche de `DataTableToolbar` écarte les gestionnaires de mots de passe (`NO_AUTOFILL`) et accepte des attributs (`recherche.attributs`).
+  - Une case verrouillée (ligne non sélectionnable, dernière colonne du sélecteur) reste lisible au lieu d'être estompée.
+  - La zone tactile de la colonne de sélection ne déborde plus sur la colonne suivante.
+  - `DeleteButton` accepte `size`, et sa corbeille est le `TooltipButton destructif`.
+
+- c1a3e07: Thème : les neutres passent à la couleur de base `gray` de shadcn (palette `gray` de Tailwind 4, légèrement bleutée), commune à toute la suite. Fonds, panneaux, bordures et textes changent légèrement de teinte, en clair comme en sombre ; une application qui surchargeait ces jetons pour obtenir des gris bleutés (`--background`, `--card`, `--muted`, `--border`…, et les jetons qui les suivaient : `--card-foreground`, `--secondary`, `--accent`, `--sidebar-*`…) peut retirer ces surcharges. Nouveau jeton `--page` (classe `bg-page`), le fond de la page elle-même : gray-50 en clair, `--background` en sombre. Le `body`, le contenu d'`AppShell` et sa barre mobile le prennent, si bien que cartes, menus et tableaux blancs s'en détachent ; `--background` reste le blanc du registre, la surface de shadcn (onglet actif, bouton `outline`…). Une application qui peint un conteneur pleine page en `bg-background` passe à `bg-page`. Le cadre de `DataTable` prend `bg-card` : un tableau posé sur la page est blanc comme une carte. `--success` est un cran plus foncé en clair, pour rester ≥ 4,5:1 sur sa teinte posée sur la page. Le contrat d'accent ne change pas. `--muted-foreground` reste un peu plus foncé que le registre en clair (≥ 4,5:1 sur `--muted`), et le bord d'une case à cocher vide (`--control-border`) atteint 3:1 en sombre aussi. Les couleurs de graphique (`--chart-*`) sont celles du registre `gray`.
+
+  `RadioGroupItem` (contour non coché) et `Switch` (rail éteint) prennent `--control-border` comme la case à cocher : ≥ 3:1 sur la page et sur une carte, en clair comme en sombre (le registre restait à 1,6:1 et 1,3:1 en sombre).
+
+  En clair, la barre latérale est blanche (`--sidebar` = `--background`, au lieu du gray-50 du registre, identique à la page) ; inchangée en sombre.
+
+  `color-scheme` suit le thème (`light` dans `:root`, `dark` dans `.dark`) : barres de défilement et contrôles natifs dans le thème de la page, même forcé à l'inverse du système. Les applications retirent leurs propres déclarations.
+
+  Application du thème : `appliquerTheme(theme)` pose la classe `dark` sur `<html>` et, en `"system"`, suit `prefers-color-scheme` et ses changements ; `useThemeApplique(theme, onThemeAutreOnglet)` peint le thème du compte dès qu'il est connu (`null` ou valeur inconnue : `"system"`), le mémorise dans ce navigateur (`localStorage`) et suit les changements faits dans un autre onglet, transmis au rappel (obligatoire) pour aligner l'état de l'application. Le type `ThemePreference` reste exporté. Le script de démarrage `@etic-insa/ui/theme-boot.js` peint le thème mémorisé avant le premier rendu : l'application le copie dans `public/` et le charge dans `<head>` (voir le README).
+
+  `CenteredScreen` est posé sur `bg-muted/40` au lieu de `bg-muted` : un fond moins appuyé, surtout en sombre.
+
+- 6d90376: Utilitaires et hooks communs à la suite, exportés par `@etic-insa/ui` :
+
+  - accords et nombres : `compte(1234, "ligne")` → « 1 234 lignes » (0 et 1 au singulier), `accorde` (le mot seul, pluriel irrégulier en option), et les helpers que la famille `DataTable` employait déjà en interne, `nombreFr`, `uniteAccordee`, `participe` (type `Unite`) ;
+  - octets et durées : `formaterOctets` (« 1,5 Ko »), `formaterDuree` (« 3 j 4 h »), `formaterDureeArrondie` (« 3 j »), `formaterAnciennete` (« il y a 3 j 4 h », « à l'instant ») ;
+  - dates en français : `formaterDate` (« 05 juillet 2026 » ; une date sans heure garde son jour à l'ouest de Greenwich), `formaterDateHeure`, `formaterHorodatage`, `formaterDateHeureLongue`. Une valeur absente rend « — » ou le repli donné, une valeur illisible est rendue telle quelle ;
+  - `lireDateIso` et `ecrireDateIso` : une date sans heure de l'API (`AAAA-MM-JJ`) vers la `Date` du `DatePicker` et retour, en heure locale, sans décalage d'un jour ;
+  - `normaliser` (sans accents ni casse) et `correspondance(recherche)(...textes)` pour filtrer une liste locale ;
+  - `NO_AUTOFILL`, les attributs qui écartent les gestionnaires de mots de passe d'un champ ;
+  - `useDebouncedValue(valeur, delai = 300)` et `useDocumentTitle(titre)`.
+
+  `useDraftAutosave` ne sérialise plus le `contenu` à chaque rendu, seulement quand il change d'identité : un gros brouillon ne coûte plus rien aux rendus qui ne le touchent pas. Le `contenu` doit donc être une référence stable (état React, `useMemo`) et ne jamais être modifié sur place.
+
+### Patch Changes
+
+- 32aadf2: `DataTableBulkActions` : sur mobile, le compte et « Tout désélectionner » occupent la première ligne de la barre, les actions la suivante. La croix ne se retrouve plus seule sur une dernière ligne.
+- 73debda: `DataTableBulkActions` : « Tout désélectionner » n'affiche plus la touche « Échap ». Le raccourci reste actif depuis le tableau ou la barre, et annoncé aux lecteurs d'écran (`aria-keyshortcuts`).
+
 ## 0.2.0
 
 ### Minor Changes
