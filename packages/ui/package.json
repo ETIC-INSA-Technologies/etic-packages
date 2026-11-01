@@ -18,6 +18,7 @@
       "default": "./dist/index.js"
     },
     "./styles.css": "./dist/styles.css",
+    "./theme-boot.js": "./dist/theme-boot.js",
     "./package.json": "./package.json"
   },
   "files": [
@@ -29,7 +30,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/build-css.mjs",
+    "build": "vite build && node scripts/build-css.mjs && node scripts/build-theme-boot.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "vitest run"

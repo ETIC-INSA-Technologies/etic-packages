@@ -16,10 +16,15 @@ describe("CenteredScreen", () => {
     )
   })
 
+  it("est posé sur --muted à 40 %", () => {
+    render(<CenteredScreen>x</CenteredScreen>)
+    expect(screen.getByRole("main")).toHaveClass("bg-muted/40")
+  })
+
   it("laisse l'application remplacer son fond", () => {
     render(<CenteredScreen className="bg-background">x</CenteredScreen>)
     const main = screen.getByRole("main")
     expect(main).toHaveClass("bg-background")
-    expect(main).not.toHaveClass("bg-muted")
+    expect(main).not.toHaveClass("bg-muted/40")
   })
 })

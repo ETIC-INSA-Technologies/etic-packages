@@ -14,9 +14,18 @@
  *   --primary-text        l'accent employé comme texte ou lien, sur le fond
  *                         ou sur --muted : au moins 4,5:1 sur les deux
  *   --ring                anneau de focus
- * Sans contrat, l'accent est le gris foncé de Nova. La barre latérale suit
+ * Sans contrat, l'accent est le gris foncé de la base. La barre latérale suit
  * l'accent : ses variables --sidebar-primary* et --sidebar-ring en dérivent.
- * Le thème sombre s'active par la classe « dark » sur un ancêtre (<html>).
+ *
+ * Couleur de base : « gray » de shadcn (registre ui.shadcn.com/r/colors/
+ * gray.json, cssVarsV4 : palette gray de Tailwind 4, neutres légèrement
+ * bleutés, ceux de toute la suite), à la place de « neutral » de Nova. Les
+ * valeurs sont celles du registre, sauf les écarts commentés ci-dessous ;
+ * src/theme.test.ts les compare au registre et vérifie les contrastes.
+ *
+ * Le thème sombre s'active par la classe « dark » sur un ancêtre (<html>) :
+ * appliquerTheme() (src/theme.ts) la pose, theme-boot.js la pose avant le
+ * premier rendu.
  */
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
@@ -75,97 +84,105 @@
 }
 
 :root {
+  color-scheme: light;
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --foreground: oklch(0.13 0.028 261.692);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.13 0.028 261.692);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  /* Contrat d'accent : valeurs par défaut, remplacées par l'application. */
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --primary-text: oklch(0.205 0 0);
-  --ring: oklch(0.708 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  /* Plus foncés que Nova (oklch(0.556 0 0), oklch(0.577 0.245 27.325)) :
-     ≥ 4,5:1 sur --muted (initiales d'Avatar, Kbd) et, pour --destructive,
-     sur sa teinte à 10 % (bouton et badge destructive). Vérifié par
-     src/theme.test.ts, d'où l'hexadécimal. */
-  --muted-foreground: #6b6b6b;
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.13 0.028 261.692);
+  /* Contrat d'accent : valeurs par défaut, remplacées par l'application.
+     --primary-text (ajout d'ETIC) vaut --primary. */
+  --primary: oklch(0.21 0.034 264.665);
+  --primary-foreground: oklch(0.985 0.002 247.839);
+  --primary-text: oklch(0.21 0.034 264.665);
+  --ring: oklch(0.707 0.022 261.325);
+  --secondary: oklch(0.967 0.003 264.542);
+  --secondary-foreground: oklch(0.21 0.034 264.665);
+  --muted: oklch(0.967 0.003 264.542);
+  /* Plus foncé que le registre (gray-500, oklch(0.551 0.027 264.364) :
+     4,39:1 sur --muted), même teinte : ≥ 4,5:1 sur --muted (initiales
+     d'Avatar, Kbd). */
+  --muted-foreground: oklch(0.54 0.027 264.364);
+  --accent: oklch(0.967 0.003 264.542);
+  --accent-foreground: oklch(0.21 0.034 264.665);
+  /* Plus foncé que le registre (oklch(0.577 0.245 27.325)) : ≥ 4,5:1 sur sa
+     teinte à 10 % (bouton et badge destructive). */
   --destructive: #c10007;
   /* Texte sur le fond, sur --muted et sur leur teinte à 20 % : ≥ 4,5:1. */
   --success: #15703f;
   --warning: #8a5300;
   /* Information (Alert info) : même exigence. */
   --info: #1f5aa8;
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  /* Bord d'une case à cocher vide : --input (Nova) se voyait à peine sur le
-     blanc. --muted-foreground à 80 % : ≥ 3:1 sur le fond et sur --muted
-     (contrôle, WCAG 1.4.11), vérifié par src/theme.test.ts. */
+  --border: oklch(0.928 0.006 264.531);
+  --input: oklch(0.928 0.006 264.531);
+  /* Bord d'une case à cocher vide : --input se voyait à peine sur le blanc.
+     --muted-foreground à 80 % : ≥ 3:1 sur le fond et sur --muted (contrôle,
+     WCAG 1.4.11), en clair comme en sombre. */
   --control-border: color-mix(
     in oklab,
     var(--muted-foreground) 80%,
     transparent
   );
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar: oklch(0.985 0.002 247.839);
+  --sidebar-foreground: oklch(0.13 0.028 261.692);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-accent: oklch(0.967 0.003 264.542);
+  --sidebar-accent-foreground: oklch(0.21 0.034 264.665);
+  --sidebar-border: oklch(0.928 0.006 264.531);
   --sidebar-ring: var(--ring);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --primary-text: oklch(0.922 0 0);
-  --ring: oklch(0.556 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  /* --muted-foreground : la valeur de Nova, en hexadécimal pour le test.
-     --destructive plus clair que Nova (oklch(0.704 0.191 22.216)) : ≥ 4,5:1
-     sur sa teinte à 20 %, y compris dans un pied de dialogue (bg-muted/50). */
-  --muted-foreground: #a1a1a1;
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  color-scheme: dark;
+  --background: oklch(0.13 0.028 261.692);
+  --foreground: oklch(0.985 0.002 247.839);
+  --card: oklch(0.21 0.034 264.665);
+  --card-foreground: oklch(0.985 0.002 247.839);
+  --popover: oklch(0.21 0.034 264.665);
+  --popover-foreground: oklch(0.985 0.002 247.839);
+  --primary: oklch(0.928 0.006 264.531);
+  --primary-foreground: oklch(0.21 0.034 264.665);
+  --primary-text: oklch(0.928 0.006 264.531);
+  --ring: oklch(0.551 0.027 264.364);
+  --secondary: oklch(0.278 0.033 256.848);
+  --secondary-foreground: oklch(0.985 0.002 247.839);
+  --muted: oklch(0.278 0.033 256.848);
+  --muted-foreground: oklch(0.707 0.022 261.325);
+  --accent: oklch(0.278 0.033 256.848);
+  --accent-foreground: oklch(0.985 0.002 247.839);
+  /* Plus clair que le registre (oklch(0.704 0.191 22.216)) : ≥ 4,5:1 sur sa
+     teinte à 20 %, y compris dans un pied de dialogue (bg-muted/50). */
   --destructive: #ff8a8a;
   --success: #6fd7a7;
   --warning: #f0b25f;
   --info: #7cb4f5;
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --control-border: var(--input);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+  /* Même règle qu'en clair : --input (blanc à 15 %) restait sous 2:1. */
+  --control-border: color-mix(
+    in oklab,
+    var(--muted-foreground) 80%,
+    transparent
+  );
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.21 0.034 264.665);
+  --sidebar-foreground: oklch(0.985 0.002 247.839);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.278 0.033 256.848);
+  --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: var(--ring);
 }

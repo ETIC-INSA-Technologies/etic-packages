@@ -67,6 +67,56 @@ liens survolés) : c'est corrigé dans `src/components/ui/`, et `npm test` écho
 
 Le thème sombre s'active par la classe `dark` sur `<html>`.
 
+Les neutres (fonds, panneaux, bordures, textes) sont ceux de la couleur de base `gray` de
+shadcn (palette `gray` de Tailwind 4, légèrement bleutée), communs à toute la suite : une
+application ne les redéfinit pas. Seul écart, vérifié par `src/theme.test.ts` avec les
+contrastes : `--muted-foreground` un peu plus foncé en clair (≥ 4,5:1 sur `--muted`).
+`color-scheme` suit le thème (`light`, `dark`) : barres de défilement et contrôles natifs
+compris.
+
+#### Thème clair, sombre ou système
+
+`appliquerTheme(theme)` pose la classe `dark` sur `<html>` pour `"dark"`, la retire pour
+`"light"` et, pour `"system"`, suit `prefers-color-scheme`, y compris quand le système change.
+La préférence vient du compte (`theme` de `@etic-insa/auth`) ; `useThemeApplique` la peint,
+la mémorise dans ce navigateur (`localStorage`, clé `CLE_THEME`) et suit un changement fait
+dans un autre onglet :
+
+```tsx
+import { useThemeApplique } from "@etic-insa/ui"
+
+// Une fois, près de la racine : thème du compte, undefined tant qu'il n'est pas chargé.
+useThemeApplique(me?.preferences?.theme, (theme) => {
+  /* autre onglet : aligner l'état local sans rappeler le serveur */
+})
+```
+
+`appliquerEtMemoriserTheme`, `THEMES` (`["light", "system", "dark"]`) et `estThemePreference`
+servent hors de React.
+
+Pour que la première image soit déjà dans le bon thème, avant le chargement du compte,
+l'application sert le script de démarrage du paquet depuis sa propre origine (une CSP
+`script-src 'self'` l'admet) et le charge dans `<head>`, avant le bundle, sans
+`type="module"` :
+
+```html
+<script src="/theme-boot.js"></script>
+```
+
+Vite ne regroupe pas un script classique : le copier dans `public/` avant `dev` et `build`
+(et ignorer la copie dans git), par exemple :
+
+```json
+"scripts": {
+  "theme-boot": "node -e \"require('fs').copyFileSync(require.resolve('@etic-insa/ui/theme-boot.js'), 'public/theme-boot.js')\"",
+  "predev": "npm run theme-boot",
+  "prebuild": "npm run theme-boot"
+}
+```
+
+Il relit la copie mémorisée (mêmes clé et valeurs que `theme.ts`) ; sans copie, il suit le
+système.
+
 ```tsx
 import { Button } from "@etic-insa/ui"
 
@@ -988,6 +1038,14 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
     pour un popover sans `PopoverTrigger` (`Toggletip`, ancré sur l'élément qu'il explique).
 
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
+
+  Thème : couleur de base `gray` de shadcn (registre `colors/gray.json`, `cssVarsV4`) au lieu
+  de `neutral` ; `--muted-foreground` clair `oklch(0.54 0.027 264.364)` au lieu de gray-500
+  (4,39:1 sur `--muted`) ; `--control-border` (`--muted-foreground` à 80 %) en sombre aussi, au
+  lieu de `--input` (sous 2:1) ; `color-scheme` dans `:root` et `.dark`. `theme.test.ts`
+  compare chaque jeton au registre, écarts exceptés. Hors `ui/`, `CenteredScreen` est posé sur
+  `bg-muted/40` au lieu du `bg-muted` des blocs de connexion de shadcn (fond moins appuyé, en
+  sombre surtout).
 
   Sans écart de code mais garanti par le même test : `Button` sans `type` rend
   `type="button"` (Base UI le fait pour un bouton natif) et ne soumet donc pas son formulaire.

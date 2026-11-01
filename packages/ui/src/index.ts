@@ -318,6 +318,16 @@ export {
   type ThemeMenuProps,
   type ThemePreference,
 } from "./components/etic/theme-menu"
+// Application du thème : classe `dark` sur <html>, préférence système suivie
+// (le script de démarrage est @etic-insa/ui/theme-boot.js).
+export {
+  appliquerEtMemoriserTheme,
+  appliquerTheme,
+  CLE_THEME,
+  estThemePreference,
+  THEMES,
+  useThemeApplique,
+} from "./theme"
 
 // Retours et mise en page : dialogues, en-têtes, états d'une page (erreur,
 // vide, chargement), statistiques, boutons d'action.

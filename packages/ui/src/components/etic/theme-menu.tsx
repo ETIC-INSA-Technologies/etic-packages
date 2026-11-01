@@ -17,11 +17,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@etic-ui/components/ui/tooltip"
+import type { ThemePreference } from "@etic-ui/theme"
 
-/** Préférence de thème d'un compte, commune à toute la suite. */
-export type ThemePreference = "light" | "system" | "dark"
+// Défini avec l'application du thème (theme.ts) ; exporté ici aussi, comme
+// avant.
+export type { ThemePreference }
 
-// Dans l'ordre du menu.
+// Dans l'ordre du menu (celui de THEMES, theme.ts).
 const OPTIONS: Record<ThemePreference, { libelle: string; Icone: LucideIcon }> =
   {
     light: { libelle: "Clair", Icone: SunIcon },
