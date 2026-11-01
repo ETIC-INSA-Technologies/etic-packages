@@ -274,27 +274,33 @@ describe("AppShell", () => {
     await waitFor(() => expect(screen.queryByRole("navigation")).toBeNull())
   })
 
-  it("sur mobile, le bouton du menu n'a qu'un nom, sans aria-label", () => {
+  it("sur mobile, le bouton du menu n'a qu'un nom, et dit s'il est ouvert", () => {
     simulerLargeur(true)
     rendre()
     const bouton = screen.getByRole("button", { name: "Ouvrir le menu" })
-    expect(bouton).not.toHaveAttribute("aria-label")
+    // Le texte lu est le nom : aucun second texte, masqué, qui divergerait.
     expect(bouton).toHaveTextContent(/^Ouvrir le menu$/)
     expect(bouton).toHaveAttribute("aria-expanded", "false")
   })
 
-  it("pose les marges de PageContainer autour du bandeau", () => {
+  it("rend le bandeau dans le contenu, avant la page", () => {
     simulerLargeur(false)
-    rendre({ bandeau: <p>Reprise impossible</p> })
-    const bandeau = screen.getByText("Reprise impossible").parentElement
-    expect(bandeau).toHaveAttribute("data-slot", "app-shell-bandeau")
-    expect(bandeau).toHaveClass("px-4", "pt-6", "sm:px-6", "empty:hidden")
+    rendre({ bandeau: <p role="alert">Reprise impossible</p> })
+    const bandeau = screen.getByRole("alert")
+    expect(screen.getByRole("main")).toContainElement(bandeau)
+    expect(
+      bandeau.compareDocumentPosition(
+        screen.getByRole("heading", { name: "Contenu" })
+      ) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
   })
 
-  it("sans bandeau, n'ajoute pas d'enveloppe", () => {
+  it("sans bandeau, son enveloppe est vide et masquée (empty:hidden)", () => {
     simulerLargeur(false)
     rendre({ bandeau: null })
-    expect(document.querySelector('[data-slot="app-shell-bandeau"]')).toBeNull()
+    const enveloppe = document.querySelector('[data-slot="app-shell-bandeau"]')
+    expect(enveloppe).toBeEmptyDOMElement()
+    expect(enveloppe).toHaveClass("empty:hidden")
   })
 })
 

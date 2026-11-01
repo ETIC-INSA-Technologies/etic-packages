@@ -5,13 +5,17 @@ import { readdirSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { createElement } from "react"
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { MOBILE_MEDIA_QUERY } from "@etic-ui/hooks/use-mobile"
 import {
   Alert,
+  Avatar,
+  AvatarFallback,
   Button,
   Calendar,
+  SidebarProvider,
+  SidebarTrigger,
   Slider,
   Tabs,
   TabsList,
@@ -236,18 +240,8 @@ describe("écarts avec shadcn", () => {
     expect(checkbox).toContain("border border-(--control-border)")
   })
 
-  it("onglets line : passent à la ligne sur un écran étroit au lieu de déborder", () => {
-    const tabs = lire("components/ui/tabs.tsx")
-    for (const classe of [
-      "group-data-horizontal/tabs:h-auto",
-      "group-data-horizontal/tabs:max-w-full",
-      "group-data-horizontal/tabs:flex-wrap",
-      "group-data-horizontal/tabs:justify-start",
-      "group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:h-7",
-      "group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:flex-none",
-    ])
-      expect(tabs).toContain(classe)
-    // La variante par défaut (pastille sur fond muted) garde sa hauteur fixe.
+  it("onglets line : passent à la ligne sous 640 px, comme shadcn au-delà", () => {
+    // Le comportement n'existe qu'en CSS : les classes sont le contrat.
     render(
       createElement(
         Tabs,
@@ -265,19 +259,60 @@ describe("écarts avec shadcn", () => {
       )
     )
     const [pastilles, lignes] = screen.getAllByRole("tablist")
-    expect(pastilles).toHaveClass("group-data-horizontal/tabs:h-8")
-    expect(pastilles).not.toHaveClass("group-data-horizontal/tabs:flex-wrap")
+    const [, ongletLigne] = screen.getAllByRole("tab")
+    // Écran étroit : retour à la ligne, onglets à la largeur de leur libellé.
     expect(lignes).toHaveClass(
-      "group-data-horizontal/tabs:h-auto",
-      "group-data-horizontal/tabs:flex-wrap"
+      "max-sm:group-data-horizontal/tabs:h-auto",
+      "max-sm:group-data-horizontal/tabs:flex-wrap"
     )
-    expect(lignes).not.toHaveClass("group-data-horizontal/tabs:h-8")
+    expect(ongletLigne).toHaveClass(
+      "max-sm:group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:flex-none"
+    )
+    // Au-delà, et pour la variante en pastille : shadcn tel quel.
+    expect(lignes).toHaveClass("group-data-horizontal/tabs:h-8")
+    expect(ongletLigne).toHaveClass("flex-1")
+    expect(pastilles.className).not.toContain("flex-wrap")
   })
 
   it("avatar : diamètre libre, initiales proportionnelles", () => {
-    const avatar = lire("components/ui/avatar.tsx")
-    expect(avatar).toContain("diametre?: number")
-    expect(avatar).toContain("data-diametre={diametre}")
-    expect(avatar).toContain("group-data-diametre/avatar:text-[length:inherit]")
+    render(
+      createElement(
+        Avatar,
+        { diametre: 64 },
+        createElement(AvatarFallback, null, "AL")
+      )
+    )
+    const racine = screen.getByText("AL").parentElement
+    expect(racine).toHaveStyle({ width: "64px", height: "64px" })
+    expect(racine).toHaveStyle({ fontSize: "23px" })
+    expect(screen.getByText("AL")).toHaveClass(
+      "group-data-diametre/avatar:text-[length:inherit]"
+    )
+  })
+
+  it("barre latérale : le bouton du menu prend son nom par `libelle`", () => {
+    vi.stubGlobal("matchMedia", (requete: string) => ({
+      matches: false,
+      media: requete,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+    try {
+      render(
+        createElement(
+          SidebarProvider,
+          null,
+          createElement(SidebarTrigger),
+          createElement(SidebarTrigger, { libelle: "Ouvrir le menu" })
+        )
+      )
+      expect(
+        screen.getByRole("button", { name: "Afficher ou masquer le menu" })
+      ).toBeInTheDocument()
+      const bouton = screen.getByRole("button", { name: "Ouvrir le menu" })
+      expect(bouton).toHaveAttribute("data-slot", "sidebar-trigger")
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

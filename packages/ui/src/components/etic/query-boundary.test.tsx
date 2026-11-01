@@ -10,7 +10,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   EmptyState,
-  erreurIntrouvable,
   Loading,
   QueryBoundary,
   QueryErrorBanner,
@@ -302,31 +301,39 @@ describe("QueryBoundary", () => {
       expect(screen.queryByText("Groupe introuvable.")).toBeNull()
     })
 
-    it("sans `introuvable`, un 404 reste une erreur ; `estIntrouvable` est personnalisable", () => {
-      const { rerender } = render(
+    it("sans `introuvable`, un 404 reste une erreur comme une autre", () => {
+      render(
         <QueryBoundary requete={requete({ isError: true, error: erreur404 })}>
           {() => "données"}
         </QueryBoundary>
       )
       expect(screen.getByRole("alert")).toHaveTextContent("Introuvable")
+    })
 
-      rerender(
+    it("lit le statut par la forme de l'erreur, pas par sa classe", () => {
+      const { rerender } = render(
         <QueryBoundary
-          requete={requete({ isError: true, error: { code: "ABSENT" } })}
+          requete={requete({
+            isError: true,
+            error: { status: 404, message: "Absent" },
+          })}
           introuvable="Absent."
-          estIntrouvable={(e) => (e as { code?: string }).code === "ABSENT"}
         >
           {() => "données"}
         </QueryBoundary>
       )
       expect(screen.getByText("Absent.")).toBeInTheDocument()
-    })
 
-    it("erreurIntrouvable lit un statut 404 par sa forme", () => {
-      expect(erreurIntrouvable(erreur404)).toBe(true)
-      expect(erreurIntrouvable(erreur500)).toBe(false)
-      expect(erreurIntrouvable("404")).toBe(false)
-      expect(erreurIntrouvable(null)).toBe(false)
+      // Une chaîne « 404 » n'est pas un statut.
+      rerender(
+        <QueryBoundary
+          requete={requete({ isError: true, error: "404" })}
+          introuvable="Absent."
+        >
+          {() => "données"}
+        </QueryBoundary>
+      )
+      expect(screen.getByRole("alert")).toHaveTextContent("404")
     })
   })
 })

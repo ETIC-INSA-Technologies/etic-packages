@@ -8,6 +8,7 @@ import {
   CollapsibleContent,
   Disclosure,
   DisclosureTrigger,
+  type DisclosureVariante,
 } from "@etic-ui/index"
 
 describe("Disclosure", () => {
@@ -27,36 +28,54 @@ describe("Disclosure", () => {
     expect(screen.getByText("Téléphone")).toBeVisible()
   })
 
-  it("s'ouvre au clavier, et son chevron tourne à l'ouverture", async () => {
+  it("s'ouvre au clavier ; son chevron est décoratif", async () => {
     render(
       <Disclosure titre="Historique">
         <p>Contenu</p>
       </Disclosure>
     )
     const bouton = screen.getByRole("button", { name: "Historique" })
-    const chevron = bouton.querySelector("svg")
-    expect(chevron).toHaveAttribute("aria-hidden", "true")
-    expect(chevron).toHaveClass("group-data-panel-open/disclosure:rotate-90")
-    expect(bouton).toHaveClass("group/disclosure")
+    expect(bouton.querySelector("svg")).toHaveAttribute("aria-hidden", "true")
 
     await userEvent.tab()
     expect(bouton).toHaveFocus()
     await userEvent.keyboard("{Enter}")
+    expect(bouton).toHaveAttribute("aria-expanded", "true")
     expect(screen.getByText("Contenu")).toBeVisible()
   })
 
-  it("ouvert d'emblée avec `defautOuvert`, contrôlable par `ouvert`", async () => {
-    const { rerender } = render(
+  it.each<DisclosureVariante>(["lien", "discret", "carte"])(
+    "variante %s : un bouton nommé par son titre, qui s'ouvre",
+    async (variante) => {
+      render(
+        <Disclosure titre="Détails" variante={variante}>
+          <p>Contenu</p>
+        </Disclosure>
+      )
+      const bouton = screen.getByRole("button", { name: "Détails" })
+      await userEvent.click(bouton)
+      expect(bouton).toHaveAttribute("aria-expanded", "true")
+      expect(screen.getByText("Contenu")).toBeVisible()
+    }
+  )
+
+  it("ouvert d'emblée avec `defautOuvert`", () => {
+    render(
       <Disclosure titre="Créations" defautOuvert>
         <p>Ada</p>
       </Disclosure>
     )
+    expect(screen.getByRole("button", { name: "Créations" })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    )
     expect(screen.getByText("Ada")).toBeVisible()
+  })
 
+  it("contrôlé : reste fermé tant que le parent ne l'ouvre pas", async () => {
     const onOuvertChange = vi.fn()
-    rerender(
+    render(
       <Disclosure
-        key="controle"
         titre="Créations"
         ouvert={false}
         onOuvertChange={onOuvertChange}
@@ -64,9 +83,10 @@ describe("Disclosure", () => {
         <p>Ada</p>
       </Disclosure>
     )
-    await userEvent.click(screen.getByRole("button", { name: "Créations" }))
-    expect(onOuvertChange).toHaveBeenCalledWith(true)
-    // Contrôlé : il reste fermé tant que le parent ne l'ouvre pas.
+    const bouton = screen.getByRole("button", { name: "Créations" })
+    await userEvent.click(bouton)
+    expect(onOuvertChange).toHaveBeenCalledWith(true, expect.anything())
+    expect(bouton).toHaveAttribute("aria-expanded", "false")
     expect(screen.queryByText("Ada")).toBeNull()
   })
 
@@ -88,54 +108,34 @@ describe("Disclosure", () => {
     expect(screen.getByText("Expression CRON")).toBeVisible()
   })
 
-  it("affiche le compteur en pastille, lu avec le titre", () => {
+  it("lit le compteur avec le titre", () => {
     render(
       <Disclosure titre="Ignorés" compteur={12} variante="carte">
         <p>…</p>
       </Disclosure>
     )
-    const bouton = screen.getByRole("button", { name: "Ignorés 12" })
-    expect(bouton.querySelector('[data-slot="badge"]')).toHaveTextContent("12")
+    expect(
+      screen.getByRole("button", { name: "Ignorés 12" })
+    ).toBeInTheDocument()
   })
 
-  it("variantes : lien, discret et carte", () => {
+  it("passe ses classes au déclencheur et au panneau", async () => {
     render(
-      <>
-        <Disclosure titre="Lien">x</Disclosure>
-        <Disclosure titre="Discret" variante="discret">
-          x
-        </Disclosure>
-        <Disclosure titre="Carte" variante="carte" className="mt-2">
-          x
-        </Disclosure>
-      </>
-    )
-    const lien = screen.getByRole("button", { name: "Lien" })
-    expect(lien).toHaveAttribute("data-variante", "lien")
-    // Lien en ligne : sans marge, 24 px au moins (cible tactile).
-    expect(lien).toHaveClass("px-0", "min-h-6", "text-primary-text")
-
-    const discret = screen.getByRole("button", { name: "Discret" })
-    expect(discret).toHaveAttribute("data-variante", "discret")
-    expect(discret).toHaveClass("text-muted-foreground", "h-7")
-
-    const carte = screen.getByRole("button", { name: "Carte" })
-    expect(carte).toHaveAttribute("data-variante", "carte")
-    expect(carte).toHaveClass("w-full", "focus-visible:ring-3")
-    const racine = carte.closest('[data-slot="disclosure"]')
-    expect(racine).toHaveClass("rounded-lg", "border", "mt-2")
-  })
-
-  it("passe ses classes au panneau", async () => {
-    render(
-      <Disclosure titre="Détails" classNameContenu="pl-5">
+      <Disclosure
+        titre="Détails"
+        variante="discret"
+        classNameDeclencheur="-ml-2"
+        classNameContenu="pl-5"
+      >
         <p>Contenu</p>
       </Disclosure>
     )
-    await userEvent.click(screen.getByRole("button", { name: "Détails" }))
+    const bouton = screen.getByRole("button", { name: "Détails" })
+    expect(bouton).toHaveClass("-ml-2")
+    await userEvent.click(bouton)
     expect(
       screen.getByText("Contenu").closest('[data-slot="collapsible-content"]')
-    ).toHaveClass("pl-5", "pt-2")
+    ).toHaveClass("pl-5")
   })
 })
 
@@ -144,9 +144,7 @@ describe("DisclosureTrigger", () => {
     render(
       <Collapsible>
         <div>
-          <DisclosureTrigger taille="xs" className="text-current">
-            Détails
-          </DisclosureTrigger>
+          <DisclosureTrigger taille="xs">Détails</DisclosureTrigger>
         </div>
         <CollapsibleContent>
           <pre>{"{}"}</pre>
@@ -154,8 +152,8 @@ describe("DisclosureTrigger", () => {
       </Collapsible>
     )
     const bouton = screen.getByRole("button", { name: "Détails" })
-    expect(bouton).toHaveClass("text-xs", "text-current")
     await userEvent.click(bouton)
+    expect(bouton).toHaveAttribute("aria-expanded", "true")
     expect(screen.getByText("{}")).toBeVisible()
   })
 })

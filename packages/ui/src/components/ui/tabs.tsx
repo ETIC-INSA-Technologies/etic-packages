@@ -28,9 +28,10 @@ const tabsListVariants = cva(
     variants: {
       variant: {
         default: "bg-muted",
-        // Écart ETIC : sur un écran étroit, les onglets passent à la ligne au
-        // lieu de déborder (un défilement couperait le trait de l'actif).
-        line: "gap-1 bg-transparent group-data-horizontal/tabs:h-auto group-data-horizontal/tabs:max-w-full group-data-horizontal/tabs:flex-wrap group-data-horizontal/tabs:justify-start group-data-horizontal/tabs:gap-y-2",
+        // Écart ETIC : sous 640 px, les onglets passent à la ligne au lieu de
+        // déborder (un défilement couperait le trait de l'actif) ; au-delà,
+        // comme dans shadcn.
+        line: "gap-1 bg-transparent max-sm:group-data-horizontal/tabs:h-auto max-sm:group-data-horizontal/tabs:max-w-full max-sm:group-data-horizontal/tabs:flex-wrap max-sm:group-data-horizontal/tabs:justify-start max-sm:group-data-horizontal/tabs:gap-y-2",
       },
     },
     defaultVariants: {
@@ -63,9 +64,9 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
         "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
         "data-active:bg-background data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground",
         "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
-        // Écart ETIC : onglets `line` qui passent à la ligne (voir
-        // `tabsListVariants`) : hauteur fixe, largeur du libellé.
-        "group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:h-7 group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:flex-none",
+        // Écart ETIC : onglets `line` qui passent à la ligne sous 640 px
+        // (voir `tabsListVariants`) : hauteur fixe, largeur du libellé.
+        "max-sm:group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:h-7 max-sm:group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:flex-none",
         className
       )}
       {...props}

@@ -55,6 +55,7 @@ function DemoReplis() {
         titre="Historique des sauvegardes (12)"
         variante="discret"
         className="border-t pt-2"
+        classNameDeclencheur="-ml-2 hover:text-foreground"
       >
         <p className="text-sm">Dernière copie complète : hier, 03 h 00.</p>
       </Disclosure>

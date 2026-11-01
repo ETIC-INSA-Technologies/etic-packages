@@ -49,14 +49,12 @@ export interface QueryBoundaryProps<T> {
    * Affiché à la place du bandeau d'erreur quand l'élément demandé n'existe
    * pas (fiche supprimée, adresse erronée) : une chaîne devient le titre d'un
    * `EmptyState`, un nœud (avec un lien de retour…) est rendu tel quel. Sans
-   * lui, « introuvable » est une erreur comme une autre. Les autres échecs
-   * (réseau, 500…) gardent le bandeau et « Réessayer » : ils ne sont jamais
-   * annoncés comme « introuvable ».
+   * lui, « introuvable » est une erreur comme une autre. « Introuvable » : une
+   * erreur de `status` 404 (`ErreurApi` de `@etic-insa/auth`, ou toute erreur
+   * de même forme). Les autres échecs (réseau, 500…) gardent le bandeau et
+   * « Réessayer » : ils ne sont jamais annoncés comme « introuvable ».
    */
   introuvable?: ReactNode
-  /** L'erreur dit-elle « introuvable » ? Par défaut : un `status` 404
-   *  (`ApiError` de `@etic-insa/auth`, ou toute erreur de même forme). */
-  estIntrouvable?: (erreur: unknown) => boolean
 }
 
 function videParDefaut(donnees: unknown) {
@@ -66,7 +64,7 @@ function videParDefaut(donnees: unknown) {
 }
 
 /** Une erreur de statut HTTP 404, lue par sa forme. */
-export function erreurIntrouvable(erreur: unknown): boolean {
+function erreurIntrouvable(erreur: unknown): boolean {
   return (
     typeof erreur === "object" &&
     erreur !== null &&
@@ -74,18 +72,15 @@ export function erreurIntrouvable(erreur: unknown): boolean {
   )
 }
 
-/** Ce que `QueryErrorBanner` lit d'une requête. */
-export type QueryErrorBannerRequete = Pick<
-  QueryBoundaryRequete<unknown>,
-  "isError" | "error" | "isFetching" | "refetch"
->
-
 export interface QueryErrorBannerProps extends Omit<
   ErrorBannerProps,
   "erreur" | "onReessayer" | "enCours"
 > {
   /** Le résultat de `useQuery` convient tel quel. */
-  requete: QueryErrorBannerRequete
+  requete: Pick<
+    QueryBoundaryRequete<unknown>,
+    "isError" | "error" | "isFetching" | "refetch"
+  >
 }
 
 /**
@@ -127,16 +122,15 @@ export function QueryBoundary<T>({
   squelette,
   enAttente = false,
   introuvable,
-  estIntrouvable = erreurIntrouvable,
 }: QueryBoundaryProps<T>) {
   const { data } = requete
   const chargement = enAttente || requete.isLoading
+  const enErreur = requete.isError && !enAttente
 
   if (
     introuvable !== undefined &&
-    requete.isError &&
-    !enAttente &&
-    estIntrouvable(requete.error)
+    enErreur &&
+    erreurIntrouvable(requete.error)
   ) {
     // Rien d'autre : pas de « Réessayer » (l'élément n'existe pas), ni de
     // données d'avant (la fiche a disparu entre-temps).
@@ -147,7 +141,7 @@ export function QueryBoundary<T>({
     )
   }
 
-  const erreur = enAttente ? null : <QueryErrorBanner requete={requete} />
+  const erreur = enErreur ? <QueryErrorBanner requete={requete} /> : null
 
   let contenu: ReactNode = null
   if (chargement) contenu = squelette ?? <SkeletonTable />

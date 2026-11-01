@@ -389,13 +389,11 @@ export {
   type PageContainerProps,
 } from "./components/etic/page-container"
 export {
-  erreurIntrouvable,
   QueryBoundary,
   type QueryBoundaryProps,
   type QueryBoundaryRequete,
   QueryErrorBanner,
   type QueryErrorBannerProps,
-  type QueryErrorBannerRequete,
 } from "./components/etic/query-boundary"
 export {
   SectionCard,

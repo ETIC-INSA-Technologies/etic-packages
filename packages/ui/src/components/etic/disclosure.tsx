@@ -35,11 +35,44 @@ export interface DisclosureTriggerProps extends ComponentProps<
 const CHEVRON =
   "transition-transform motion-reduce:transition-none group-data-panel-open/disclosure:rotate-90"
 
+/** Le `Button` de chaque variante, et ce qui le distingue. */
+const VARIANTES: Record<
+  DisclosureVariante,
+  {
+    variant: "link" | "ghost"
+    taille: DisclosureTaille
+    classes: string
+    /** Retrait réduit du côté du chevron (`data-icon` de `Button`). */
+    iconeEnTete: boolean
+  }
+> = {
+  // 24 px de haut au moins : cible tactile (WCAG 2.5.8).
+  lien: {
+    variant: "link",
+    taille: "default",
+    classes: "h-auto min-h-6 px-0",
+    iconeEnTete: false,
+  },
+  discret: {
+    variant: "ghost",
+    taille: "sm",
+    classes: "text-muted-foreground",
+    iconeEnTete: true,
+  },
+  carte: {
+    variant: "ghost",
+    taille: "default",
+    classes:
+      "h-auto w-full justify-start rounded-lg px-3 py-2 text-left whitespace-normal",
+    iconeEnTete: false,
+  },
+}
+
 /**
- * Déclencheur d'un `Collapsible`, précédé d'un chevron qui tourne d'un quart
- * de tour à l'ouverture, avec l'anneau de focus de la bibliothèque. Pour une
- * mise en page que `Disclosure` ne couvre pas (déclencheur et panneau
- * séparés) ; sinon, `Disclosure`.
+ * Déclencheur d'un `Collapsible`, sur `Button`, précédé d'un chevron qui
+ * tourne d'un quart de tour à l'ouverture. Pour une mise en page que
+ * `Disclosure` ne couvre pas (déclencheur et panneau séparés) ; sinon,
+ * `Disclosure`.
  */
 export function DisclosureTrigger({
   variante = "lien",
@@ -48,42 +81,22 @@ export function DisclosureTrigger({
   children,
   ...props
 }: DisclosureTriggerProps) {
-  if (variante === "carte") {
-    return (
-      <CollapsibleTrigger
-        data-variante="carte"
-        className={cn(
-          "group/disclosure flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium outline-none hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-          className
-        )}
-        {...props}
-      >
-        <ChevronRightIcon aria-hidden className={CHEVRON} />
-        {children}
-      </CollapsibleTrigger>
-    )
-  }
-  const lien = variante === "lien"
+  const style = VARIANTES[variante]
   return (
     <CollapsibleTrigger
       data-variante={variante}
       render={
         <Button
-          variant={lien ? "link" : "ghost"}
-          size={taille ?? (lien ? "default" : "sm")}
+          variant={style.variant}
+          size={variante === "carte" ? style.taille : (taille ?? style.taille)}
         />
       }
-      className={cn(
-        "group/disclosure",
-        // 24 px de haut au moins : cible tactile (WCAG 2.5.8).
-        lien ? "h-auto min-h-6 px-0" : "text-muted-foreground",
-        className
-      )}
+      className={cn("group/disclosure", style.classes, className)}
       {...props}
     >
       <ChevronRightIcon
         aria-hidden
-        data-icon={lien ? undefined : "inline-start"}
+        data-icon={style.iconeEnTete ? "inline-start" : undefined}
         className={CHEVRON}
       />
       {children}
@@ -107,6 +120,8 @@ export interface DisclosureProps extends Omit<
   /** Ouvert ou fermé (contrôlé, avec `onOuvertChange`). */
   ouvert?: boolean
   onOuvertChange?: (ouvert: boolean) => void
+  /** Classes du déclencheur (alignement sur le texte voisin : `-ml-2`…). */
+  classNameDeclencheur?: string
   /** Classes du panneau (espacement, retrait…). */
   classNameContenu?: string
   /** Contenu replié : il n'est monté qu'à l'ouverture. */
@@ -125,6 +140,7 @@ export function Disclosure({
   defautOuvert,
   ouvert,
   onOuvertChange,
+  classNameDeclencheur,
   classNameContenu,
   className,
   children,
@@ -136,13 +152,15 @@ export function Disclosure({
       data-slot="disclosure"
       defaultOpen={defautOuvert}
       open={ouvert}
-      onOpenChange={
-        onOuvertChange ? (suivant) => onOuvertChange(suivant) : undefined
-      }
+      onOpenChange={onOuvertChange}
       className={cn(carte && "rounded-lg border", className)}
       {...props}
     >
-      <DisclosureTrigger variante={variante} taille={taille}>
+      <DisclosureTrigger
+        variante={variante}
+        taille={taille}
+        className={classNameDeclencheur}
+      >
         {titre}
         {compteur !== undefined && compteur !== null ? (
           <>

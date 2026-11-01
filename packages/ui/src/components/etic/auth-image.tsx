@@ -34,10 +34,12 @@ export interface AuthObjectUrlEtat {
   erreur: unknown
 }
 
-type Resultat = { src: string; cle: unknown } & (
-  | { url: string; echec: false; erreur?: never }
-  | { url?: never; echec: true; erreur: unknown }
-)
+/** L'issue d'un chargement, et la `src` (et la `cle`) qu'il concernait. */
+interface Resultat {
+  src: string
+  cle: unknown
+  etat: AuthObjectUrlEtat
+}
 
 const SANS_SRC: AuthObjectUrlEtat = {
   url: null,
@@ -78,10 +80,13 @@ export function useAuthObjectUrlEtat(
       .then((blob) => {
         if (!actif) return
         creee = URL.createObjectURL(blob)
-        setResultat({ src, cle, url: creee, echec: false })
+        // L'état rendu est préparé ici, une fois : il garde son identité
+        // d'un rendu à l'autre (dépendance d'effet ou de mémo sans relance).
+        setResultat({ src, cle, etat: { ...SANS_SRC, url: creee } })
       })
       .catch((erreur: unknown) => {
-        if (actif) setResultat({ src, cle, echec: true, erreur })
+        if (actif)
+          setResultat({ src, cle, etat: { ...SANS_SRC, echec: true, erreur } })
       })
     return () => {
       actif = false
@@ -94,9 +99,7 @@ export function useAuthObjectUrlEtat(
   // Le résultat d'une ancienne `src` (ou d'une ancienne `cle`, URL déjà
   // révoquée) n'est jamais rendu : la nouvelle est en cours.
   if (resultat?.src !== src || !Object.is(resultat.cle, cle)) return EN_COURS
-  return resultat.echec
-    ? { ...SANS_SRC, echec: true, erreur: resultat.erreur }
-    : { ...SANS_SRC, url: resultat.url }
+  return resultat.etat
 }
 
 /**

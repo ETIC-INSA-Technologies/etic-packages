@@ -11,6 +11,17 @@ const LARGEURS: Record<PageContainerLargeur, string> = {
   full: "",
 }
 
+/**
+ * Gouttières d'une page (16 px sur téléphone, 24 puis 32 px au-delà), seule
+ * source des marges du contenu : `PageContainer` et le `bandeau` d'`AppShell`
+ * s'en servent, pour rester alignés.
+ */
+export const GOUTTIERES_PAGE = {
+  laterales: "px-4 sm:px-6 min-[1025px]:px-8",
+  haute: "pt-6 min-[1025px]:pt-8",
+  basse: "pb-6 min-[1025px]:pb-8",
+} as const
+
 export interface PageContainerProps extends ComponentProps<"div"> {
   /** « full » par défaut (listes, tableaux) ; « md » pour un formulaire ou
    *  une fiche à lire, « lg » ou « xl » entre les deux. Le contenu limité
@@ -35,7 +46,10 @@ export function PageContainer({
       data-slot="page-container"
       data-largeur={largeur}
       className={cn(
-        "mx-auto flex w-full min-w-0 flex-1 flex-col gap-6 px-4 py-6 min-[1025px]:px-8 min-[1025px]:py-8 sm:px-6",
+        "mx-auto flex w-full min-w-0 flex-1 flex-col gap-6",
+        GOUTTIERES_PAGE.laterales,
+        GOUTTIERES_PAGE.haute,
+        GOUTTIERES_PAGE.basse,
         LARGEURS[largeur],
         className
       )}

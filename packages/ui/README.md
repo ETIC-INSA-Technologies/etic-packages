@@ -170,7 +170,7 @@ chargement d'une image) et, au besoin, son composant de lien (`lien`, comme pour
 | `ErrorBoundary`                                                          | Filet sous le rendu : message, détail technique, « Réessayer », « Retour à l'accueil » ; `cleReinitialisation` (la route) l'efface. Le focus perdu avec la partie cassée passe sur le message.                                                                                                                                                                                                                          |
 | `EmptyState`, `Loading`, `SkeletonTable`, `SkeletonCard`, `SkeletonPage` | État vide (`Empty` dans un cadre pointillé, `icone` lucide : `icone={InboxIcon}`) ; attente annoncée (`Spinner`) ; squelettes de tableau, de carte et de fiche, un seul statut « Chargement… » chacun.                                                                                                                                                                                                                  |
 | `QueryBoundary`                                                          | Chargement, erreur (avec « Réessayer »), vide et données d'une requête ; accepte tel quel le résultat de `useQuery`. L'échec d'une actualisation garde les données, montées, sous le bandeau d'erreur ; pendant une nouvelle tentative, le bandeau reste, son bouton occupé. Sans enveloppe : rendu dans le parent, qui règle l'espacement.                                                                             |
-| `QueryBoundary introuvable`, `erreurIntrouvable`                         | Fiche : `introuvable` (texte ou nœud, avec un lien de retour) remplace le bandeau quand l'erreur dit 404 (`status`, lu par `erreurIntrouvable` ; `estIntrouvable` pour une autre règle), sans « Réessayer ». Les autres échecs gardent le bandeau : une panne n'est jamais annoncée « introuvable ».                                                                                                                    |
+| `QueryBoundary introuvable`                                              | Fiche : `introuvable` (texte ou nœud, avec un lien de retour) remplace le bandeau quand l'erreur porte un `status` 404 (`ErreurApi` de `@etic-insa/auth`, ou même forme), sans « Réessayer ». Les autres échecs gardent le bandeau : une panne n'est jamais annoncée « introuvable ».                                                                                                                                   |
 | `QueryErrorBanner`                                                       | Le bandeau d'erreur de `QueryBoundary`, seul (`requete` : `isError`, `error`, `isFetching`, `refetch`), pour une page qui place elle-même ses données ; rien tant que la requête n'a pas échoué. Accepte `titre`, `description`, `className` d'`ErrorBanner`.                                                                                                                                                           |
 | `Disclosure`, `DisclosureTrigger`                                        | Section repliable à chevron tournant, fermée par défaut : `titre`, `compteur` en pastille, `variante` `lien` (en ligne), `discret` (fantôme estompé) ou `carte` (bloc encadré), `defautOuvert` ou `ouvert` / `onOuvertChange`. `DisclosureTrigger` seul pour un `Collapsible` composé à la main.                                                                                                                        |
 | `CenteredScreen`                                                         | Écran hors de la coquille (connexion, page introuvable, vérification de session) : le `<main>` de la page, contenu centré sur toute la hauteur, fond estompé.                                                                                                                                                                                                                                                           |
@@ -719,13 +719,15 @@ npm run build      # dist/ : un module par composant, types, styles.css
   - bouton qui ouvre la liste de `combobox.tsx` nommé « Afficher les options » ;
   - `alert.tsx` : `role="status"` pour `info` et `success` (messages d'état, annoncés sans
     interrompre), `role="alert"` gardé pour les autres variantes ;
-  - onglets `variant="line"` de `tabs.tsx` qui passent à la ligne sur un écran étroit
-    (liste en `h-auto max-w-full flex-wrap justify-start`, déclencheurs en `h-7 flex-none`)
-    au lieu de déborder ; un défilement couperait le trait de l'onglet actif. La variante par
-    défaut, en pastille, ne change pas ;
+  - onglets `variant="line"` de `tabs.tsx` qui passent à la ligne sous 640 px (`max-sm:` :
+    liste en `h-auto max-w-full flex-wrap justify-start`, déclencheurs en `h-7 flex-none`)
+    au lieu de déborder ; un défilement couperait le trait de l'onglet actif. Au-delà, et pour
+    la variante par défaut en pastille, rien ne change ;
   - `avatar.tsx` : `diametre` (px) au-delà des tailles `sm`, `default` et `lg` (24 à 40 px),
     qui pose largeur, hauteur et taille des initiales (36 % du diamètre), reprise par
-    `AvatarFallback` (`group-data-diametre/avatar:text-[length:inherit]`).
+    `AvatarFallback` (`group-data-diametre/avatar:text-[length:inherit]`) ;
+  - `SidebarTrigger` de `sidebar.tsx` : `libelle`, le nom lu du bouton (« Afficher ou masquer
+    le menu » par défaut), au lieu d'un `aria-label` qui masquerait ce texte.
 
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 

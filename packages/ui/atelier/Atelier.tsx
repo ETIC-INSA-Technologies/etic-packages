@@ -570,6 +570,21 @@ const ICONES: Record<string, LucideIcon> = {
 }
 const icone = (id: string) => ICONES[id] ?? SquareIcon
 
+/** Démonstrations groupées : une rubrique de navigation chacune, et leurs
+ *  sections dans la page. */
+const GROUPES: {
+  titre: string
+  demos: {
+    id: string
+    titre: string
+    icone?: LucideIcon
+    rendu: () => ReactNode
+  }[]
+}[] = [
+  { titre: "Retours et mise en page", demos: RETOURS },
+  { titre: "Coquille et fiches", demos: COQUILLE },
+]
+
 const VARIANTES = [
   "default",
   "outline",
@@ -662,24 +677,15 @@ export function Atelier() {
             { libelle: "DataTable", href: "#data-table", icone: Table2Icon },
           ].map((lien) => ({ ...lien, actif: lien.href === section })),
         },
-        {
-          titre: "Retours et mise en page",
-          liens: RETOURS.map(({ id, titre }) => ({
+        ...GROUPES.map(({ titre, demos }) => ({
+          titre,
+          liens: demos.map(({ id, titre, icone: Icone }) => ({
             libelle: titre,
             href: `#${id}`,
-            icone: icone(id),
+            icone: Icone ?? icone(id),
             actif: `#${id}` === section,
           })),
-        },
-        {
-          titre: "Coquille et fiches",
-          liens: COQUILLE.map(({ id, titre, icone }) => ({
-            libelle: titre,
-            href: `#${id}`,
-            icone,
-            actif: `#${id}` === section,
-          })),
-        },
+        })),
       ]}
       compte={{
         nom: "Ada Lovelace",
@@ -745,16 +751,11 @@ export function Atelier() {
           </section>
         ))}
 
-        {[...BOUTONS, ...FORMULAIRES, ...RETOURS].map(
-          ({ id, titre, rendu }) => (
-            <section key={id} id={id} className="flex flex-col gap-4">
-              <h2 className="text-lg font-medium">{titre}</h2>
-              {rendu()}
-            </section>
-          )
-        )}
-
-        {COQUILLE.map(({ id, titre, rendu }) => (
+        {[
+          ...BOUTONS,
+          ...FORMULAIRES,
+          ...GROUPES.flatMap(({ demos }) => demos),
+        ].map(({ id, titre, rendu }) => (
           <section key={id} id={id} className="flex flex-col gap-4">
             <h2 className="text-lg font-medium">{titre}</h2>
             {rendu()}

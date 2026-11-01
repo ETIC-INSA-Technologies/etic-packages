@@ -164,6 +164,10 @@ describe("useAuthObjectUrlEtat", () => {
     })
     await waitFor(() => expect(result.current.url).toBe("blob:test/1"))
     expect(result.current.enCours).toBe(false)
+    // Même état, même objet d'un rendu à l'autre (dépendance d'effet stable).
+    const charge = result.current
+    rerender({ src: "/ok" })
+    expect(result.current).toBe(charge)
 
     rerender({ src: "/refuse" })
     expect(result.current).toMatchObject({ url: null, enCours: true })
