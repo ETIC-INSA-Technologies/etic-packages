@@ -455,4 +455,38 @@ describe("FormDialog", () => {
     )
     expect(sortie.className).not.toMatch(/(^|\s)text-destructive(\s|$)/)
   })
+
+  it("action secondaire terminée après la fermeture : ignorée, pas d'erreur à la réouverture", async () => {
+    let rejeter: (raison: unknown) => void = () => {}
+    const onOuvertChange = vi.fn()
+    const dialogue = (ouvert: boolean) => (
+      <FormDialog
+        titre="Profil"
+        ouvert={ouvert}
+        onOuvertChange={onOuvertChange}
+        onEnvoyer={() => {}}
+        actionSecondaire={{
+          libelle: "Se déconnecter",
+          onChoisir: () => new Promise((_, r) => (rejeter = r)),
+        }}
+      >
+        <Input aria-label="Nom" />
+      </FormDialog>
+    )
+    const { rerender } = render(dialogue(true))
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Se déconnecter" })
+    )
+    // L'application ferme le dialogue (la déconnexion a changé de page…).
+    rerender(dialogue(false))
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    rejeter(new Error("Déconnexion impossible."))
+    await new Promise((r) => setTimeout(r, 20))
+    rerender(dialogue(true))
+    const sortie = await screen.findByRole("button", {
+      name: "Se déconnecter",
+    })
+    expect(screen.queryByRole("alert")).toBeNull()
+    expect(sortie).not.toHaveAttribute("aria-busy")
+  })
 })

@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { CopyIcon } from "lucide-react"
 import { describe, expect, it, vi } from "vitest"
 
 import {
@@ -8,8 +9,10 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogTrigger,
   ThemeMenu,
   Tooltip,
+  TooltipButton,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
@@ -61,34 +64,56 @@ describe("TooltipTrigger : ouverture au focus", () => {
     )
   })
 
-  it("pas sur un focus qui suit un clic ou une frappe ; oui à la tabulation", async () => {
+  it("s'ouvre sur le focus initial d'un dialogue ouvert par Entrée", async () => {
     const user = userEvent.setup()
     render(
       <TooltipProvider>
-        <Button>Avant</Button>
-        <Tooltip>
-          <TooltipTrigger render={<Button />}>Copier</TooltipTrigger>
-          <TooltipContent>Copier l'adresse</TooltipContent>
-        </Tooltip>
+        <Dialog>
+          <DialogTrigger render={<Button />}>Partager</DialogTrigger>
+          <DialogContent showCloseButton={false}>
+            <DialogTitle>Partager</DialogTitle>
+            <TooltipButton size="icon" infobulle="Copier l'adresse">
+              <CopyIcon />
+            </TooltipButton>
+          </DialogContent>
+        </Dialog>
       </TooltipProvider>
     )
-    const bouton = screen.getByRole("button", { name: "Copier" })
-    // Un clic donne le focus sans ouvrir par le focus (le survol, lui, ouvre).
-    await user.click(bouton)
-    await user.unhover(bouton)
-    await attendre()
-    expect(infobulle()).toBeNull()
-    // Focus rendu par programme après une frappe : pas d'infobulle.
-    await user.keyboard("a")
-    act(() => screen.getByRole("button", { name: "Avant" }).focus())
-    act(() => bouton.focus())
-    await attendre()
-    expect(infobulle()).toBeNull()
-    // Maj+Tab puis Tab : navigation, elle s'ouvre.
-    await user.tab({ shift: true })
     await user.tab()
-    expect(bouton).toHaveFocus()
+    await user.keyboard("{Enter}")
+    const copier = await screen.findByRole("button", {
+      name: "Copier l'adresse",
+    })
+    await waitFor(() => expect(copier).toHaveFocus())
     expect(await trouverInfobulle()).toHaveTextContent("Copier l'adresse")
+  })
+
+  it("pas sur le focus rendu par un menu fermé par un choix ; l'Échap suivant ferme le dialogue", async () => {
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    render(
+      <TooltipProvider>
+        <Dialog open onOpenChange={onOpenChange}>
+          <DialogContent showCloseButton={false}>
+            <DialogTitle>Préférences</DialogTitle>
+            <ThemeMenu valeur="light" onValeurChange={() => {}} />
+          </DialogContent>
+        </Dialog>
+      </TooltipProvider>
+    )
+    const bouton = screen.getByRole("button", { name: /^Thème\s:\sClair$/ })
+    await waitFor(() => expect(bouton).toHaveFocus())
+    await user.keyboard("{Enter}")
+    await screen.findByRole("menu")
+    await user.keyboard("{ArrowDown}{ArrowDown}{Enter}")
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull())
+    await waitFor(() => expect(bouton).toHaveFocus())
+    await attendre()
+    expect(infobulle()).toBeNull()
+    await user.keyboard("{Escape}")
+    await waitFor(() =>
+      expect(onOpenChange).toHaveBeenCalledWith(false, expect.anything())
+    )
   })
 
   it("garde le gestionnaire onFocus de l'application", async () => {

@@ -405,6 +405,28 @@ describe("IconToggle", () => {
     expect(neutre.className).not.toContain("warning")
   })
 
+  it("a la géométrie d'un bouton à icône icon-sm, comme la corbeille voisine", () => {
+    render(
+      <>
+        <IconToggle
+          actif={false}
+          onActifChange={() => {}}
+          icone={LockIcon}
+          libelle="Critique"
+        />
+        <TooltipButton variant="ghost" size="icon-sm" infobulle="Supprimer">
+          <PencilIcon />
+        </TooltipButton>
+      </>
+    )
+    const bascule = screen.getByRole("button", { name: "Critique" })
+    const voisin = screen.getByRole("button", { name: "Supprimer" })
+    // Carré de 28 px, icône de 16 px (taille par défaut du Button) : la
+    // taille de Toggle (`h-7 min-w-7 px-2.5`, icône `size-3.5`) n'est plus là.
+    for (const bouton of [bascule, voisin]) expect(bouton).toHaveClass("size-7")
+    expect(bascule.className).not.toMatch(/min-w-7|px-2\.5|size-3\.5/)
+  })
+
   it("inactif, est gris", () => {
     render(
       <IconToggle

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 
 /**
  * Action d'un dialogue : synchrone, ou une promesse que le dialogue attend.
@@ -14,25 +14,33 @@ export type ActionDialogue = () => unknown
  * `succes`, s'il est donné, est appelé, sauf si l'action a renvoyé `false`
  * (une action qui ne ferme rien n'en passe pas) ; en cas d'échec,
  * `erreur` reçoit la raison. Une action synchrone qui lève une exception
- * échoue de même.
+ * échoue de même. `reinitialiser` (à la fermeture du dialogue) oublie une
+ * action encore en cours : son issue, venue après, est ignorée, et aucune
+ * erreur périmée n'apparaît à la réouverture.
  */
 export function useAction() {
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<unknown>(null)
+  // Numéro de la dernière action lancée ou oubliée : une issue qui ne porte
+  // plus ce numéro est périmée.
+  const generation = useRef(0)
 
   const lancer = useCallback(
     async (action: ActionDialogue, succes?: () => void) => {
+      const numero = ++generation.current
       setErreur(null)
       setEnCours(true)
       let resultat: unknown
       try {
         resultat = await action()
       } catch (raison) {
+        if (numero !== generation.current) return
         // Une promesse rejetée sans raison doit tout de même s'afficher.
         setErreur(raison ?? new Error("L'action a échoué. Réessayez."))
         setEnCours(false)
         return
       }
+      if (numero !== generation.current) return
       setEnCours(false)
       if (resultat !== false) succes?.()
     },
@@ -40,6 +48,7 @@ export function useAction() {
   )
 
   const reinitialiser = useCallback(() => {
+    generation.current++
     setErreur(null)
     setEnCours(false)
   }, [])

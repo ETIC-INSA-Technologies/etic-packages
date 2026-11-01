@@ -546,11 +546,15 @@ describe("écarts avec shadcn", () => {
     expect(cadre).toHaveClass("mon-cadre")
   })
 
-  it("infobulle : ouverte au focus après une navigation au clavier seulement", () => {
-    // Le comportement est testé dans tooltip.test.tsx (menu fermé par Échap,
-    // clic, frappe, tabulation).
+  it("infobulle : pas d'ouverture sur le focus rendu par un popup qui se ferme", () => {
+    // Le comportement est testé dans tooltip.test.tsx (menu fermé par Échap
+    // ou par un choix, dialogue ouvert par Entrée, tabulation).
     expect(lire("components/ui/tooltip.tsx")).toContain(
-      'from "@etic-ui/lib/navigation-clavier"'
+      'from "@etic-ui/lib/focus-rendu"'
     )
+  })
+
+  it("popover : PopoverContent accepte anchor (popover sans déclencheur)", () => {
+    expect(lire("components/ui/popover.tsx")).toContain("anchor={anchor}")
   })
 })

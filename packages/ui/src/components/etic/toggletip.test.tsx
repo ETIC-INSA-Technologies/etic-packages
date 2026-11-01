@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it } from "vitest"
+import { createRef } from "react"
+import { describe, expect, it, vi } from "vitest"
 
 import { Badge, ExplainedBadge, Toggletip } from "@etic-ui/index"
 
@@ -26,6 +27,66 @@ function rendre() {
   )
   return screen.getByText("12:00").closest("[data-slot=toggletip]")!
 }
+
+describe("Toggletip : props et contexte", () => {
+  it("fusionne les props de render (ref, gestionnaires, classes) avec les siennes", async () => {
+    const user = userEvent.setup()
+    const ref = createRef<HTMLTimeElement>()
+    const onClick = vi.fn()
+    const onFocus = vi.fn()
+    render(
+      <Toggletip
+        explication="Heure du serveur, en UTC"
+        render={
+          <time
+            ref={ref}
+            dateTime="2026-11-01"
+            className="font-mono"
+            onClick={onClick}
+            onFocus={onFocus}
+          />
+        }
+      >
+        12:00
+      </Toggletip>
+    )
+    const date = screen.getByText("12:00").closest("time")!
+    expect(ref.current).toBe(date)
+    expect(date).toHaveClass("font-mono", "outline-none")
+    expect(date).toHaveAttribute("data-slot", "toggletip")
+    await user.click(date)
+    expect(onClick).toHaveBeenCalledOnce()
+    expect(onFocus).toHaveBeenCalledOnce()
+    await trouverBulle()
+  })
+
+  it("le clic ne remonte pas à une ligne ou une carte cliquable", async () => {
+    const user = userEvent.setup()
+    const onLigne = vi.fn()
+    render(
+      <div onClick={onLigne}>
+        <Toggletip explication="Imposé par le poste">Bureau</Toggletip>
+      </div>
+    )
+    await user.click(screen.getByText("Bureau"))
+    await trouverBulle()
+    expect(onLigne).not.toHaveBeenCalled()
+  })
+
+  it("ouverte au survol puis focalisée, reste ouverte quand la souris part", async () => {
+    const user = userEvent.setup()
+    const porteur = rendre()
+    await user.hover(porteur)
+    await trouverBulle()
+    act(() => (porteur as HTMLElement).focus())
+    await user.unhover(porteur)
+    await attendre()
+    expect(bulle()).not.toBeNull()
+    // Le focus part : elle se ferme.
+    act(() => (porteur as HTMLElement).blur())
+    await fermee()
+  })
+})
 
 describe("Toggletip", () => {
   it("s'ouvre au toucher, se ferme au toucher ailleurs", async () => {

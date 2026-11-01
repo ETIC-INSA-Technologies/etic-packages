@@ -190,8 +190,8 @@ chargement d'une image) et, au besoin, son composant de lien (`lien`, comme pour
 | `Disclosure`, `DisclosureTrigger`                                        | Section repliable à chevron tournant, fermée par défaut : `titre`, `compteur` en pastille, `variante` `lien` (en ligne), `discret` (fantôme estompé) ou `carte` (bloc encadré), `defautOuvert` ou `ouvert` / `onOuvertChange`. `DisclosureTrigger` seul pour un `Collapsible` composé à la main.                                                                                                                                                    |
 | `CenteredScreen`                                                         | Écran hors de la coquille (connexion, page introuvable, vérification de session) : le `<main>` de la page, contenu centré sur toute la hauteur, fond estompé.                                                                                                                                                                                                                                                                                       |
 | `StatTile`, `StatGrid`, `StatusBadge`                                    | Chiffre clé d'un résumé ; rangée de tuiles (colonnes de `largeurMin` au moins, 190 px par défaut, une seule sur téléphone) ; badge d'état à pastille. `ton` (type `StatusTon`) : `neutral`, `info`, `success`, `warning`, `destructive` ; il colore aussi `Progress` (8 px avec `size="lg"`), le segment choisi d'un `SegmentedControl` et un `IconToggle` actif.                                                                                   |
-| `RemovableBadge`, `ExplainedBadge`                                       | Badge de 28 px (`size="lg"`, aussi pour les badges sans croix de la même liste) terminé par une croix « Retirer » (`onRetirer`, `libelleRetirer`, `enCours`, `verrou`) ; badge dont l'`explication` s'ouvre au toucher, au clic, au survol et au focus clavier (un `Toggletip`) et se lit après lui (`render` : un autre porteur, `<time>` par exemple).                                                                                            |
-| `Toggletip`                                                              | Explication d'un élément qui n'est pas une action (date, sigle) : bulle sur `Popover`, ouverte au toucher, au clic, au survol et au focus d'une tabulation, fermée au toucher ailleurs, à Échap ou quand le focus part ; lue après le contenu (`texteLu`). Un bouton qui agit garde son infobulle (`TooltipButton`).                                                                                                                                |
+| `RemovableBadge`, `ExplainedBadge`                                       | Badge de 28 px (`size="lg"`, aussi pour les badges sans croix de la même liste) terminé par une croix « Retirer » (`onRetirer`, `libelleRetirer`, `enCours`, `verrou`) ; badge dont l'`explication` s'ouvre au toucher, au clic, au survol et au focus (un `Toggletip`) et se lit après lui (`render` : un autre porteur, `<time>` par exemple).                                                                                                    |
+| `Toggletip`                                                              | Explication d'un élément qui n'est pas une action (date, sigle) : bulle sur `Popover`, ouverte au toucher, au clic, au survol et au focus, fermée au toucher ailleurs, à Échap ou quand le focus part ; clic sans effet sur un parent cliquable ; lue après le contenu (`texteLu`). Un bouton qui agit garde son infobulle (`TooltipButton`).                                                                                                       |
 | `SaveBar`                                                                | Pied d'un formulaire de page : « Enregistrer » (soumet le formulaire, ou `onEnregistrer`), occupé mais focalisable pendant `enCours` ; « Annuler » avec `onAnnuler` ; statut annoncé : « Enregistré » (`enregistre`), « Modifications non enregistrées » (`modifie`). `collante` : barre collée en bas d'un long formulaire.                                                                                                                        |
 | `CopyButton`, `DeleteButton`, `IconToggle`                               | Copie avec retour « Copié ! », ou « Copie impossible » si le navigateur refuse (`onCopie`, `onEchec`) ; corbeille qui ouvre une confirmation ; bouton à icône qui pose ou retire un marqueur (`Toggle`, `aria-pressed`, `onActifChange`, `enCours` occupé sans perdre le focus ; actif, en couleur de son `ton`, `warning` par défaut). Tous ont une infobulle, et `verrou` pour dire pourquoi l'action est impossible.                             |
 | `TooltipButton`                                                          | `Button` avec infobulle et état `verrou` (désactivé mais focalisable, la raison en infobulle) : la règle pour tout bouton à icône seule, que l'infobulle nomme (`aria-label`, sauf nom donné). `destructif` : gris, rouge au survol seulement (corbeille, retrait dans une liste).                                                                                                                                                                  |
@@ -974,13 +974,18 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
     et les champs du corps ; avec un média, la grille de shadcn reste telle quelle ;
   - `table.tsx` : la ligne d'en-tête ne se surligne pas au survol (`[&_tr:hover]:bg-transparent`
     sur `TableHeader`) ; les lignes de données gardent le survol de shadcn ;
-  - `tooltip.tsx` : `TooltipTrigger` n'ouvre l'infobulle au focus qu'après une touche de
-    navigation (Tab, flèches, Début, Fin, Page préc./suiv.), suivie par
-    `lib/navigation-clavier.ts`. Le focus qu'un menu ou un calendrier rend à son déclencheur
-    en se fermant (Échap, Entrée, clic) ne l'ouvre plus : l'infobulle absorbait l'Échap
-    suivant, celui qui ferme le dialogue englobant (`ThemeMenu`, « Plus d'actions » de
-    `DetailHeader`, tout `TooltipTrigger` posé sur un `DropdownMenuTrigger`). Le survol et
-    l'`onFocus` de l'application ne changent pas.
+  - `tooltip.tsx` : le focus qu'un popup (menu, calendrier, dialogue) rend à son
+    déclencheur en se fermant, par Échap ou par un choix, n'ouvre plus l'infobulle de
+    `TooltipTrigger` : elle absorbait l'Échap suivant, celui qui ferme le dialogue
+    englobant (`ThemeMenu`, « Plus d'actions » de `DetailHeader`, tout `TooltipTrigger` posé
+    sur un `DropdownMenuTrigger`). Reconnu par `lib/focus-rendu.ts` : le déclencheur a perdu
+    le focus son popup ouvert (`aria-expanded`), ou le focus vient d'un popup qui ne le
+    contient pas. Tout autre focus clavier l'ouvre comme avant (focus initial d'un dialogue
+    ouvert par Entrée compris) ; le survol et l'`onFocus` de l'application ne changent pas.
+    `CLASSES_BULLE` et `CLASSES_FLECHE` (internes) portent l'allure de la bulle, partagée
+    avec `Toggletip` ;
+  - `popover.tsx` : `PopoverContent` accepte `anchor` (celui du `Positioner` de Base UI),
+    pour un popover sans `PopoverTrigger` (`Toggletip`, ancré sur l'élément qu'il explique).
 
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 

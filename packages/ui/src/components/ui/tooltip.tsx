@@ -3,7 +3,10 @@
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
 import { cn } from "cn"
 
-import { useOuvertureAuFocusClavier } from "@etic-ui/lib/navigation-clavier"
+import {
+  focusRenduParUnPopup,
+  noterDepartDuFocus,
+} from "@etic-ui/lib/focus-rendu"
 
 function TooltipProvider({
   delay = 0,
@@ -22,21 +25,29 @@ function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
 }
 
-// Écart avec shadcn : l'infobulle ne s'ouvre au focus qu'après une vraie
-// navigation au clavier (Tab, flèches). Le focus qu'un popup rend à son
-// déclencheur en se fermant (menu, calendrier : Échap, Entrée, clic) ne
-// l'ouvre plus : elle absorbait l'Échap suivant, celui qui ferme le dialogue
-// englobant. Le survol n'est pas touché.
-function TooltipTrigger({ onFocus, ...props }: TooltipPrimitive.Trigger.Props) {
-  const parNavigation = useOuvertureAuFocusClavier()
+// Écart avec shadcn : le focus qu'un popup rend à son déclencheur en se
+// fermant (menu, calendrier, dialogue : Échap, un choix, « Annuler »)
+// n'ouvre plus l'infobulle : elle absorbait l'Échap suivant, celui qui ferme
+// le dialogue englobant (voir `lib/focus-rendu.ts`). Tout autre focus
+// clavier l'ouvre comme avant ; le survol n'est pas touché.
+function TooltipTrigger({
+  onFocus,
+  onBlur,
+  ...props
+}: TooltipPrimitive.Trigger.Props) {
   return (
     <TooltipPrimitive.Trigger
       data-slot="tooltip-trigger"
       onFocus={(event) => {
         onFocus?.(event)
-        // Le gestionnaire de l'application d'abord ; puis, hors navigation,
-        // celui de Base UI (ouverture au focus) est écarté.
-        if (!parNavigation()) event.preventBaseUIHandler()
+        // Le gestionnaire de l'application d'abord ; puis, pour un focus
+        // rendu, celui de Base UI (ouverture au focus) est écarté.
+        if (focusRenduParUnPopup(event.currentTarget, event.relatedTarget))
+          event.preventBaseUIHandler()
+      }}
+      onBlur={(event) => {
+        onBlur?.(event)
+        noterDepartDuFocus(event.currentTarget)
       }}
       {...props}
     />
