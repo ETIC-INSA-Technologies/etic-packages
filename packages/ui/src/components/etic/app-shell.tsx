@@ -1,10 +1,4 @@
-import {
-  useId,
-  useState,
-  type ComponentProps,
-  type ComponentType,
-  type ReactNode,
-} from "react"
+import { useId, useState, type ReactNode } from "react"
 import { cn } from "cn"
 import {
   ChevronsUpDownIcon,
@@ -60,10 +54,11 @@ import {
   type ThemeMenuProps,
 } from "@etic-ui/components/etic/theme-menu"
 import { TooltipButton } from "@etic-ui/components/etic/tooltip-button"
+import { useLien, type LienComposant } from "@etic-ui/components/etic/lien"
 
-/** Lien du routeur de l'application (react-router, TanStack Router…), qui
- *  reçoit `href` comme un `<a>`. Par défaut, un `<a>` : rechargement complet. */
-export type AppShellLienComposant = ComponentType<ComponentProps<"a">> | "a"
+/** Lien du routeur de l'application : `LienComposant`, sous son nom de la
+ *  0.2.0. */
+export type AppShellLienComposant = LienComposant
 
 export interface AppShellLien {
   libelle: string
@@ -115,6 +110,8 @@ export interface AppShellProps {
   sections: AppShellSection[]
   compte?: AppShellCompte
   theme?: Pick<ThemeMenuProps, "valeur" | "onValeurChange">
+  /** Composant de lien du routeur ; par défaut, celui du `LienProvider`,
+   *  sinon un `<a>`. */
   lien?: AppShellLienComposant
   /**
    * Au-dessus du contenu, avec les gouttières de `PageContainer` : message
@@ -143,10 +140,11 @@ export function AppShell({
   sections,
   compte,
   theme,
-  lien: Lien = "a",
+  lien,
   bandeau,
   children,
 }: AppShellProps) {
+  const Lien = useLien(lien)
   const idContenu = useId()
   return (
     <TooltipProvider>

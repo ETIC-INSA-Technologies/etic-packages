@@ -308,6 +308,12 @@ export {
   type AppShellSection,
 } from "./components/etic/app-shell"
 export {
+  type LienComposant,
+  LienProvider,
+  type LienProviderProps,
+  useLien,
+} from "./components/etic/lien"
+export {
   ThemeMenu,
   type ThemeMenuProps,
   type ThemePreference,
@@ -432,6 +438,7 @@ export {
   ExplainedBadge,
   type ExplainedBadgeProps,
 } from "./components/etic/explained-badge"
+export { Toggletip, type ToggletipProps } from "./components/etic/toggletip"
 export { SaveBar, type SaveBarProps } from "./components/etic/save-bar"
 export {
   TooltipButton,

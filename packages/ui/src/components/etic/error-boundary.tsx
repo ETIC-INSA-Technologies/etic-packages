@@ -6,7 +6,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@etic-ui/components/ui/alert"
-import { buttonVariants } from "@etic-ui/components/ui/button"
+import { ButtonLink } from "@etic-ui/components/etic/button-link"
 import {
   BoutonReessayer,
   DetailTechnique,
@@ -147,10 +147,11 @@ export class ErrorBoundary extends Component<
             a l'allure d'un bouton. */}
         <div className="col-start-2 mt-2 flex flex-wrap gap-2">
           <BoutonReessayer onClick={this.reinitialiser} />
-          {/* Rechargement complet voulu : il repart d'un état sain. */}
-          <a href={accueil} className={buttonVariants({ size: "sm" })}>
+          {/* Rechargement complet voulu, même sous un `LienProvider` : il
+              repart d'un état sain. */}
+          <ButtonLink lien="a" href={accueil} size="sm">
             Retour à l'accueil
-          </a>
+          </ButtonLink>
         </div>
       </Alert>
     )

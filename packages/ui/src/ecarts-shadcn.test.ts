@@ -545,4 +545,14 @@ describe("écarts avec shadcn", () => {
     expect(cadre).toHaveAttribute("data-slot", "data-table")
     expect(cadre).toHaveClass("mon-cadre")
   })
+
+  it("infobulle : ouverte au focus après une navigation au clavier seulement", () => {
+    // Le comportement est testé dans tooltip.test.tsx (menu fermé par Échap,
+    // clic, frappe, tabulation).
+    const tooltip = lire("components/ui/tooltip.tsx")
+    expect(tooltip).toContain("suivreNavigationClavier")
+    expect(tooltip).toContain(
+      "if (focusHorsNavigation()) event.preventBaseUIHandler()"
+    )
+  })
 })

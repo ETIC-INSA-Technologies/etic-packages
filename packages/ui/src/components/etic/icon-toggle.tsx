@@ -1,8 +1,10 @@
 import type { ComponentProps } from "react"
+import { Toggle as TogglePrimitive } from "@base-ui/react/toggle"
 import { cn } from "cn"
 import type { LucideIcon } from "lucide-react"
 
-import { Toggle } from "@etic-ui/components/ui/toggle"
+import { Button } from "@etic-ui/components/ui/button"
+import type { Toggle } from "@etic-ui/components/ui/toggle"
 import {
   Tooltip,
   TooltipContent,
@@ -27,8 +29,9 @@ export interface IconToggleProps extends Omit<
    *  comme critique », « Retirer le marqueur critique »). Le libellé par
    *  défaut. */
   infobulles?: { activer: string; desactiver: string }
-  /** Bascule en cours d'enregistrement : le bouton est occupé
-   *  (`aria-busy`) et ne réagit plus, mais garde le focus. */
+  /** Bascule en cours d'enregistrement : comme un `Button` en cours, une
+   *  roue remplace l'icône, le bouton est occupé (`aria-busy`) et ne réagit
+   *  plus, mais garde le focus. */
   enCours?: boolean
   /** Bascule impossible : le bouton reste focalisable, et son infobulle dit
    *  pourquoi. */
@@ -38,11 +41,20 @@ export interface IconToggleProps extends Omit<
   ton?: StatusTon
 }
 
+/** Taille du `Button` à icône seule qui porte la bascule. */
+const TAILLES = {
+  default: "icon",
+  sm: "icon-sm",
+  lg: "icon-lg",
+} as const
+
 /**
  * Bouton à icône qui pose ou retire un marqueur sensible (élément critique,
- * protégé…), sur le `Toggle` de shadcn : sans libellé visible, il porte son
- * état (`aria-pressed`, en couleur de son `ton` quand il est actif), et son infobulle
- * dit ce que ferait un clic.
+ * protégé…), sur le `Toggle` de Base UI rendu en `Button` à icône (comme la
+ * corbeille de `DeleteButton` à côté) : sans libellé visible, il porte son
+ * état (`aria-pressed`, en couleur de son `ton` quand il est actif), et son
+ * infobulle dit ce que ferait un clic. Son état « en cours » est celui du
+ * `Button`.
  */
 export function IconToggle({
   actif,
@@ -53,6 +65,7 @@ export function IconToggle({
   enCours = false,
   verrou,
   ton = "warning",
+  variant = "default",
   size = "sm",
   className,
   ...props
@@ -63,35 +76,39 @@ export function IconToggle({
       ? infobulles.desactiver
       : infobulles.activer
     : libelle
-  // Ni le verrou ni l'enregistrement ne désactivent nativement le bouton :
-  // il perdrait le focus (et le survol qui montre la raison). Il est dit
-  // indisponible et ignore les clics.
-  const inerte = !!verrou || enCours
   return (
     <>
       <Tooltip>
         <TooltipTrigger
           render={
-            <Toggle
+            <TogglePrimitive
               {...props}
-              size={size}
+              data-slot="toggle"
               pressed={actif}
               onPressedChange={(suivant) => {
-                if (!inerte) onActifChange(suivant)
+                if (!verrou && !enCours) onActifChange(suivant)
               }}
-              aria-disabled={inerte || undefined}
-              aria-busy={enCours || undefined}
+              // Ni le verrou ni l'enregistrement ne désactivent nativement le
+              // bouton : il perdrait le focus (et le survol qui montre la
+              // raison). Il est dit indisponible et ignore les clics.
+              render={
+                <Button
+                  variant={variant === "outline" ? "outline" : "ghost"}
+                  size={TAILLES[size ?? "sm"]}
+                  disabled={!!verrou}
+                  focusableWhenDisabled
+                  enCours={enCours}
+                />
+              }
               aria-label={libelle}
               aria-describedby={describedBy}
               className={cn(
                 // Inactif, en gris comme les icônes d'action voisines : seul
                 // l'état actif attire l'œil.
-                "text-muted-foreground",
-                // Couleur du bouton actif, survol compris (le Toggle passe
+                "text-muted-foreground aria-pressed:bg-muted",
+                // Couleur du bouton actif, survol compris (le bouton passe
                 // sinon en texte normal).
                 TONS[ton].basculeActive,
-                verrou && "cursor-not-allowed opacity-50",
-                enCours && "cursor-progress opacity-50",
                 className
               )}
             />

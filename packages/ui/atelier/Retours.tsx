@@ -53,6 +53,7 @@ import {
   StatTile,
   StatusBadge,
   TooltipButton,
+  Toggletip,
   type QueryBoundaryRequete,
 } from "@etic-ui/index"
 
@@ -291,6 +292,16 @@ function DemoBadges() {
             <LockIcon className="text-muted-foreground" aria-hidden />
           </Badge>
         </ExplainedBadge>
+      </li>
+      <li className="flex items-center text-sm">
+        {/* Au toucher aussi : à essayer en vue mobile. */}
+        <Toggletip
+          explication="Heure du serveur, en UTC"
+          render={<time dateTime="2026-11-01T12:00Z" />}
+          className="rounded-sm underline decoration-dotted underline-offset-4"
+        >
+          12:00 UTC
+        </Toggletip>
       </li>
     </ul>
   )

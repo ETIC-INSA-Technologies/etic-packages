@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from "@etic-ui/components/ui/dialog"
 import {
-  SpinnerBouton,
   useAction,
   useOuvertureDialogue,
   type ActionDialogue,
@@ -125,15 +124,12 @@ export function DraftResumeDialog({
           </Button>
           <Button
             variant="destructive"
-            disabled={action.enCours}
-            focusableWhenDisabled
-            aria-busy={action.enCours || undefined}
+            enCours={action.enCours}
             onClick={() => {
               setRelancee(true)
-              void action.lancer(onRepartir, () => {})
+              void action.lancer(onRepartir)
             }}
           >
-            {action.enCours ? <SpinnerBouton /> : null}
             {libelleRepartir}
           </Button>
           {reprenable ? (

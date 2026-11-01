@@ -144,6 +144,13 @@ gras d'un éditeur). Sur mobile, la page réserve en haut la hauteur de la barre
 (`scroll-padding-top`) : une ancre ne s'arrête pas dessous. `ThemeMenu` existe aussi seul
 (page de connexion…) ; son `className` va sur le bouton.
 
+Le composant de lien du routeur se donne une fois, autour de l'application :
+`<LienProvider lien={LienRouteur}>`. `AppShell`, `DetailHeader` et `ButtonLink` le prennent
+alors par défaut, sans `lien={…}` à chaque appel ; leur prop `lien` reste prioritaire
+(`lien="a"` : un vrai `<a>`, rechargement complet). Sans fournisseur ni prop, un `<a>`.
+`useLien(lien?)` rend le même choix à un composant de l'application, et le type
+`LienComposant` (alias `AppShellLienComposant`) le décrit.
+
 `bandeau` (un `ErrorBanner` qui concerne toute l'application…) s'affiche au-dessus du
 contenu avec les marges latérales de `PageContainer` : l'application le passe nu. Un bandeau
 qui ne rend rien (`ErrorBanner` sans erreur) ne laisse pas d'espace vide. Il prend toute la
@@ -180,11 +187,12 @@ chargement d'une image) et, au besoin, son composant de lien (`lien`, comme pour
 | `Disclosure`, `DisclosureTrigger`                                        | Section repliable à chevron tournant, fermée par défaut : `titre`, `compteur` en pastille, `variante` `lien` (en ligne), `discret` (fantôme estompé) ou `carte` (bloc encadré), `defautOuvert` ou `ouvert` / `onOuvertChange`. `DisclosureTrigger` seul pour un `Collapsible` composé à la main.                                                                                                                                                    |
 | `CenteredScreen`                                                         | Écran hors de la coquille (connexion, page introuvable, vérification de session) : le `<main>` de la page, contenu centré sur toute la hauteur, fond estompé.                                                                                                                                                                                                                                                                                       |
 | `StatTile`, `StatGrid`, `StatusBadge`                                    | Chiffre clé d'un résumé ; rangée de tuiles (colonnes de `largeurMin` au moins, 190 px par défaut, une seule sur téléphone) ; badge d'état à pastille. `ton` (type `StatusTon`) : `neutral`, `info`, `success`, `warning`, `destructive` ; il colore aussi `Progress` (8 px avec `size="lg"`), le segment choisi d'un `SegmentedControl` et un `IconToggle` actif.                                                                                   |
-| `RemovableBadge`, `ExplainedBadge`                                       | Badge de 28 px (`size="lg"`, aussi pour les badges sans croix de la même liste) terminé par une croix « Retirer » (`onRetirer`, `libelleRetirer`, `enCours`, `verrou`) ; badge dont l'`explication` s'ouvre au survol et au focus et se lit après lui (`render` : un autre porteur, `<time>` par exemple).                                                                                                                                          |
+| `RemovableBadge`, `ExplainedBadge`                                       | Badge de 28 px (`size="lg"`, aussi pour les badges sans croix de la même liste) terminé par une croix « Retirer » (`onRetirer`, `libelleRetirer`, `enCours`, `verrou`) ; badge dont l'`explication` s'ouvre au toucher, au clic, au survol et au focus clavier (un `Toggletip`) et se lit après lui (`render` : un autre porteur, `<time>` par exemple).                                                                                            |
+| `Toggletip`                                                              | Explication d'un élément qui n'est pas une action (date, sigle) : bulle sur `Popover`, ouverte au toucher, au clic, au survol et au focus d'une tabulation, fermée au toucher ailleurs, à Échap ou quand le focus part ; lue après le contenu (`texteLu`). Un bouton qui agit garde son infobulle (`TooltipButton`).                                                                                                                                |
 | `SaveBar`                                                                | Pied d'un formulaire de page : « Enregistrer » (soumet le formulaire, ou `onEnregistrer`), occupé mais focalisable pendant `enCours` ; « Annuler » avec `onAnnuler` ; statut annoncé : « Enregistré » (`enregistre`), « Modifications non enregistrées » (`modifie`). `collante` : barre collée en bas d'un long formulaire.                                                                                                                        |
 | `CopyButton`, `DeleteButton`, `IconToggle`                               | Copie avec retour « Copié ! », ou « Copie impossible » si le navigateur refuse (`onCopie`, `onEchec`) ; corbeille qui ouvre une confirmation ; bouton à icône qui pose ou retire un marqueur (`Toggle`, `aria-pressed`, `onActifChange`, `enCours` occupé sans perdre le focus ; actif, en couleur de son `ton`, `warning` par défaut). Tous ont une infobulle, et `verrou` pour dire pourquoi l'action est impossible.                             |
 | `TooltipButton`                                                          | `Button` avec infobulle et état `verrou` (désactivé mais focalisable, la raison en infobulle) : la règle pour tout bouton à icône seule, que l'infobulle nomme (`aria-label`, sauf nom donné). `destructif` : gris, rouge au survol seulement (corbeille, retrait dans une liste).                                                                                                                                                                  |
-| `ButtonLink`                                                             | Lien à l'allure de bouton (`variant`, `size` de `Button`), annoncé comme un lien ; `lien` : le composant de lien du routeur de l'application, comme pour `AppShell` (`<a>` par défaut).                                                                                                                                                                                                                                                             |
+| `ButtonLink`                                                             | Lien à l'allure de bouton (`variant`, `size` de `Button`), annoncé comme un lien ; `lien` : le composant de lien du routeur, par défaut celui du `LienProvider` (`<a>` sans lui ; `lien="a"` force un rechargement complet).                                                                                                                                                                                                                        |
 | `AuthAvatar`, `AuthImage`, `useAuthObjectUrl`                            | Image servie par une adresse authentifiée : l'application passe `charger(src, signal)` (type `AuthImageCharger`) qui renvoie le `Blob` ; l'avatar garde les initiales tant que la photo manque.                                                                                                                                                                                                                                                     |
 | `useAuthObjectUrlEtat`, `secoursEchec`, `diametre`                       | État complet d'une image authentifiée (`url`, `enCours`, `echec`, `erreur`) pour dire « indisponible » plutôt que charger sans fin ; `secoursEchec` d'`AuthImage` en cas d'échec ; `diametre` (px) d'`AuthAvatar` et d'`Avatar`, initiales proportionnées (leur graisse suit la racine).                                                                                                                                                            |
 
@@ -220,8 +228,11 @@ réussite, alors que `onOuvertChange(false)` suit les deux). Si `saisie.attendu`
 l'ouverture (le nombre d'éléments a changé côté serveur), la saisie est vidée, sans remonter le
 dialogue : pas de `key` à forcer. `FormDialog` prend `libelleAnnuler` (« Plus tard ») et
 `actionSecondaire` (`libelle`, `onChoisir`, `destructif`) : une troisième sortie discrète en
-tête du pied (« Se déconnecter »), occupée pendant l'envoi, qui ne ferme pas le dialogue
-d'elle-même. Sans champ où l'on tape, il s'ouvre sur le premier contrôle actif et affiché (case,
+tête du pied (« Se déconnecter »), indisponible pendant l'envoi, qui ne ferme pas le dialogue
+d'elle-même ; si `onChoisir` renvoie une promesse, le dialogue l'attend comme un envoi (ce
+bouton en cours, le reste figé, erreur en tête), et `destructif` la rend grise, rouge au
+survol (comme `TooltipButton`). Les boutons occupés de ces dialogues, de « Réessayer »
+(`ErrorBanner`), de `FileUploadButton` et d'`IconToggle` sont tous le `Button` en cours. Sans champ où l'on tape, il s'ouvre sur le premier contrôle actif et affiché (case,
 liste, choix segmenté… ; un panneau replié est ignoré). Tous les dialogues plafonnent leur
 hauteur à l'écran et gardent le focus : Tab et Maj+Tab en font le tour sans en sortir. Dans
 `FormDialog`, `ConfirmDialog` et `DraftResumeDialog`, seul le corps défile : titre, croix et
@@ -959,7 +970,14 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
     description alignés à gauche dès le téléphone (shadcn les centre sous `sm`), comme la liste
     et les champs du corps ; avec un média, la grille de shadcn reste telle quelle ;
   - `table.tsx` : la ligne d'en-tête ne se surligne pas au survol (`[&_tr:hover]:bg-transparent`
-    sur `TableHeader`) ; les lignes de données gardent le survol de shadcn.
+    sur `TableHeader`) ; les lignes de données gardent le survol de shadcn ;
+  - `tooltip.tsx` : `TooltipTrigger` n'ouvre l'infobulle au focus qu'après une touche de
+    navigation (Tab, flèches, Début, Fin, Page préc./suiv.), suivie par
+    `lib/navigation-clavier.ts`. Le focus qu'un menu ou un calendrier rend à son déclencheur
+    en se fermant (Échap, Entrée, clic) ne l'ouvre plus : l'infobulle absorbait l'Échap
+    suivant, celui qui ferme le dialogue englobant (`ThemeMenu`, « Plus d'actions » de
+    `DetailHeader`, tout `TooltipTrigger` posé sur un `DropdownMenuTrigger`). Le survol et
+    l'`onFocus` de l'application ne changent pas.
 
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 

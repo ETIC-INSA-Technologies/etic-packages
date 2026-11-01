@@ -384,4 +384,75 @@ describe("FormDialog", () => {
       screen.getByRole("button", { name: "Créer", hidden: true })
     )
   })
+
+  it("pendant l'envoi, le bouton d'envoi est un Button en cours (roue muette)", async () => {
+    await rendre({ onEnvoyer: () => new Promise(() => {}) })
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Enregistrer" })
+    )
+    const envoyer = screen.getByRole("button", { name: "Enregistrer" })
+    expect(envoyer).toHaveAttribute("data-en-cours")
+    expect(envoyer.querySelector('[data-slot="spinner"]')).toHaveAttribute(
+      "aria-hidden",
+      "true"
+    )
+    // Les autres sorties sont seulement indisponibles.
+    expect(screen.getByRole("button", { name: "Annuler" })).not.toHaveAttribute(
+      "data-en-cours"
+    )
+  })
+
+  it("action secondaire en promesse : occupée, dialogue figé, erreur affichée", async () => {
+    let rejeter: (raison: unknown) => void = () => {}
+    const onEnvoyer = vi.fn()
+    await rendre({
+      onEnvoyer,
+      actionSecondaire: {
+        libelle: "Se déconnecter",
+        onChoisir: () => new Promise((_, r) => (rejeter = r)),
+      },
+    })
+    const sortie = await screen.findByRole("button", {
+      name: "Se déconnecter",
+    })
+    await userEvent.click(sortie)
+    expect(sortie).toHaveAttribute("aria-busy", "true")
+    expect(sortie).toHaveAttribute("data-en-cours")
+    expect(sortie).toHaveFocus()
+    const envoyer = screen.getByRole("button", { name: "Enregistrer" })
+    expect(envoyer).toHaveAttribute("aria-disabled", "true")
+    expect(envoyer).not.toHaveAttribute("data-en-cours")
+    expect(screen.getByLabelText(/Nom/)).toBeDisabled()
+    // Impossible à fermer, ni à envoyer, pendant l'action.
+    await userEvent.keyboard("{Escape}")
+    await userEvent.click(envoyer)
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(onEnvoyer).not.toHaveBeenCalled()
+
+    rejeter(new Error("Déconnexion impossible."))
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Déconnexion impossible."
+    )
+    await waitFor(() => expect(sortie).not.toHaveAttribute("aria-busy"))
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+  })
+
+  it("action secondaire destructive : grise, rouge au survol seulement", async () => {
+    await rendre({
+      actionSecondaire: {
+        libelle: "Supprimer le brouillon",
+        onChoisir: () => {},
+        destructif: true,
+      },
+    })
+    const sortie = await screen.findByRole("button", {
+      name: "Supprimer le brouillon",
+    })
+    expect(sortie).toHaveClass(
+      "text-muted-foreground",
+      "hover:bg-destructive/10",
+      "hover:text-destructive"
+    )
+    expect(sortie.className).not.toMatch(/(^|\s)text-destructive(\s|$)/)
+  })
 })

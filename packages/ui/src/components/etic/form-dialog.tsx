@@ -20,9 +20,9 @@ import {
   DialogTrigger,
 } from "@etic-ui/components/ui/dialog"
 import {
-  SpinnerBouton,
   useAction,
   useOuvertureDialogue,
+  type ActionDialogue,
 } from "@etic-ui/components/etic/action"
 import type { DialogFinalFocus } from "@etic-ui/components/etic/confirm-dialog"
 import { ErrorBanner } from "@etic-ui/components/etic/error-banner"
@@ -161,8 +161,15 @@ function nomDuChamp(champ: ChampValidable) {
 
 export interface FormDialogActionSecondaire {
   libelle: string
-  onChoisir: () => void
-  /** En rouge (texte), pour une sortie qui détruit. */
+  /**
+   * L'action. Elle ne ferme pas le dialogue d'elle-même. Si elle renvoie une
+   * promesse, le dialogue l'attend comme un envoi (ce bouton occupé, les
+   * autres et les champs figés, impossible à fermer) et affiche l'erreur en
+   * tête du formulaire si elle échoue.
+   */
+  onChoisir: ActionDialogue
+  /** Sortie qui détruit : grise, rouge au survol (comme `destructif` de
+   *  `TooltipButton`). */
   destructif?: boolean
 }
 
@@ -188,8 +195,8 @@ export interface FormDialogProps {
   libelleAnnuler?: string
   /**
    * Une troisième sortie, en tête du pied (à gauche sur ordinateur), discrète :
-   * « Se déconnecter »… Occupée comme « Annuler » pendant l'envoi. Elle ne
-   * ferme pas le dialogue d'elle-même.
+   * « Se déconnecter »… Indisponible comme « Annuler » pendant l'envoi. Elle
+   * ne ferme pas le dialogue d'elle-même.
    */
   actionSecondaire?: FormDialogActionSecondaire
   /** Bouton d'envoi désactivé : formulaire incomplet, rien de modifié… */
@@ -233,6 +240,8 @@ export function FormDialog({
   className,
 }: FormDialogProps) {
   const action = useAction()
+  // Ce qui a lancé l'action en cours : l'envoi, ou l'action secondaire.
+  const [lanceur, setLanceur] = useState<"envoi" | "secondaire">("envoi")
   const ouverture = useOuvertureDialogue(ouvert, onOuvertChange, action.enCours)
   const [invalides, setInvalides] = useState<{ nom: string; raison: string }[]>(
     []
@@ -292,6 +301,7 @@ export function FormDialog({
     if (champs.current?.contains(document.activeElement)) {
       boutonEnvoi.current?.focus()
     }
+    setLanceur("envoi")
     void action.lancer(
       () => onEnvoyer(event),
       () => ouverture.definir(false)
@@ -367,19 +377,21 @@ export function FormDialog({
             {actionSecondaire ? (
               // Sans cadre et rangée à part : elle ne répond pas au
               // formulaire, elle en sort.
-              <Button
+              <TooltipButton
                 variant="ghost"
-                className={cn(
-                  "sm:mr-auto",
-                  actionSecondaire.destructif &&
-                    "text-destructive hover:text-destructive"
-                )}
+                destructif={actionSecondaire.destructif}
+                className="sm:mr-auto"
                 disabled={action.enCours}
                 focusableWhenDisabled
-                onClick={actionSecondaire.onChoisir}
+                enCours={action.enCours && lanceur === "secondaire"}
+                onClick={() => {
+                  if (action.enCours) return
+                  setLanceur("secondaire")
+                  void action.lancer(actionSecondaire.onChoisir)
+                }}
               >
                 {actionSecondaire.libelle}
-              </Button>
+              </TooltipButton>
             ) : null}
             <Button
               variant="outline"
@@ -395,9 +407,8 @@ export function FormDialog({
               disabled={action.enCours || envoiDesactive}
               focusableWhenDisabled
               verrou={verrouEnvoi}
-              aria-busy={action.enCours || undefined}
+              enCours={action.enCours && lanceur === "envoi"}
             >
-              {action.enCours ? <SpinnerBouton /> : null}
               {libelleEnvoyer}
             </TooltipButton>
           </DialogFooter>

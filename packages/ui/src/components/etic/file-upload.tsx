@@ -9,7 +9,6 @@ import {
 } from "react-dropzone"
 
 import { Button } from "@etic-ui/components/ui/button"
-import { Spinner } from "@etic-ui/components/ui/spinner"
 
 /** Types acceptés, au format de react-dropzone. */
 export type FileUploadAccept = Accept
@@ -182,22 +181,13 @@ export function FileUploadButton({
     <>
       <Button
         {...props}
-        disabled={disabled || enCours}
-        // Désactivé nativement, le bouton qui a le focus le perdrait.
-        focusableWhenDisabled={enCours}
-        aria-busy={enCours || undefined}
+        disabled={disabled}
+        enCours={enCours}
+        libelleEnCours={libelleEnCours}
         onClick={open}
       >
-        {enCours ? (
-          <Spinner
-            role={undefined}
-            aria-hidden="true"
-            data-icon="inline-start"
-          />
-        ) : (
-          <UploadIcon data-icon="inline-start" />
-        )}
-        {enCours ? libelleEnCours : children}
+        <UploadIcon data-icon="inline-start" />
+        {children}
       </Button>
       {/* Hors du flux : dans une rangée flex, l'input compterait un écart. */}
       <span className="sr-only">

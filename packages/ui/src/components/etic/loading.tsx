@@ -4,10 +4,6 @@ import { Card, CardContent } from "@etic-ui/components/ui/card"
 import { Skeleton } from "@etic-ui/components/ui/skeleton"
 import { SpinnerDecoratif } from "@etic-ui/components/ui/spinner"
 
-// Défini à côté de `Spinner` (le `Button` occupé s'en sert) ; réexporté ici
-// pour les imports internes existants.
-export { SpinnerDecoratif }
-
 export interface LoadingProps {
   /** Annoncé aux lecteurs d'écran à chaque changement ; « Chargement… »
    *  par défaut. */

@@ -22,7 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@etic-ui/components/ui/tooltip"
-import type { AppShellLienComposant } from "@etic-ui/components/etic/app-shell"
+import { useLien, type LienComposant } from "@etic-ui/components/etic/lien"
 
 export interface PageHeaderProps {
   titre: ReactNode
@@ -110,8 +110,9 @@ export interface DetailHeaderProps {
    * seul le titre (le `<h1>`), actions sur la même ligne. Demande `chemin`.
    */
   compact?: boolean
-  /** Composant de lien du routeur, comme pour `AppShell`. */
-  lien?: AppShellLienComposant
+  /** Composant de lien du routeur ; par défaut, celui du `LienProvider`,
+   *  sinon un `<a>`. */
+  lien?: LienComposant
   className?: string
 }
 
@@ -126,9 +127,10 @@ export function DetailHeader({
   actionsSecondaires = [],
   tailleActions = "default",
   compact = false,
-  lien: Lien = "a",
+  lien,
   className,
 }: DetailHeaderProps) {
+  const Lien = useLien(lien)
   const lesActions =
     actions || actionsSecondaires.length > 0 ? (
       <Actions>

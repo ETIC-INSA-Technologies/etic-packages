@@ -1,7 +1,5 @@
 import { useCallback, useState } from "react"
 
-import { SpinnerDecoratif } from "@etic-ui/components/ui/spinner"
-
 /**
  * Action d'un dialogue : synchrone, ou une promesse que le dialogue attend.
  * Renvoyer `false` (ou une promesse résolue à `false`) garde le dialogue
@@ -13,7 +11,8 @@ export type ActionDialogue = () => unknown
 /**
  * État d'une action lancée depuis un dialogue. `lancer` appelle l'action :
  * si elle renvoie une promesse, `enCours` vaut vrai jusqu'à son issue. Puis
- * `succes` est appelé, sauf si l'action a renvoyé `false` ; en cas d'échec,
+ * `succes`, s'il est donné, est appelé, sauf si l'action a renvoyé `false`
+ * (une action qui ne ferme rien n'en passe pas) ; en cas d'échec,
  * `erreur` reçoit la raison. Une action synchrone qui lève une exception
  * échoue de même.
  */
@@ -22,7 +21,7 @@ export function useAction() {
   const [erreur, setErreur] = useState<unknown>(null)
 
   const lancer = useCallback(
-    async (action: ActionDialogue, succes: () => void) => {
+    async (action: ActionDialogue, succes?: () => void) => {
       setErreur(null)
       setEnCours(true)
       let resultat: unknown
@@ -35,7 +34,7 @@ export function useAction() {
         return
       }
       setEnCours(false)
-      if (resultat !== false) succes()
+      if (resultat !== false) succes?.()
     },
     []
   )
@@ -85,10 +84,4 @@ export function fermerSaufEnCours(
   return (suivant) => {
     if (suivant || !enCours) onOuvertChange(suivant)
   }
-}
-
-/** Roue dans un bouton occupé, muette : le bouton garde son nom et porte
- *  `aria-busy`. */
-export function SpinnerBouton() {
-  return <SpinnerDecoratif data-icon="inline-start" />
 }

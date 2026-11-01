@@ -14,7 +14,6 @@ import {
   CollapsibleContent,
 } from "@etic-ui/components/ui/collapsible"
 import { DisclosureTrigger } from "@etic-ui/components/etic/disclosure"
-import { SpinnerDecoratif } from "@etic-ui/components/etic/loading"
 
 export interface ErrorBannerProps {
   /**
@@ -122,19 +121,8 @@ export function BoutonReessayer({
   enCours?: boolean
 }) {
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      disabled={enCours}
-      focusableWhenDisabled
-      aria-busy={enCours || undefined}
-      onClick={onClick}
-    >
-      {enCours ? (
-        <SpinnerDecoratif data-icon="inline-start" />
-      ) : (
-        <RotateCwIcon data-icon="inline-start" />
-      )}
+    <Button variant="outline" size="sm" enCours={enCours} onClick={onClick}>
+      <RotateCwIcon data-icon="inline-start" />
       Réessayer
     </Button>
   )

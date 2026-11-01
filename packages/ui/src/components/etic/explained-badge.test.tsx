@@ -24,7 +24,7 @@ describe("ExplainedBadge", () => {
     await user.hover(porteur)
     expect(
       await screen.findByText("Imposé par le poste « Trésorier »")
-    ).toHaveAttribute("data-slot", "tooltip-content")
+    ).toHaveAttribute("data-slot", "toggletip-content")
   })
 
   it("render et texteLu : une date, focalisable sans tabIndex donné", async () => {

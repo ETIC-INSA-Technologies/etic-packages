@@ -2,16 +2,17 @@ import type { ComponentProps } from "react"
 import type { VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
-import type { AppShellLienComposant } from "@etic-ui/components/etic/app-shell"
 import { buttonVariants } from "@etic-ui/components/ui/button"
+import { useLien, type LienComposant } from "@etic-ui/components/etic/lien"
 
 export interface ButtonLinkProps
   extends ComponentProps<"a">, VariantProps<typeof buttonVariants> {
   /**
    * Composant de lien de l'application (celui de son routeur, qui reçoit
-   * `href`), comme pour `AppShell` et `DetailHeader` ; `<a>` par défaut.
+   * `href`) ; par défaut, celui du `LienProvider`, sinon un `<a>`. `"a"`
+   * force un rechargement complet.
    */
-  lien?: AppShellLienComposant
+  lien?: LienComposant
 }
 
 /**
@@ -21,13 +22,17 @@ export interface ButtonLinkProps
  * serait annoncé comme un bouton.
  */
 export function ButtonLink({
-  lien: Lien = "a",
+  lien,
   variant = "default",
   size = "default",
   className,
   ...props
 }: ButtonLinkProps) {
+  const Lien = useLien(lien)
   return (
+    // Le composant vient des props ou du contexte : stable d'un rendu à
+    // l'autre, il n'est pas créé pendant le rendu (faux positif de la règle).
+    // eslint-disable-next-line react-hooks/static-components
     <Lien
       data-slot="button"
       className={cn(buttonVariants({ variant, size }), className)}

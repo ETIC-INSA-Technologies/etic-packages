@@ -22,7 +22,6 @@ import { DialogBody } from "@etic-ui/components/ui/dialog"
 import { Field, FieldLabel } from "@etic-ui/components/ui/field"
 import { Input } from "@etic-ui/components/ui/input"
 import {
-  SpinnerBouton,
   useAction,
   useOuvertureDialogue,
   type ActionDialogue,
@@ -289,10 +288,9 @@ export function ConfirmDialog({
             disabled={!peutConfirmer}
             focusableWhenDisabled
             verrou={verrou}
-            aria-busy={action.enCours || undefined}
+            enCours={action.enCours}
             onClick={confirmer}
           >
-            {action.enCours ? <SpinnerBouton /> : null}
             {libelleConfirmer}
           </TooltipButton>
         </AlertDialogFooter>
