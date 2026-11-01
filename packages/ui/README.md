@@ -65,13 +65,14 @@ composants shadcn d'origine emploient `text-primary` (variante `link` du bouton 
 liens survolés) : c'est corrigé dans `src/components/ui/`, et `npm test` échoue si
 `text-primary` y réapparaît.
 
-Le thème sombre s'active par la classe `dark` sur `<html>`.
+Le thème sombre s'active par la classe `dark` sur `<html>` (la racine, pas un élément plus
+bas : certains jetons en dérivent d'autres et ne se résolvent qu'à la racine).
 
 Les neutres (fonds, panneaux, bordures, textes) sont ceux de la couleur de base `gray` de
 shadcn (palette `gray` de Tailwind 4, légèrement bleutée), communs à toute la suite : une
 application ne les redéfinit pas. Écarts, vérifiés par `src/theme.test.ts` avec les
 contrastes : en clair, le fond de page est gray-50 (cartes, menus et tableaux restent blancs
-et s'en détachent, comme les cartes gray-900 sur le fond gray-950 en sombre) et
+et s'en détachent, comme les cartes plus claires que le fond en sombre) et
 `--muted-foreground` est un peu plus foncé (≥ 4,5:1 sur `--muted`).
 `color-scheme` suit le thème (`light`, `dark`) : barres de défilement et contrôles natifs
 compris.
@@ -81,8 +82,8 @@ compris.
 `appliquerTheme(theme)` pose la classe `dark` sur `<html>` pour `"dark"`, la retire pour
 `"light"` et, pour `"system"`, suit `prefers-color-scheme`, y compris quand le système change.
 La préférence vient du compte (`theme` de `@etic-insa/auth`) ; `useThemeApplique` la peint,
-la mémorise dans ce navigateur (`localStorage`, clé `CLE_THEME`) et suit un changement fait
-dans un autre onglet :
+la mémorise dans ce navigateur (`localStorage`, clé `"etic-theme"`) et suit un changement
+fait dans un autre onglet :
 
 ```tsx
 import { useThemeApplique } from "@etic-insa/ui"
@@ -93,20 +94,18 @@ useThemeApplique(me?.preferences?.theme, (theme) => {
 })
 ```
 
-`appliquerEtMemoriserTheme`, `THEMES` (`["light", "system", "dark"]`) et `estThemePreference`
-servent hors de React.
+Hors de React (atelier, page sans compte), `appliquerTheme` seul : il ne mémorise rien.
 
 Pour que la première image soit déjà dans le bon thème, avant le chargement du compte,
-l'application sert le script de démarrage du paquet depuis sa propre origine (une CSP
-`script-src 'self'` l'admet) et le charge dans `<head>`, avant le bundle, sans
-`type="module"` :
+l'application charge le script de démarrage du paquet dans `<head>`, avant le bundle, sans
+`type="module"`, depuis sa propre origine (une CSP `script-src 'self'` l'admet) :
 
 ```html
 <script src="/theme-boot.js"></script>
 ```
 
 Vite ne regroupe pas un script classique : le copier dans `public/` avant `dev` et `build`
-(et ignorer la copie dans git), par exemple :
+(copie ignorée dans git) :
 
 ```json
 "scripts": {
@@ -116,8 +115,7 @@ Vite ne regroupe pas un script classique : le copier dans `public/` avant `dev` 
 }
 ```
 
-Il relit la copie mémorisée (mêmes clé et valeurs que `theme.ts`) ; sans copie, il suit le
-système.
+Il relit le thème mémorisé ; sans thème mémorisé, il suit le système.
 
 ```tsx
 import { Button } from "@etic-insa/ui"
@@ -1042,14 +1040,15 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 
   Thème : couleur de base `gray` de shadcn (registre `colors/gray.json`, `cssVarsV4`) au lieu
-  de `neutral` ; `--background` clair gray-50 (`oklch(0.985 0.002 247.839)`) au lieu du blanc,
-  `--card` et `--popover` restant blancs ; cadre de `Table` (`table-container`) et de
-  `DataTable` en `bg-card` (blanc sur ce fond, comme une carte ; survol et sélection de
-  shadcn inchangés) ; `--success` clair `#146c3d` (≥ 4,5:1 sur sa teinte à 20 % posée sur
-  gray-50) ; `--muted-foreground` clair `oklch(0.54 0.027 264.364)` au lieu de gray-500
-  (4,39:1 sur `--muted`) ; `--control-border` (`--muted-foreground` à 80 %) en sombre aussi, au
-  lieu de `--input` (sous 2:1) ; `color-scheme` dans `:root` et `.dark`. `theme.test.ts`
-  compare chaque jeton au registre, écarts exceptés. Hors `ui/`, `CenteredScreen` est posé sur
+  de `neutral` ; `--background` clair gray-50 au lieu du blanc, `--card` et `--popover`
+  restant blancs ; cadre de `Table` (`table-container`) et de `DataTable` en `bg-card` (blanc
+  sur ce fond, comme une carte ; survol et sélection de shadcn inchangés) ; `--success` clair
+  un cran plus foncé (≥ 4,5:1 sur sa teinte posée sur gray-50) ; `--muted-foreground` clair un
+  peu plus foncé que gray-500 (≥ 4,5:1 sur `--muted`) ; `--control-border`
+  (`--muted-foreground` à 80 %) en sombre aussi, au lieu de `--input` (sous 2:1) ;
+  `color-scheme` dans `:root` et `.dark`. Les valeurs sont commentées dans `styles.css` ;
+  `theme.test.ts` compare chaque jeton au registre, écarts (`ECARTS`) exceptés, et en vérifie
+  les contrastes. Hors `ui/`, `CenteredScreen` est posé sur
   `bg-muted/40` au lieu du `bg-muted` des blocs de connexion de shadcn (fond moins appuyé, en
   sombre surtout).
 

@@ -17,13 +17,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@etic-ui/components/ui/tooltip"
-import type { ThemePreference } from "@etic-ui/theme"
+import { THEMES, type ThemePreference } from "@etic-ui/theme"
 
-// Défini avec l'application du thème (theme.ts) ; exporté ici aussi, comme
-// avant.
-export type { ThemePreference }
-
-// Dans l'ordre du menu (celui de THEMES, theme.ts).
 const OPTIONS: Record<ThemePreference, { libelle: string; Icone: LucideIcon }> =
   {
     light: { libelle: "Clair", Icone: SunIcon },
@@ -115,12 +110,19 @@ export function ThemeMenu({
               value={valeur}
               onValueChange={(theme) => choisir(theme as ThemePreference)}
             >
-              {Object.entries(OPTIONS).map(([option, { libelle, Icone }]) => (
-                <DropdownMenuRadioItem key={option} value={option} closeOnClick>
-                  <Icone />
-                  {libelle}
-                </DropdownMenuRadioItem>
-              ))}
+              {THEMES.map((option) => {
+                const { libelle, Icone } = OPTIONS[option]
+                return (
+                  <DropdownMenuRadioItem
+                    key={option}
+                    value={option}
+                    closeOnClick
+                  >
+                    <Icone />
+                    {libelle}
+                  </DropdownMenuRadioItem>
+                )
+              })}
             </DropdownMenuRadioGroup>
           </DropdownMenuGroup>
         </DropdownMenuContent>

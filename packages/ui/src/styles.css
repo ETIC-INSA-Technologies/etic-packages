@@ -23,9 +23,10 @@
  * valeurs sont celles du registre, sauf les écarts commentés ci-dessous ;
  * src/theme.test.ts les compare au registre et vérifie les contrastes.
  *
- * Le thème sombre s'active par la classe « dark » sur un ancêtre (<html>) :
- * appliquerTheme() (src/theme.ts) la pose, theme-boot.js la pose avant le
- * premier rendu.
+ * Le thème sombre s'active par la classe « dark » sur la racine (<html>), pas
+ * sur un ancêtre plus bas (les jetons dérivés par var(), comme
+ * --control-border, ne sont résolus qu'à la racine) : appliquerTheme()
+ * (src/theme.ts) la pose, theme-boot.js la pose avant le premier rendu.
  */
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
@@ -120,9 +121,11 @@
   --info: #1f5aa8;
   --border: oklch(0.928 0.006 264.531);
   --input: oklch(0.928 0.006 264.531);
-  /* Bord d'une case à cocher vide : --input se voyait à peine sur le blanc.
-     --muted-foreground à 80 % : ≥ 3:1 sur le fond et sur --muted (contrôle,
-     WCAG 1.4.11), en clair comme en sombre. */
+  /* Bord d'une case à cocher vide : --input se voyait à peine sur le blanc
+     (et restait sous 2:1 en sombre). --muted-foreground à 80 % : ≥ 3:1 sur
+     le fond et sur --muted (contrôle, WCAG 1.4.11), en clair comme en
+     sombre. Déclaré ici seulement : avec « dark » sur la racine (<html>),
+     var(--muted-foreground) s'y résout déjà en valeur sombre. */
   --control-border: color-mix(
     in oklab,
     var(--muted-foreground) 80%,
@@ -170,12 +173,6 @@
   --info: #7cb4f5;
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  /* Même règle qu'en clair : --input (blanc à 15 %) restait sous 2:1. */
-  --control-border: color-mix(
-    in oklab,
-    var(--muted-foreground) 80%,
-    transparent
-  );
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);

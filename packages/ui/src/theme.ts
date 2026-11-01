@@ -64,17 +64,6 @@ export function appliquerTheme(theme: ThemePreference): void {
   }
 }
 
-/** Applique le thème et le mémorise pour le prochain chargement de page. */
-export function appliquerEtMemoriserTheme(theme: ThemePreference): void {
-  appliquerTheme(theme)
-  try {
-    localStorage.setItem(CLE_THEME, theme)
-  } catch {
-    // Stockage indisponible (navigation privée stricte) : seul le premier
-    // rendu du prochain chargement en pâtit.
-  }
-}
-
 /**
  * Peint le thème du compte : l'applique et le mémorise dès qu'il est connu
  * (`undefined` tant que le compte n'est pas chargé : rien ne change, le thème
@@ -88,7 +77,14 @@ export function useThemeApplique(
   onThemeAutreOnglet?: (theme: ThemePreference) => void
 ): void {
   useEffect(() => {
-    if (theme) appliquerEtMemoriserTheme(theme)
+    if (!theme) return
+    appliquerTheme(theme)
+    try {
+      localStorage.setItem(CLE_THEME, theme)
+    } catch {
+      // Stockage indisponible (navigation privée stricte) : seul le premier
+      // rendu du prochain chargement en pâtit.
+    }
   }, [theme])
 
   // Le dernier rappel, sans réabonner l'écouteur à chaque rendu.

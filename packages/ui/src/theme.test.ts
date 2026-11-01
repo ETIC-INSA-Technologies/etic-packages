@@ -143,9 +143,10 @@ function teinte(couleur: string, fond: string, part: number) {
   )
 }
 
-// Variables d'un bloc CSS. `valeur` rend une couleur opaque en hexadécimal :
-// hexadécimal à 6 chiffres, oklch(L C H), ou var(--autre) du même bloc ; une
-// variable demandée qui manque ou s'écrit autrement est une erreur.
+// Variables d'un bloc CSS (`bloc` : son texte brut). `valeur` rend une
+// couleur opaque en hexadécimal : hexadécimal à 6 chiffres, oklch(L C H), ou
+// var(--autre) du même bloc ; une variable demandée qui manque ou s'écrit
+// autrement est une erreur.
 function variables(css: string, selecteur: string) {
   const debut = css.indexOf(`${selecteur} {`)
   if (debut < 0) throw new Error(`bloc ${selecteur} introuvable`)
@@ -171,6 +172,7 @@ function variables(css: string, selecteur: string) {
     )
   }
   return {
+    bloc,
     noms: Object.keys(declarees),
     brute: (nom: string) => declarees[nom],
     valeur,
@@ -188,41 +190,40 @@ const css = lire("src/styles.css")
 const racineCss = variables(css, ":root")
 const sombreCss = variables(css, ".dark")
 
-// Fonds de la page et des cartes (tableaux compris), lus dans le thème.
-const CLAIR = {
-  fond: racineCss.valeur("background"),
-  muted: racineCss.valeur("muted"),
-  card: racineCss.valeur("card"),
-}
-const SOMBRE = {
-  fond: sombreCss.valeur("background"),
-  muted: sombreCss.valeur("muted"),
-  card: sombreCss.valeur("card"),
+// Fonds de la page et des cartes (tableaux compris), lus dans le thème :
+// `fonds` ceux où se pose du texte, `surfaces` ceux où se pose une teinte
+// (bg-x/10…). `teinteDestructive` : opacité de bg-destructive (10 %, 20 % en
+// sombre). `accent` : suffixe du sélecteur d'un contrat d'accent.
+function surfaces(
+  nom: "clair" | "sombre",
+  vars: ReturnType<typeof variables>,
+  teinteDestructive: number,
+  accent: string
+) {
+  const [fond, card, muted] = ["background", "card", "muted"].map(vars.valeur)
+  return {
+    nom,
+    vars,
+    fond,
+    card,
+    muted,
+    fonds: [fond, card, muted],
+    surfaces: [fond, card],
+    teinteDestructive,
+    accent,
+  }
 }
 
-const THEMES = [
-  {
-    nom: "clair",
-    vars: racineCss,
-    fonds: [CLAIR.fond, CLAIR.card, CLAIR.muted],
-  },
-  {
-    nom: "sombre",
-    vars: sombreCss,
-    fonds: [SOMBRE.fond, SOMBRE.card, SOMBRE.muted],
-  },
-] as const
+const CLAIR = surfaces("clair", racineCss, 0.1, "")
+const SOMBRE = surfaces("sombre", sombreCss, 0.2, ".dark")
+const THEMES = [CLAIR, SOMBRE]
 
 describe("couleur de base", () => {
   it.each(THEMES)(
     "$nom : valeurs du registre gray de shadcn",
     ({ nom, vars }) => {
-      const registre = REGISTRE_GRAY[nom === "clair" ? "clair" : "sombre"]
-      const ecarts = [
-        ...ECARTS.commun,
-        ...ECARTS[nom === "clair" ? "clair" : "sombre"],
-      ]
-      for (const [jeton, attendu] of Object.entries(registre)) {
+      const ecarts = [...ECARTS.commun, ...ECARTS[nom]]
+      for (const [jeton, attendu] of Object.entries(REGISTRE_GRAY[nom])) {
         if (ecarts.includes(jeton)) continue
         expect(vars.brute(jeton), `${nom} : --${jeton}`).toBe(attendu)
       }
@@ -230,13 +231,8 @@ describe("couleur de base", () => {
   )
 
   it("color-scheme suit le thème (contrôles natifs, barres de défilement)", () => {
-    const bloc = (selecteur: string) =>
-      css.slice(
-        css.indexOf(`${selecteur} {`),
-        css.indexOf("}", css.indexOf(`${selecteur} {`))
-      )
-    expect(bloc(":root")).toContain("color-scheme: light;")
-    expect(bloc(".dark")).toContain("color-scheme: dark;")
+    expect(racineCss.bloc).toContain("color-scheme: light;")
+    expect(sombreCss.bloc).toContain("color-scheme: dark;")
   })
 
   // Les jetons qu'une surface emploie avec son texte suivent la base : une
@@ -328,13 +324,19 @@ describe("couleur de base", () => {
     }
   )
 
-  // Bord d'une case à cocher vide : --muted-foreground à 80 %.
+  // Bord d'une case à cocher vide : --muted-foreground à 80 %, déclaré dans
+  // :root seulement. Avec `dark` sur <html>, var(--muted-foreground) s'y
+  // résout en valeur sombre : le contour sombre se calcule donc avec elle.
+  it("le bord d'une case à cocher suit --muted-foreground", () => {
+    expect(racineCss.brute("control-border")).toBe(
+      "color-mix( in oklab, var(--muted-foreground) 80%, transparent )"
+    )
+    expect(sombreCss.brute("control-border")).toBeUndefined()
+  })
+
   it.each(THEMES)(
     "$nom : le bord d'une case à cocher se voit",
     ({ nom, vars, fonds }) => {
-      expect(vars.brute("control-border")).toBe(
-        "color-mix( in oklab, var(--muted-foreground) 80%, transparent )"
-      )
       const couleur = vars.valeur("muted-foreground")
       for (const fond of fonds) {
         lisible(
@@ -349,29 +351,17 @@ describe("couleur de base", () => {
 })
 
 describe("couleurs sémantiques", () => {
-  it.each(["success", "warning", "info"])("%s se lit en clair", (nom) => {
-    const couleur = racineCss.valeur(nom)
-    for (const fond of [
-      CLAIR.fond,
-      CLAIR.card,
-      CLAIR.muted,
-      teinte(couleur, CLAIR.fond, 0.2),
-      teinte(couleur, CLAIR.card, 0.2),
-    ]) {
-      lisible(couleur, fond, TEXTE, nom)
-    }
-  })
-
-  it.each(["success", "warning", "info"])("%s se lit en sombre", (nom) => {
-    const couleur = sombreCss.valeur(nom)
-    for (const fond of [
-      SOMBRE.fond,
-      SOMBRE.card,
-      SOMBRE.muted,
-      teinte(couleur, SOMBRE.fond, 0.2),
-      teinte(couleur, SOMBRE.card, 0.2),
-    ]) {
-      lisible(couleur, fond, TEXTE, nom)
+  // Chaque couleur dans chaque thème, sur les fonds et sur sa teinte à 20 %
+  // posée sur le fond ou une carte.
+  it.each(
+    THEMES.flatMap((theme) =>
+      ["success", "warning", "info"].map((couleur) => ({ couleur, theme }))
+    )
+  )("$couleur se lit en $theme.nom", ({ couleur: nom, theme }) => {
+    const couleur = theme.vars.valeur(nom)
+    const teintes = theme.surfaces.map((s) => teinte(couleur, s, 0.2))
+    for (const fond of [...theme.fonds, ...teintes]) {
+      lisible(couleur, fond, TEXTE, `${theme.nom}, ${nom}`)
     }
   })
 
@@ -380,36 +370,34 @@ describe("couleurs sémantiques", () => {
   it.each(["destructive", "warning", "info", "success"])(
     "Alert %s : la description à 90 % se lit sur la carte",
     (nom) => {
-      const clair = racineCss.valeur(nom)
-      lisible(teinte(clair, CLAIR.card, 0.9), CLAIR.card, TEXTE, nom)
-      const sombre = sombreCss.valeur(nom)
-      lisible(teinte(sombre, SOMBRE.card, 0.9), SOMBRE.card, TEXTE, nom)
+      for (const { nom: theme, vars, card } of THEMES) {
+        const couleur = vars.valeur(nom)
+        lisible(teinte(couleur, card, 0.9), card, TEXTE, `${theme}, ${nom}`)
+      }
     }
   )
 
   // Variante destructive en teinte (bouton, badge, StatusBadge) : texte
   // --destructive sur bg-destructive/10 (20 % en sombre), posée sur le fond,
   // une carte ou un pied de dialogue (bg-muted/50 sur la carte).
-  it("destructive se lit sur sa teinte, en clair", () => {
-    const couleur = racineCss.valeur("destructive")
-    const pied = teinte(CLAIR.muted, CLAIR.card, 0.5)
-    for (const fond of [CLAIR.fond, CLAIR.card, CLAIR.muted]) {
-      lisible(couleur, fond, TEXTE, "destructive")
+  it.each(THEMES)(
+    "$nom : destructive se lit sur sa teinte",
+    ({ nom, vars, fonds, muted, card, teinteDestructive }) => {
+      const couleur = vars.valeur("destructive")
+      const pied = teinte(muted, card, 0.5)
+      for (const fond of fonds) {
+        lisible(couleur, fond, TEXTE, `${nom}, destructive`)
+      }
+      for (const fond of [...fonds, pied]) {
+        lisible(
+          couleur,
+          teinte(couleur, fond, teinteDestructive),
+          TEXTE,
+          `${nom}, destructive teinté`
+        )
+      }
     }
-    for (const fond of [CLAIR.fond, CLAIR.card, CLAIR.muted, pied]) {
-      lisible(couleur, teinte(couleur, fond, 0.1), TEXTE, "destructive teinté")
-    }
-  })
-
-  it("destructive se lit sur sa teinte, en sombre", () => {
-    const couleur = sombreCss.valeur("destructive")
-    const pied = teinte(SOMBRE.muted, SOMBRE.card, 0.5)
-    for (const fond of [SOMBRE.fond, SOMBRE.card, SOMBRE.muted]) {
-      lisible(couleur, fond, TEXTE, "destructive")
-      lisible(couleur, teinte(couleur, fond, 0.2), TEXTE, "destructive teinté")
-    }
-    lisible(couleur, teinte(couleur, pied, 0.2), TEXTE, "destructive teinté")
-  })
+  )
 })
 
 describe("contrats d'accent des applications", () => {
@@ -423,23 +411,11 @@ describe("contrats d'accent des applications", () => {
   })
 
   it.each(applications)("%s : contrat complet et lisible", (application) => {
-    const selecteur = `:root[data-accent="${application}"]`
-    const themes = [
-      {
-        nom: "clair",
-        selecteur,
-        fonds: [CLAIR.fond, CLAIR.card, CLAIR.muted],
-        surfaces: [CLAIR.fond, CLAIR.card],
-      },
-      {
-        nom: "sombre",
-        selecteur: `${selecteur}.dark`,
-        fonds: [SOMBRE.fond, SOMBRE.card, SOMBRE.muted],
-        surfaces: [SOMBRE.fond, SOMBRE.card],
-      },
-    ]
-    for (const theme of themes) {
-      const vars = variables(accents, theme.selecteur)
+    for (const theme of THEMES) {
+      const vars = variables(
+        accents,
+        `:root[data-accent="${application}"]${theme.accent}`
+      )
       expect([...vars.noms].sort(), theme.nom).toEqual(CONTRAT)
       const [primary, foreground, texte, ring] = CONTRAT.map(vars.valeur)
 

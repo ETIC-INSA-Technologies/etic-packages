@@ -4,14 +4,8 @@ import { resolve } from "node:path"
 import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  appliquerEtMemoriserTheme,
-  appliquerTheme,
-  CLE_THEME,
-  estThemePreference,
-  THEMES,
-  useThemeApplique,
-} from "@etic-ui/index"
+import { appliquerTheme, useThemeApplique } from "@etic-ui/index"
+import { CLE_THEME, estThemePreference, THEMES } from "@etic-ui/theme"
 
 const html = document.documentElement
 const sombre = () => html.classList.contains("dark")
@@ -100,30 +94,22 @@ describe("préférences", () => {
     expect(estThemePreference("auto")).toBe(false)
     expect(estThemePreference(null)).toBe(false)
   })
-
-  it("appliquerEtMemoriserTheme garde une copie locale", () => {
-    simulerSysteme(false)
-    appliquerEtMemoriserTheme("dark")
-    expect(sombre()).toBe(true)
-    expect(localStorage.getItem(CLE_THEME)).toBe("dark")
-  })
-
-  it("stockage indisponible : le thème s'applique quand même", () => {
-    simulerSysteme(false)
-    const setItem = vi
-      .spyOn(Storage.prototype, "setItem")
-      .mockImplementation(() => {
-        throw new Error("refusé")
-      })
-    expect(() => appliquerEtMemoriserTheme("dark")).not.toThrow()
-    expect(sombre()).toBe(true)
-    setItem.mockRestore()
-  })
 })
 
 describe("useThemeApplique", () => {
   beforeEach(() => {
     simulerSysteme(false)
+  })
+
+  it("stockage indisponible : le thème s'applique quand même", () => {
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new Error("refusé")
+      })
+    expect(() => renderHook(() => useThemeApplique("dark"))).not.toThrow()
+    expect(sombre()).toBe(true)
+    setItem.mockRestore()
   })
 
   it("rien tant que le thème du compte est inconnu, puis l'applique et le mémorise", () => {

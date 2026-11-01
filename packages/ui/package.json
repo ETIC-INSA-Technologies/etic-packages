@@ -18,11 +18,12 @@
       "default": "./dist/index.js"
     },
     "./styles.css": "./dist/styles.css",
-    "./theme-boot.js": "./dist/theme-boot.js",
+    "./theme-boot.js": "./src/theme-boot.js",
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "src/theme-boot.js"
   ],
   "publishConfig": {
     "access": "public",
@@ -30,7 +31,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/build-css.mjs && node scripts/build-theme-boot.mjs",
+    "build": "vite build && node scripts/build-css.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "vitest run"

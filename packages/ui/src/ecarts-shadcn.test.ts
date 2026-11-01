@@ -260,45 +260,34 @@ describe("écarts avec shadcn", () => {
     expect(css).not.toContain("--muted-foreground: oklch(0.556 0 0)")
   })
 
-  it("thème : base gray, muted-foreground clair plus foncé que le registre", () => {
-    // Registre gray (gray-500) : 4,39:1 sur --muted. Le reste de la base est
-    // comparé au registre par theme.test.ts.
-    const css = lire("styles.css")
-    expect(css).not.toContain("--muted-foreground: oklch(0.551 0.027 264.364)")
-    expect(css).toContain("--muted-foreground: oklch(0.54 0.027 264.364)")
-  })
-
-  it("thème : bord de case à cocher à 3:1 en sombre aussi, pas --input", () => {
-    const css = lire("styles.css")
-    const sombre = css.slice(css.indexOf(".dark {"))
-    expect(sombre.slice(0, sombre.indexOf("}"))).not.toContain(
-      "--control-border: var(--input)"
-    )
-  })
-
-  it("thème : fond de page gray-50 en clair, cartes blanches", () => {
-    const css = lire("styles.css")
-    const clair = css.slice(css.indexOf(":root {"))
-    const bloc = clair.slice(0, clair.indexOf("}"))
-    expect(bloc).toContain("--background: oklch(0.985 0.002 247.839);")
-    expect(bloc).toContain("--card: oklch(1 0 0);")
-  })
+  // Thème : couleur de base gray de shadcn au lieu de neutral. Écarts avec
+  // le registre (fond de page gray-50 en clair, cartes blanches ;
+  // --muted-foreground clair plus foncé ; --control-border dérivé de
+  // --muted-foreground en sombre aussi) : voir ECARTS de theme.test.ts, qui
+  // compare chaque jeton au registre et vérifie les contrastes.
+  // CenteredScreen sur bg-muted/40 : centered-screen.test.tsx.
 
   it("tableaux : cadre en bg-card, blanc sur le fond comme une carte", () => {
     const { container } = render(createElement(Table))
     expect(
       container.querySelector('[data-slot="table-container"]')
     ).toHaveClass("bg-card")
-    expect(lire("components/etic/data-table.tsx")).toContain(
-      '"min-w-0 overflow-hidden rounded-md border bg-card"'
-    )
-  })
 
-  it("CenteredScreen : fond bg-muted/40, pas bg-muted", () => {
-    const ecran = lire("components/etic/centered-screen.tsx")
-    // Dans la chaîne de classes (le commentaire cite bg-muted).
-    expect(ecran).toMatch(/"[^"]* bg-muted\/40 [^"]*"/)
-    expect(ecran).not.toMatch(/"[^"]* bg-muted [^"]*"/)
+    function Tableau() {
+      const table = useDataTable({
+        donnees: [] as { id: string }[],
+        colonnes: [],
+        idLigne: (l) => l.id,
+      })
+      return createElement(DataTable<{ id: string }>, {
+        table,
+        libelle: "Vide",
+      })
+    }
+    render(createElement(Tableau))
+    expect(document.querySelector('[data-slot="data-table"]')).toHaveClass(
+      "bg-card"
+    )
   })
 
   it("case à cocher partielle : un trait sur fond plein, pas une coche", () => {
