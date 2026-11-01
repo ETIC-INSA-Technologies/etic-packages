@@ -59,7 +59,8 @@ export interface CopyButtonProps extends Omit<
  * accessible. Après la copie, une coche et « Copié ! » pendant deux
  * secondes ; si le navigateur la refuse, une croix et « Copie impossible ».
  * Les deux sont annoncés aux lecteurs d'écran. `verrou` comme pour
- * `TooltipButton`.
+ * `TooltipButton`. Dans un `InputGroupAddon`, il passe à 24 px, sauf `size`
+ * donnée.
  */
 export function CopyButton({
   valeur,
@@ -69,10 +70,11 @@ export function CopyButton({
   onCopie,
   onEchec,
   variant = "outline",
-  size = "icon-sm",
+  size: tailleDemandee,
   className,
   ...props
 }: CopyButtonProps) {
+  const size = tailleDemandee ?? "icon-sm"
   const [etat, setEtat] = useState<"copie" | "echec" | null>(null)
   const minuterie = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -100,6 +102,12 @@ export function CopyButton({
         data-copie={etat === "copie" || undefined}
         data-echec={etat === "echec" || undefined}
         className={cn(
+          // Dans un groupe de saisie (`InputGroupAddon`), 24 px comme
+          // l'`InputGroupButton` `icon-xs` de shadcn : à 28 px, le bouton
+          // touchait presque la bordure du champ (1 px) et son anneau de
+          // focus en sortait. Une taille donnée par l'application prime.
+          tailleDemandee === undefined &&
+            "in-data-[slot=input-group-addon]:size-6 in-data-[slot=input-group-addon]:rounded-[calc(var(--radius)-3px)]",
           etat === "copie" && "text-success",
           etat === "echec" && "text-destructive",
           className

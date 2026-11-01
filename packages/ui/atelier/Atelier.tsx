@@ -150,6 +150,7 @@ import {
   Textarea,
   type ThemePreference,
 } from "@etic-ui/index"
+import { BOUTONS } from "./Boutons"
 import { DemoTableaux } from "./DemoTableaux"
 import { FORMULAIRES } from "./Formulaires"
 import { RETOURS } from "./Retours"
@@ -642,6 +643,11 @@ export function Atelier() {
           titre: "Composants",
           liens: [
             { libelle: "Button", href: "#button", icone: BoxIcon },
+            ...BOUTONS.map(({ id, titre }) => ({
+              libelle: titre,
+              href: `#${id}`,
+              icone: icone(id),
+            })),
             ...PRIMITIVES.map(({ id, titre }) => ({
               libelle: titre,
               href: `#${id}`,
@@ -726,6 +732,13 @@ export function Atelier() {
             <Button disabled>désactivé</Button>
           </div>
         </section>
+
+        {BOUTONS.map(({ id, titre, rendu }) => (
+          <section key={id} id={id} className="flex flex-col gap-4">
+            <h2 className="text-lg font-medium">{titre}</h2>
+            {rendu()}
+          </section>
+        ))}
 
         {PRIMITIVES.map(({ id, titre, rendu }) => (
           <section key={id} id={id} className="flex flex-col gap-4">

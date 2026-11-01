@@ -1,10 +1,18 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { LockIcon } from "lucide-react"
-import { useState } from "react"
+import { LockIcon, PencilIcon } from "lucide-react"
+import { useState, type ComponentProps } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { CopyButton, IconToggle, TooltipButton } from "@etic-ui/index"
+import {
+  ButtonLink,
+  CopyButton,
+  IconToggle,
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  TooltipButton,
+} from "@etic-ui/index"
 import { trouverInfobulle } from "@etic-ui/test/infobulle"
 
 afterEach(() => {
@@ -96,6 +104,34 @@ describe("CopyButton", () => {
     await userEvent.click(bouton)
     expect(writeText).not.toHaveBeenCalled()
   })
+
+  it("dans un groupe de saisie, passe à 24 px comme le bouton de shadcn, sauf taille donnée", () => {
+    render(
+      <>
+        <InputGroup>
+          <InputGroupInput aria-label="Valeur" readOnly value="x" />
+          <InputGroupAddon align="inline-end">
+            <CopyButton valeur="x" libelle="Copier dans le groupe" />
+            <CopyButton valeur="x" libelle="Copier en grand" size="icon-lg" />
+          </InputGroupAddon>
+        </InputGroup>
+        <CopyButton valeur="x" libelle="Copier hors groupe" />
+      </>
+    )
+    // La classe ne s'applique qu'à l'intérieur d'un addon (variante `in-`) :
+    // ailleurs, le bouton garde ses 28 px (`size-7`).
+    expect(
+      screen.getByRole("button", { name: "Copier dans le groupe" })
+    ).toHaveClass("size-7", "in-data-[slot=input-group-addon]:size-6")
+    expect(
+      screen.getByRole("button", { name: "Copier hors groupe" })
+    ).toHaveClass("size-7")
+    const grand = screen.getByRole("button", { name: "Copier en grand" })
+    expect(grand).toHaveClass("size-9")
+    expect(grand.className).not.toContain(
+      "in-data-[slot=input-group-addon]:size-6"
+    )
+  })
 })
 
 describe("TooltipButton", () => {
@@ -118,6 +154,145 @@ describe("TooltipButton", () => {
     await userEvent.click(bouton)
     expect(onClick).not.toHaveBeenCalled()
     expect(await trouverInfobulle()).toHaveTextContent("Droits insuffisants")
+  })
+
+  it("verrouillé, prend l'allure désactivée du Button", () => {
+    render(<TooltipButton verrou="Droits insuffisants">Publier</TooltipButton>)
+    expect(screen.getByRole("button", { name: "Publier" })).toHaveClass(
+      "aria-disabled:opacity-50"
+    )
+  })
+
+  it("à icône seule, est nommé par son infobulle", () => {
+    render(
+      <TooltipButton size="icon-sm" variant="ghost" infobulle="Modifier">
+        <PencilIcon />
+      </TooltipButton>
+    )
+    expect(screen.getByRole("button", { name: "Modifier" })).toBeVisible()
+  })
+
+  it("à icône seule et verrouillé, garde l'infobulle pour nom et la raison pour description", () => {
+    render(
+      <TooltipButton size="icon" infobulle="Modifier" verrou="Fiche archivée">
+        <PencilIcon />
+      </TooltipButton>
+    )
+    const bouton = screen.getByRole("button", { name: "Modifier" })
+    expect(bouton).toHaveAccessibleDescription("Fiche archivée")
+  })
+
+  it("garde le nom donné par l'application", () => {
+    render(
+      <>
+        <TooltipButton
+          size="icon-xs"
+          infobulle="Retirer"
+          aria-label="Retirer Ada"
+        >
+          <PencilIcon />
+        </TooltipButton>
+        <span id="nom-externe">Retirer Grace</span>
+        <TooltipButton
+          size="icon-xs"
+          infobulle="Retirer"
+          aria-labelledby="nom-externe"
+        >
+          <PencilIcon />
+        </TooltipButton>
+      </>
+    )
+    expect(screen.getByRole("button", { name: "Retirer Ada" })).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "Retirer Grace" })
+    ).not.toHaveAttribute("aria-label")
+  })
+
+  it("à texte, garde son texte pour nom (WCAG 2.5.3)", () => {
+    render(<TooltipButton infobulle="Envoie le rapport">Envoyer</TooltipButton>)
+    const bouton = screen.getByRole("button", { name: "Envoyer" })
+    expect(bouton).not.toHaveAttribute("aria-label")
+  })
+
+  it("destructif : gris au repos, rouge au survol seulement", () => {
+    render(
+      <>
+        <TooltipButton
+          variant="ghost"
+          size="icon-sm"
+          infobulle="Retirer"
+          destructif
+        >
+          <PencilIcon />
+        </TooltipButton>
+        <TooltipButton
+          variant="ghost"
+          size="icon-sm"
+          infobulle="Retirer verrouillé"
+          verrou="Indispensable"
+          destructif
+        >
+          <PencilIcon />
+        </TooltipButton>
+      </>
+    )
+    const actif = screen.getByRole("button", { name: "Retirer" })
+    expect(actif).toHaveClass("text-muted-foreground", "hover:text-destructive")
+    expect(actif.className).not.toMatch(/(^|\s)text-destructive/)
+    const verrouille = screen.getByRole("button", {
+      name: "Retirer verrouillé",
+    })
+    expect(verrouille).toHaveClass("text-muted-foreground")
+    expect(verrouille.className).not.toContain("hover:text-destructive")
+  })
+
+  it("occupé, garde son infobulle, son nom et le focus", async () => {
+    const { rerender } = render(
+      <TooltipButton size="icon" infobulle="Actualiser">
+        <PencilIcon />
+      </TooltipButton>
+    )
+    const bouton = screen.getByRole("button", { name: "Actualiser" })
+    await userEvent.tab()
+    rerender(
+      <TooltipButton size="icon" infobulle="Actualiser" occupe>
+        <PencilIcon />
+      </TooltipButton>
+    )
+    expect(bouton).toHaveAttribute("aria-busy", "true")
+    expect(bouton).toHaveFocus()
+    expect(bouton).toHaveAccessibleName("Actualiser")
+  })
+})
+
+describe("ButtonLink", () => {
+  it("est un lien à l'allure de bouton, <a> par défaut", () => {
+    render(
+      <ButtonLink href="/membres" variant="outline" size="sm">
+        Retour
+      </ButtonLink>
+    )
+    const lien = screen.getByRole("link", { name: "Retour" })
+    expect(lien.tagName).toBe("A")
+    expect(lien).toHaveAttribute("href", "/membres")
+    expect(lien).toHaveAttribute("data-slot", "button")
+    expect(lien).toHaveClass("border-border", "h-7")
+    expect(screen.queryByRole("button")).toBeNull()
+  })
+
+  it("passe par le composant de lien de l'application", () => {
+    const LienRouteur = ({ href, ...props }: ComponentProps<"a">) => (
+      <a data-routeur="" href={`#${href}`} {...props} />
+    )
+    render(
+      <ButtonLink lien={LienRouteur} href="/groupes" className="w-full">
+        Groupes
+      </ButtonLink>
+    )
+    const lien = screen.getByRole("link", { name: "Groupes" })
+    expect(lien).toHaveAttribute("data-routeur")
+    expect(lien).toHaveAttribute("href", "#/groupes")
+    expect(lien).toHaveClass("w-full", "bg-primary")
   })
 })
 

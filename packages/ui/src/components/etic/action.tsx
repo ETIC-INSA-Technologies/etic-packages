@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
 
-import { SpinnerDecoratif } from "@etic-ui/components/etic/loading"
+import { SpinnerDecoratif } from "@etic-ui/components/ui/spinner"
 
 /**
  * Action d'un dialogue : synchrone, ou une promesse que le dialogue attend.
@@ -68,6 +68,21 @@ export function useOuvertureDialogue(
     definir(suivant)
   }
   return { ouvert: ouvert ?? ouvertInterne, definir, changer }
+}
+
+/**
+ * `onOpenChange` d'un dialogue composé à la main qui ne se ferme pas pendant
+ * son action (Échap, clic sur le voile, croix, « Annuler ») : le fermer ne
+ * l'arrêterait pas, elle aboutirait après coup. `ConfirmDialog` et
+ * `FormDialog` le font d'eux-mêmes.
+ */
+export function fermerSaufOccupe(
+  occupe: boolean,
+  onFermer: () => void
+): (ouvert: boolean) => void {
+  return (ouvert) => {
+    if (!ouvert && !occupe) onFermer()
+  }
 }
 
 /** Roue dans un bouton occupé, muette : le bouton garde son nom et porte

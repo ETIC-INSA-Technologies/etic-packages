@@ -31,8 +31,9 @@ export function useRaisonVerrou(
 }
 
 export interface TooltipButtonProps extends ComponentProps<typeof Button> {
-  /** Texte de l'infobulle. Un bouton à icône seule reçoit aussi un
-   *  `aria-label` : l'infobulle n'est pas son nom accessible. */
+  /** Texte de l'infobulle. Un bouton à icône seule (`size` `icon…`) sans
+   *  `aria-label` ni `aria-labelledby` reçoit aussi l'infobulle comme
+   *  `aria-label` : l'infobulle seule ne le nomme pas. */
   infobulle?: string
   /**
    * Action impossible : le bouton est désactivé mais reste focalisable et
@@ -40,7 +41,18 @@ export interface TooltipButtonProps extends ComponentProps<typeof Button> {
    * action qu'il refusera). La raison est aussi sa description accessible.
    */
   verrou?: string
+  /**
+   * Action destructrice discrète : gris au repos, rouge au survol seulement
+   * (une colonne de corbeilles rouges ferait une colonne d'alarmes). Pour un
+   * bouton `ghost` ; verrouillé, il reste gris.
+   */
+  destructif?: boolean
 }
+
+/** Rouge au survol (`destructif`) : les classes de la corbeille de
+ *  `DeleteButton`. */
+const CLASSES_DESTRUCTIF_AU_SURVOL =
+  "hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/20"
 
 /**
  * Le `Button` de shadcn avec une infobulle, et un état verrouillé qui
@@ -50,6 +62,7 @@ export interface TooltipButtonProps extends ComponentProps<typeof Button> {
 export function TooltipButton({
   infobulle,
   verrou,
+  destructif = false,
   disabled,
   className,
   children,
@@ -57,11 +70,16 @@ export function TooltipButton({
   ...props
 }: TooltipButtonProps) {
   const { describedBy, raison } = useRaisonVerrou(verrou, decritPar)
+  const classes = cn(
+    destructif && "text-muted-foreground",
+    destructif && !verrou && CLASSES_DESTRUCTIF_AU_SURVOL,
+    className
+  )
   if (!infobulle && !verrou) {
     return (
       <Button
         disabled={disabled}
-        className={className}
+        className={classes}
         aria-describedby={decritPar}
         {...props}
       >
@@ -69,6 +87,16 @@ export function TooltipButton({
       </Button>
     )
   }
+  // Nom d'un bouton à icône seule : l'infobulle, jamais la raison du verrou
+  // (elle est sa description). Un bouton à texte garde son texte pour nom
+  // (WCAG 2.5.3).
+  const nomParInfobulle =
+    infobulle &&
+    String(props.size ?? "").startsWith("icon") &&
+    props["aria-label"] === undefined &&
+    props["aria-labelledby"] === undefined
+      ? infobulle
+      : undefined
   return (
     <>
       <Tooltip>
@@ -76,18 +104,16 @@ export function TooltipButton({
           render={
             <Button
               {...props}
+              aria-label={nomParInfobulle ?? props["aria-label"]}
               disabled={disabled || !!verrou}
               // Un bouton désactivé nativement ne reçoit ni survol ni focus :
-              // l'infobulle de la raison ne s'afficherait jamais.
+              // l'infobulle de la raison ne s'afficherait jamais. L'allure
+              // estompée vient du `Button` (`aria-disabled:`).
               focusableWhenDisabled={
                 verrou ? true : props.focusableWhenDisabled
               }
               aria-describedby={describedBy}
-              className={cn(
-                verrou &&
-                  "cursor-not-allowed opacity-50 active:not-aria-[haspopup]:translate-y-0",
-                className
-              )}
+              className={classes}
             />
           }
         >

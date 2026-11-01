@@ -1,20 +1,12 @@
-import type { ComponentProps } from "react"
 import { cn } from "cn"
 
 import { Card, CardContent } from "@etic-ui/components/ui/card"
 import { Skeleton } from "@etic-ui/components/ui/skeleton"
-import { Spinner } from "@etic-ui/components/ui/spinner"
+import { SpinnerDecoratif } from "@etic-ui/components/ui/spinner"
 
-/**
- * Roue muette, à côté d'un texte qui dit déjà qu'on attend (bouton occupé,
- * statut « Chargement… ») : sans rôle ni nom, cachée aux lecteurs d'écran.
- * Usage interne.
- */
-export function SpinnerDecoratif(props: ComponentProps<typeof Spinner>) {
-  return (
-    <Spinner {...props} role={undefined} aria-label={undefined} aria-hidden />
-  )
-}
+// Défini à côté de `Spinner` (le `Button` occupé s'en sert) ; réexporté ici
+// pour les imports internes existants.
+export { SpinnerDecoratif }
 
 export interface LoadingProps {
   /** Annoncé aux lecteurs d'écran à chaque changement ; « Chargement… »

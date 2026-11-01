@@ -13,4 +13,15 @@ function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
   )
 }
 
-export { Spinner }
+/**
+ * Roue muette, à côté d'un texte qui dit déjà qu'on attend (bouton occupé,
+ * statut « Chargement… ») : sans rôle ni nom, cachée aux lecteurs d'écran.
+ * Ajout ETIC à shadcn.
+ */
+function SpinnerDecoratif(props: React.ComponentProps<typeof Spinner>) {
+  return (
+    <Spinner {...props} role={undefined} aria-label={undefined} aria-hidden />
+  )
+}
+
+export { Spinner, SpinnerDecoratif }

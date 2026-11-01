@@ -168,7 +168,8 @@ chargement d'une image) et, au besoin, son composant de lien (`lien`, comme pour
 | `QueryBoundary`                                                          | Chargement, erreur (avec « Réessayer »), vide et données d'une requête ; accepte tel quel le résultat de `useQuery`. L'échec d'une actualisation garde les données, montées, sous le bandeau d'erreur ; pendant une nouvelle tentative, le bandeau reste, son bouton occupé. Sans enveloppe : rendu dans le parent, qui règle l'espacement.                                                                             |
 | `StatTile`, `StatusBadge`                                                | Chiffre clé d'un résumé ; badge d'état à pastille. `ton` (type `StatusTon`) : `neutral`, `success`, `warning`, `destructive`.                                                                                                                                                                                                                                                                                           |
 | `CopyButton`, `DeleteButton`, `IconToggle`                               | Copie avec retour « Copié ! », ou « Copie impossible » si le navigateur refuse (`onCopie`, `onEchec`) ; corbeille qui ouvre une confirmation ; bouton à icône qui pose ou retire un marqueur (`Toggle`, `aria-pressed`, `onActifChange`, `enCours` occupé sans perdre le focus ; actif, en couleur de son `ton`, `warning` par défaut). Tous ont une infobulle, et `verrou` pour dire pourquoi l'action est impossible. |
-| `TooltipButton`                                                          | `Button` avec infobulle et état `verrou` (désactivé mais focalisable, la raison en infobulle) : la règle pour tout bouton à icône seule.                                                                                                                                                                                                                                                                                |
+| `TooltipButton`                                                          | `Button` avec infobulle et état `verrou` (désactivé mais focalisable, la raison en infobulle) : la règle pour tout bouton à icône seule, que l'infobulle nomme (`aria-label`, sauf nom donné). `destructif` : gris, rouge au survol seulement (corbeille, retrait dans une liste).                                                                                                                                      |
+| `ButtonLink`                                                             | Lien à l'allure de bouton (`variant`, `size` de `Button`), annoncé comme un lien ; `lien` : le composant de lien du routeur de l'application, comme pour `AppShell` (`<a>` par défaut).                                                                                                                                                                                                                                 |
 | `AuthAvatar`, `AuthImage`, `useAuthObjectUrl`                            | Image servie par une adresse authentifiée : l'application passe `charger(src, signal)` (type `AuthImageCharger`) qui renvoie le `Blob` ; l'avatar garde les initiales tant que la photo manque.                                                                                                                                                                                                                         |
 
 `ConfirmDialog` et `FormDialog` s'ouvrent par un `declencheur`, ou sont contrôlés (`ouvert`,
@@ -179,6 +180,14 @@ effet), se ferme si elle aboutit, affiche l'erreur si elle échoue. Avec TanStac
 `mutateAsync`. Si l'action renvoie `false` (ou une promesse résolue à `false`), le dialogue
 reste ouvert sans erreur : suppression en deux temps, où la page change sa question (la
 description de `ConfirmDialog` est une région polie : la nouvelle est lue).
+
+Hors de ces dialogues, un bouton qui lance une action longue passe `occupe` au `Button` (ou au
+`TooltipButton`) : la roue remplace ses icônes, `libelleOccupe` (« Suppression… ») son texte,
+et il reste focalisable (`aria-busy`, clics ignorés). Un dialogue composé à la main refuse de
+se fermer pendant l'action avec `onOpenChange={fermerSaufOccupe(occupe, fermer)}`. Un lien dans
+une phrase ou une cellule : `<Button variant="link" size="inline">`. `SpinnerDecoratif` est
+la roue muette, à côté d'un texte qui dit déjà l'attente. Un `CopyButton` placé dans un
+`InputGroupAddon` passe à 24 px, comme le bouton de shadcn dans un groupe (sauf `size` donnée).
 
 Un envoi de `FormDialog` refusé par les contraintes marque chaque champ fautif
 (`aria-invalid`, retiré dès qu'il est corrigé) et le nomme par son libellé, y compris une
@@ -667,6 +676,14 @@ npm run build      # dist/ : un module par composant, types, styles.css
   - l'accent comme texte en `text-primary-text` au lieu de `text-primary` : variante `link` de
     `button.tsx` et `badge.tsx`, liens survolés de `empty.tsx`, `field.tsx` et `item.tsx` ;
   - import inutilisé de React retiré de `scroll-area.tsx` (sans quoi `tsc` échoue) ;
+  - `button.tsx` : un bouton `aria-disabled` (désactivé mais focalisable, `focusableWhenDisabled`)
+    est estompé comme un bouton `disabled`, curseur interdit, sans enfoncement au clic ; pas de
+    `pointer-events-none`, qui couperait l'infobulle de sa raison ;
+  - `button.tsx` : taille `inline` (`h-auto min-h-6 gap-1 px-0`), pour un lien `variant="link"`
+    dans une phrase ou une cellule, cible tactile de 24 px gardée ;
+  - `button.tsx` : `occupe` (roue muette à la place des icônes, `aria-busy`, clics ignorés,
+    focus gardé par `focusableWhenDisabled`) et `libelleOccupe` ; `spinner.tsx` :
+    `SpinnerDecoratif`, roue sans rôle ni nom, cachée aux lecteurs d'écran ;
   - variantes `success` et `warning` ajoutées à `badge.tsx`, sur le modèle de `destructive`
     (teinte à 10 %, 20 % en sombre, texte de la couleur) ;
   - case à cocher partielle (`indeterminate`) : `checkbox.tsx` affiche un trait sur fond plein,

@@ -54,6 +54,29 @@ describe("écarts avec shadcn", () => {
     )
   })
 
+  it("Button : aria-disabled estompé, sans enfoncement ni pointer-events-none", () => {
+    const button = lire("components/ui/button.tsx")
+    expect(button).toContain(
+      "aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+    )
+    expect(button).toContain(
+      "active:not-aria-[haspopup]:not-aria-disabled:translate-y-px"
+    )
+    expect(button).not.toContain("aria-disabled:pointer-events-none")
+  })
+
+  it("Button : taille inline, occupé (roue muette, aria-busy, focus gardé)", () => {
+    const button = lire("components/ui/button.tsx")
+    expect(button).toContain('inline: "h-auto min-h-6 gap-1 px-0"')
+    expect(button).toContain("aria-busy={occupe || undefined}")
+    expect(button).toContain(
+      "focusableWhenDisabled={focusableWhenDisabled || occupe}"
+    )
+    expect(lire("components/ui/spinner.tsx")).toContain(
+      "function SpinnerDecoratif"
+    )
+  })
+
   it("textes des lecteurs d'écran en français", () => {
     const sidebar = lire("components/ui/sidebar.tsx")
     expect(sidebar).not.toContain("Toggle Sidebar")
