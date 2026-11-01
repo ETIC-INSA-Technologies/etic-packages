@@ -1,10 +1,12 @@
 import {
   createContext,
+  createElement,
   useContext,
   type ComponentProps,
   type ComponentType,
   type ReactNode,
 } from "react"
+import { useRender } from "@base-ui/react/use-render"
 
 /** Lien du routeur de l'application (react-router, TanStack Router…), qui
  *  reçoit `href` comme un `<a>`. Par défaut, un `<a>` : rechargement complet. */
@@ -33,4 +35,19 @@ export function LienProvider({ lien, children }: LienProviderProps) {
 export function useLien(lien?: LienComposant): LienComposant {
   const fourni = useContext(ContexteLien)
   return lien ?? fourni
+}
+
+/**
+ * Un lien rendu par le composant de `useLien(lien)`. Usage interne
+ * (`ButtonLink`, `DataTableCellLink`). L'élément vide du composant choisi
+ * reçoit les props par `useRender` de Base UI, plutôt qu'un `<Lien />` en
+ * JSX : le composant est stable, mais la règle
+ * `react-hooks/static-components` prendrait un composant lu d'un hook pour
+ * un composant créé pendant le rendu.
+ */
+export function LienApplication({
+  lien,
+  ...props
+}: ComponentProps<"a"> & { lien?: LienComposant }) {
+  return useRender({ render: createElement(useLien(lien)), props })
 }

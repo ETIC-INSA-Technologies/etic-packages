@@ -145,7 +145,8 @@ gras d'un éditeur). Sur mobile, la page réserve en haut la hauteur de la barre
 (page de connexion…) ; son `className` va sur le bouton.
 
 Le composant de lien du routeur se donne une fois, autour de l'application :
-`<LienProvider lien={LienRouteur}>`. `AppShell`, `DetailHeader` et `ButtonLink` le prennent
+`<LienProvider lien={LienRouteur}>`. `AppShell`, `DetailHeader`, `ButtonLink` et
+`DataTableCellLink` le prennent
 alors par défaut, sans `lien={…}` à chaque appel ; leur prop `lien` reste prioritaire
 (`lien="a"` : un vrai `<a>`, rechargement complet). Sans fournisseur ni prop, un `<a>`.
 `useLien(lien?)` rend le même choix à un composant de l'application, et le type

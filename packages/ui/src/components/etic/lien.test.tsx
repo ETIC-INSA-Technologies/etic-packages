@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   AppShell,
   ButtonLink,
+  DataTableCellLink,
   DetailHeader,
   ErrorBoundary,
   LienProvider,
@@ -86,6 +87,28 @@ describe("LienProvider", () => {
     expect(screen.getByRole("link", { name: "Groupes" })).toHaveAttribute(
       "data-autre"
     )
+  })
+
+  it("DataTableCellLink : le lien du fournisseur, sa prop prioritaire, le bouton sans href", () => {
+    const ouvrir = vi.fn()
+    render(
+      <LienProvider lien={LienRouteur}>
+        <DataTableCellLink href="/membres/1">Ada</DataTableCellLink>
+        <DataTableCellLink href="/membres/2" lien={AutreLien}>
+          Alan
+        </DataTableCellLink>
+        <DataTableCellLink onClick={ouvrir}>Grace</DataTableCellLink>
+      </LienProvider>
+    )
+    const ada = screen.getByRole("link", { name: "Ada" })
+    expect(ada).toHaveAttribute("data-routeur")
+    expect(ada).toHaveAttribute("href", "/membres/1")
+    expect(ada).toHaveAttribute("data-slot", "data-table-cell-link")
+    expect(ada).toHaveClass("font-medium")
+    expect(screen.getByRole("link", { name: "Alan" })).toHaveAttribute(
+      "data-autre"
+    )
+    expect(screen.getByRole("button", { name: "Grace" })).toBeInTheDocument()
   })
 
   it("sans fournisseur, un <a>", () => {

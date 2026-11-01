@@ -96,7 +96,10 @@ import {
   participe,
   type DataTableUnite,
 } from "@etic-ui/components/etic/data-table-format"
-import type { AppShellLienComposant } from "@etic-ui/components/etic/app-shell"
+import {
+  LienApplication,
+  type LienComposant,
+} from "@etic-ui/components/etic/lien"
 import {
   focaliserTableau,
   rendreFocusApresLigne,
@@ -1694,9 +1697,9 @@ type DataTableCellLinkCommun = {
 export type DataTableCellLinkProps = DataTableCellLinkCommun &
   Omit<ComponentProps<"a">, "children" | "className"> & {
     href: string
-    /** Lien du routeur de l'application (comme celui d'`AppShell`) ; un
-     *  `<a>` par défaut. */
-    lien?: AppShellLienComposant
+    /** Lien du routeur de l'application ; par défaut, celui du
+     *  `LienProvider`, sinon un `<a>`. */
+    lien?: LienComposant
   }
 
 /** Bouton de cellule : une action sur place (ouvrir la modification…). */
@@ -1713,7 +1716,7 @@ const TITRE_DE_LIGNE =
 
 /**
  * Titre d'une ligne qui mène à sa fiche : un vrai lien (`href`, routeur par
- * `lien`), ou un bouton sans `href` (ouvrir la modification). Le clic de
+ * `lien` ou le `LienProvider`), ou un bouton sans `href` (ouvrir la modification). Le clic de
  * ligne (`onActiverLigne`) n'est qu'un raccourci à la souris : ce lien est
  * le chemin du clavier et des lecteurs d'écran, et garde l'ouverture dans un
  * nouvel onglet.
@@ -1722,9 +1725,9 @@ export function DataTableCellLink(
   props: DataTableCellLinkProps | DataTableCellButtonProps
 ) {
   if (props.href !== undefined) {
-    const { lien: Lien = "a", className, ...lienProps } = props
+    const { className, ...lienProps } = props
     return (
-      <Lien
+      <LienApplication
         data-slot="data-table-cell-link"
         className={cn(TITRE_DE_LIGNE, className)}
         {...lienProps}
