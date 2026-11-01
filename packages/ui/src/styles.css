@@ -104,6 +104,14 @@
   --info: #1f5aa8;
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
+  /* Bord d'une case à cocher vide : --input (Nova) se voyait à peine sur le
+     blanc. --muted-foreground à 80 % : ≥ 3:1 sur le fond et sur --muted
+     (contrôle, WCAG 1.4.11), vérifié par src/theme.test.ts. */
+  --control-border: color-mix(
+    in oklab,
+    var(--muted-foreground) 80%,
+    transparent
+  );
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -146,6 +154,7 @@
   --info: #7cb4f5;
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
+  --control-border: var(--input);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);

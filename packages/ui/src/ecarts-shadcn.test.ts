@@ -199,4 +199,10 @@ describe("écarts avec shadcn", () => {
     expect(checkbox).toContain("MinusIcon")
     expect(checkbox).toContain("data-indeterminate:bg-primary")
   })
+
+  it("case à cocher : bord en --control-border, visible en clair", () => {
+    const checkbox = lire("components/ui/checkbox.tsx")
+    expect(checkbox).not.toContain("border-input")
+    expect(checkbox).toContain("border border-(--control-border)")
+  })
 })

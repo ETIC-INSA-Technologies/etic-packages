@@ -153,6 +153,18 @@ describe("couleurs sémantiques", () => {
       lisible(sombre, fond, TEXTE, "muted-foreground, sombre")
     }
   })
+
+  // Bord d'une case à cocher vide, en clair : --control-border est
+  // --muted-foreground à 80 %.
+  it("le bord d'une case à cocher se voit, en clair", () => {
+    expect(css.replace(/\s+/g, " ")).toContain(
+      "--control-border: color-mix( in oklab, var(--muted-foreground) 80%, transparent );"
+    )
+    const couleur = variables(css, ":root").valeur("muted-foreground")
+    for (const fond of [CLAIR.fond, CLAIR.muted]) {
+      lisible(teinte(couleur, fond, 0.8), fond, NON_TEXTE, "bord de case")
+    }
+  })
 })
 
 describe("contrats d'accent des applications", () => {

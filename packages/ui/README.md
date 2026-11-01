@@ -642,6 +642,9 @@ npm run build      # dist/ : un module par composant, types, styles.css
     (teinte à 10 %, 20 % en sombre, texte de la couleur) ;
   - case à cocher partielle (`indeterminate`) : `checkbox.tsx` affiche un trait sur fond plein,
     comme une case cochée, au lieu de la coche sur fond vide de shadcn (on croyait tout coché) ;
+  - bord d'une case à cocher vide en `--control-border` (`styles.css`) au lieu de `--input` :
+    `--muted-foreground` à 80 % en clair (≥ 3:1, le bord de Nova se voyait à peine), `--input`
+    en sombre ;
   - variantes `warning`, `info` et `success` ajoutées à `alert.tsx`, sur le modèle de
     `destructive` (fond de carte, texte de la couleur, description à 90 %), et couleur `--info`
     dans `styles.css` ;
