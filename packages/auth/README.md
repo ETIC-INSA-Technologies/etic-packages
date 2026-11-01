@@ -186,6 +186,53 @@ function Barre() {
 - `nomAffichage(me)` donne le libellé à afficher (jamais prénom + nom recollés : un compte
   fonctionnel n'en a pas) ; `aPermission(me, code)` la même règle que `SiPermission`.
 
+### Client HTTP commun
+
+`creerClientHttp` est le client des appels d'une application à son API. Il ne dépend ni de
+React ni de react-query.
+
+```ts
+import {
+  creerClientHttp,
+  ErreurApi,
+  signalerNonAuthentifie,
+} from "@etic-insa/auth"
+
+// Application satellite : session par cookie.
+export const api = creerClientHttp({
+  base: "/api/v1",
+  credentials: "include",
+  surNonAuthentifie: signalerNonAuthentifie,
+})
+
+// ETIC Members : jeton Bearer gardé par l'application.
+export const api = creerClientHttp({
+  base: API_BASE_URL,
+  jeton: () => lireJeton(),
+  surNonAuthentifie: () => effacerJeton(),
+})
+
+await api.get<Membre[]>("/membres", { query: { statut: ["active", "alumni"] } })
+await api.post("/membres", { nom: "Ada" })
+await api.post("/fichiers", undefined, { corpsBrut: formulaire })
+const photo = await api.lireBlob(`/membres/${id}/photo`)
+```
+
+- Toute requête qui n'aboutit pas lève une `ErreurApi` (`status`, `code`, `message`,
+  `details`) : celle de l'enveloppe `{"error": {…}}` du backend, ou un code et un texte lisibles
+  déduits du statut. `ApiError` est la même classe, sous le nom des anciennes copies.
+- Codes propres au client, avec `status` 0 : `network_error` (`CODE_RESEAU`, pas de réponse) et
+  `delai_depasse` (`CODE_DELAI_DEPASSE`, 30 s par défaut, réglable par `delaiMax`).
+  L'annulation demandée par l'appelant (`signal`) reste une annulation.
+- Une page HTML (ou tout autre corps qui n'est pas du JSON) reçue en 200 lève
+  `reponse_non_json` (`CODE_REPONSE_NON_JSON`) : en pratique, `/api` n'est pas routé vers le
+  backend et le proxy a servi l'`index.html`. `lireBlob` refuse de même une page HTML.
+- Le jeton, lu à chaque requête, ne sert qu'à l'en-tête `Authorization` : il n'apparaît dans
+  aucune erreur ni aucun journal. Une requête qui le porte ne suit aucune redirection
+  (`redirection_refusee`, `CODE_REDIRECTION_REFUSEE`), et un chemin doit commencer par un seul
+  `/` : `//hote` mènerait le jeton vers une autre origine.
+- `surNonAuthentifie` est appelé sur tout 401, avant que l'erreur soit levée.
+
 ## Développer
 
 Côté navigateur, comme les autres paquets (`npm run lint`, `typecheck`, `test`, `build`
