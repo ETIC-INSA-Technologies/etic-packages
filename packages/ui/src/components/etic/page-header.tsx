@@ -101,6 +101,11 @@ export interface DetailHeaderProps {
   /** Actions rares ou destructives, derrière « Plus d'actions ». */
   actionsSecondaires?: DetailHeaderActionSecondaire[]
   /**
+   * Taille des boutons de `actions` (leur `size`, à leur donner) : le bouton
+   * « Plus d'actions » la suit (`icon` ou `icon-lg`) pour rester aligné.
+   */
+  tailleActions?: "default" | "lg"
+  /**
    * Fiche dont la première carte répète déjà le nom : le fil d'Ariane porte
    * seul le titre (le `<h1>`), actions sur la même ligne. Demande `chemin`.
    */
@@ -119,6 +124,7 @@ export function DetailHeader({
   meta,
   actions,
   actionsSecondaires = [],
+  tailleActions = "default",
   compact = false,
   lien: Lien = "a",
   className,
@@ -128,7 +134,7 @@ export function DetailHeader({
       <Actions>
         {actions}
         {actionsSecondaires.length > 0 ? (
-          <MenuActions actions={actionsSecondaires} />
+          <MenuActions actions={actionsSecondaires} taille={tailleActions} />
         ) : null}
       </Actions>
     ) : null
@@ -206,7 +212,13 @@ export function DetailHeader({
   )
 }
 
-function MenuActions({ actions }: { actions: DetailHeaderActionSecondaire[] }) {
+function MenuActions({
+  actions,
+  taille,
+}: {
+  actions: DetailHeaderActionSecondaire[]
+  taille: "default" | "lg"
+}) {
   return (
     <DropdownMenu>
       <Tooltip>
@@ -216,7 +228,7 @@ function MenuActions({ actions }: { actions: DetailHeaderActionSecondaire[] }) {
               render={
                 <Button
                   variant="outline"
-                  size="icon"
+                  size={taille === "lg" ? "icon-lg" : "icon"}
                   aria-label="Plus d'actions"
                 />
               }

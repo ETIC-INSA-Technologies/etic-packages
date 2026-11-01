@@ -93,6 +93,19 @@ describe("DetailHeader", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("donne au bouton « Plus d'actions » la taille des actions", () => {
+    const actionsSecondaires = [{ libelle: "Supprimer", onChoisir: vi.fn() }]
+    const { unmount } = rendre({ actionsSecondaires })
+    expect(screen.getByRole("button", { name: "Plus d'actions" })).toHaveClass(
+      "size-8"
+    )
+    unmount()
+    rendre({ actionsSecondaires, tailleActions: "lg" })
+    expect(screen.getByRole("button", { name: "Plus d'actions" })).toHaveClass(
+      "size-9"
+    )
+  })
+
   it("range les actions rares dans un menu et n'exécute pas une entrée désactivée", async () => {
     const supprimer = vi.fn()
     const archiver = vi.fn()
