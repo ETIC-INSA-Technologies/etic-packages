@@ -100,6 +100,13 @@ export function DataTablePagination<TData extends RowData>(
         table.setPageIndex(Math.floor(suivant / limite))
       }
       onLimiteChange={(suivante) => table.setPageSize(suivante)}
+      // Une seule mise à jour : taille et retour en première page ensemble.
+      // Deux appels successifs (`setPageSize` puis `setPageIndex`) se
+      // résoudraient, avec une pagination contrôlée, contre la même valeur
+      // rendue, et le second effacerait la nouvelle taille.
+      changerTaille={(suivante) =>
+        table.setPagination({ pageIndex: 0, pageSize: suivante })
+      }
       // `useDataTable` ramène déjà une page passée au-delà de la fin.
       ramenerAuDela={false}
     />
@@ -126,8 +133,12 @@ function PaginationParDecalage({
   limites = [10, 25, 50, 100],
   className,
   ramenerAuDela = true,
+  changerTaille,
 }: Omit<DataTablePaginationDecalageProps, "table"> & {
   ramenerAuDela?: boolean
+  /** Change la taille et revient à la première page en une fois (à la
+   *  place de `onLimiteChange` puis `onDecalageChange(0)`). */
+  changerTaille?: (limite: number) => void
 }) {
   const idTaille = useId()
   const nombrePages = Math.max(1, Math.ceil(total / limite))
@@ -169,6 +180,7 @@ function PaginationParDecalage({
             value={String(limite)}
             onValueChange={(valeur) => {
               if (valeur === null) return
+              if (changerTaille) return changerTaille(Number(valeur))
               onLimiteChange(Number(valeur))
               onDecalageChange(0)
             }}

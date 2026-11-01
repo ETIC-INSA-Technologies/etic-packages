@@ -3,6 +3,7 @@
 import { act, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
+import { functionalUpdate } from "@tanstack/react-table"
 import { describe, expect, it, vi } from "vitest"
 
 import {
@@ -287,5 +288,169 @@ describe("deselectionner", () => {
     act(() => table!.options.meta!.deselectionner(["2"]))
     expect(screen.getByTestId("tout")).toHaveTextContent("false")
     expect(screen.getByTestId("selection")).toHaveTextContent("1,3")
+  })
+})
+
+describe("pagination et filtres côté client : cas limites", () => {
+  /** Tableau minimal, piloté par ses props (`colonnes`, filtres, page). */
+  function Simple({
+    colonnes = COLONNES,
+    surTable,
+    ...options
+  }: Partial<UseDataTableOptions<Poste>> & {
+    surTable?: (table: DataTableInstance<Poste>) => void
+  }) {
+    const table = useDataTable({
+      donnees: POSTES,
+      colonnes,
+      idLigne: (p) => p.id,
+      paginationClient: true,
+      ...options,
+    })
+    surTable?.(table)
+    return (
+      <>
+        <DataTable table={table} libelle="Postes" />
+        <DataTablePagination table={table} />
+      </>
+    )
+  }
+
+  it("garde une page initiale tant que les données ne sont pas arrivées", () => {
+    const initial = { pagination: { pageIndex: 2, pageSize: 5 } }
+    const { rerender } = render(<Simple donnees={[]} etatInitial={initial} />)
+    rerender(<Simple donnees={POSTES} etatInitial={initial} />)
+    // Page 3 (index 2) : postes 11 à 15, pas un retour en page 1.
+    expect(nomsAffiches()[0]).toBe("Poste 11")
+  })
+
+  it("ne revient pas en page 1 pour des filtres recréés à l'identique", async () => {
+    const user = userEvent.setup()
+    const filtres = () => [{ id: "pole", value: "Études" }]
+    const initial = { pagination: { pageSize: 5 } }
+    const { rerender } = render(
+      <Simple filtresColonnes={filtres()} etatInitial={initial} />
+    )
+    await user.click(screen.getByRole("button", { name: "Page 2" }))
+    expect(nomsAffiches()[0]).toBe("Poste 16")
+    // Nouveau tableau, même contenu (filtre écrit en ligne par la page).
+    rerender(<Simple filtresColonnes={filtres()} etatInitial={initial} />)
+    expect(nomsAffiches()[0]).toBe("Poste 16")
+    // Un autre contenu, lui, ramène en page 1.
+    rerender(
+      <Simple
+        filtresColonnes={[{ id: "pole", value: "DSI" }]}
+        etatInitial={initial}
+      />
+    )
+    expect(nomsAffiches()[0]).toBe("Poste 2")
+  })
+
+  it("relit les textes quand les colonnes changent, données identiques", () => {
+    // TanStack ne relit pas lui-même les valeurs d'une ligne tant que les
+    // données ne changent pas : on appelle la fonction de filtre avec une
+    // ligne dont l'accesseur change, comme après un changement de colonnes.
+    let table: DataTableInstance<Poste> | undefined
+    render(
+      <Simple
+        colonnes={aide.columns([
+          aide.accessor("nom", { header: "Nom", filterFn: "texteFr" }),
+        ])}
+        surTable={(t) => {
+          table = t
+        }}
+      />
+    )
+    const fn = table!.getColumn("nom")!.getFilterFn()!
+    const donnees = [{}]
+    const ligne = (colonnes: object, valeur: string) =>
+      ({
+        id: "1",
+        getValue: () => valeur,
+        table: { options: { data: donnees, columns: colonnes } },
+      }) as unknown as Parameters<typeof fn>[0]
+    const cherche = fn.resolveFilterValue?.("tresorerie")
+    expect(fn(ligne([], "Poste 1"), "nom", cherche)).toBe(false)
+    // Mêmes données, autres définitions de colonnes : autre valeur lue.
+    expect(fn(ligne([], "Trésorerie"), "nom", cherche)).toBe(true)
+  })
+
+  it("texteFr : une recherche vide laisse passer toute ligne, cellule vide comprise", () => {
+    interface Fiche {
+      id: string
+      nom: string | null
+    }
+    const aideFiche = createDataTableColumnHelper<Fiche>()
+    const colonnes = aideFiche.columns([
+      aideFiche.accessor("nom", { header: "Nom", filterFn: "texteFr" }),
+    ])
+    function Fiches({
+      filtre,
+      surTable,
+    }: {
+      filtre?: string
+      surTable: (t: DataTableInstance<Fiche>) => void
+    }) {
+      const table = useDataTable({
+        donnees: FICHES,
+        colonnes,
+        idLigne: (f) => f.id,
+        filtresColonnes:
+          filtre === undefined ? [] : [{ id: "nom", value: filtre }],
+        filtreGlobal: " ",
+      })
+      surTable(table)
+      return <DataTable table={table} libelle="Fiches" />
+    }
+    const FICHES: Fiche[] = [
+      { id: "1", nom: "Ada" },
+      { id: "2", nom: null },
+    ]
+    let table: DataTableInstance<Fiche> | undefined
+    render(
+      <Fiches
+        filtre=""
+        surTable={(t) => {
+          table = t
+        }}
+      />
+    )
+    expect(screen.getAllByRole("row")).toHaveLength(3)
+
+    // Appel direct de la fonction, avec la valeur qu'elle résout elle-même :
+    // une recherche « » ne filtre rien, même une cellule nulle.
+    const fn = table!.getColumn("nom")!.getFilterFn()!
+    const ligneNulle = table!.getRow("2")
+    for (const recherche of [" ", ""])
+      expect(
+        fn(ligneNulle, "nom", fn.resolveFilterValue?.(recherche) ?? recherche)
+      ).toBe(true)
+  })
+
+  it("change la taille de page en une seule mise à jour (pagination contrôlée)", async () => {
+    const user = userEvent.setup()
+    function Controlee() {
+      const [pagination, setPagination] = useState({
+        pageIndex: 1,
+        pageSize: 10,
+      })
+      return (
+        <Simple
+          pagination={pagination}
+          // Résolu contre la valeur rendue, comme une page qui garde sa
+          // pagination dans l'URL : deux mises à jour successives se
+          // contrediraient.
+          onPaginationChange={(maj) =>
+            setPagination(functionalUpdate(maj, pagination))
+          }
+        />
+      )
+    }
+    render(<Controlee />)
+    expect(nomsAffiches()[0]).toBe("Poste 11")
+    await user.click(screen.getByRole("combobox", { name: "Lignes par page" }))
+    await user.click(await screen.findByRole("option", { name: "25" }))
+    expect(nomsAffiches()).toHaveLength(25)
+    expect(nomsAffiches()[0]).toBe("Poste 1")
   })
 })

@@ -374,3 +374,60 @@ describe("DataTableViewOptions sans useDataTable", () => {
     expect(screen.getByTestId("visibles")).toHaveTextContent("ville,pole")
   })
 })
+
+describe("DataTableViewOptions et useColumnPrefs : colonnes fixes", () => {
+  // « nom » est fixe en tête, « pole » n'est pas dans les préférences : le
+  // panneau ne les propose ni à masquer ni à déplacer, même masquables
+  // pour TanStack.
+  const OPTIONS_PREFS = {
+    cle: "test:fixes",
+    colonnes: ["ville"],
+    visiblesParDefaut: ["ville"],
+    fixesEnTete: ["nom"],
+  }
+
+  async function panneau() {
+    const user = userEvent.setup()
+    await user.click(screen.getByRole("button", { name: "Colonnes" }))
+    await screen.findByRole("checkbox", { name: "Ville" })
+    return screen.getAllByRole("listitem").map((li) => li.textContent)
+  }
+
+  it("avec une table : seules les colonnes réglables sont proposées", async () => {
+    localStorage.clear()
+    function AvecTable() {
+      const prefs = useColumnPrefs(OPTIONS_PREFS)
+      const table = useDataTable({
+        donnees: DONNEES,
+        colonnes: COLONNES,
+        idLigne: (l) => l.id,
+        ...prefs.optionsTableau,
+      })
+      return <DataTableViewOptions table={table} />
+    }
+    render(<AvecTable />)
+    expect(await panneau()).toEqual(["Ville"])
+    expect(
+      screen.queryByRole("button", { name: /Déplacer la colonne Nom/ })
+    ).toBeNull()
+  })
+
+  it("sans table : de même", async () => {
+    localStorage.clear()
+    function SansTable() {
+      const prefs = useColumnPrefs(OPTIONS_PREFS)
+      return (
+        <DataTableViewOptions
+          colonnes={[
+            { id: "nom", libelle: "Nom" },
+            { id: "ville", libelle: "Ville" },
+            { id: "pole", libelle: "Pôle" },
+          ]}
+          {...prefs.optionsTableau}
+        />
+      )
+    }
+    render(<SansTable />)
+    expect(await panneau()).toEqual(["Ville"])
+  })
+})

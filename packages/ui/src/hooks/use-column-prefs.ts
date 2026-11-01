@@ -48,6 +48,9 @@ export interface ColumnPrefsOptionsTableau {
   onVisibiliteColonnesChange: OnChangeFn<ColumnVisibilityState>
   ordreColonnes: ColumnOrderState
   onOrdreColonnesChange: OnChangeFn<ColumnOrderState>
+  /** Les seules colonnes que « Colonnes » peut masquer et déplacer : les
+   *  disponibles, ni fixes en tête ni absentes de `colonnes`. */
+  colonnesReglables: readonly string[]
 }
 
 export interface ColumnPrefsResultat {
@@ -84,10 +87,12 @@ export function lirePreferencesColonnes(
   if (!brute || typeof brute !== "object")
     return { order: [...colonnes], visible: visiblesDefaut }
   const { order, visible } = brute as { order?: unknown; visible?: unknown }
-  const citees = new Set(connues(order, colonnes))
-  const ajoutees = colonnes.filter((id) => !citees.has(id))
+  const ordre = ordonner(Array.isArray(order) ? order : [], colonnes)
+  // Après les colonnes citées, `ordonner` met celles que l'enregistrement
+  // ne connaissait pas : les colonnes apparues depuis.
+  const ajoutees = ordre.slice(connues(order, colonnes).length)
   return {
-    order: ordonner(Array.isArray(order) ? order : [], colonnes),
+    order: ordre,
     visible:
       visible === undefined
         ? visiblesDefaut
@@ -102,16 +107,11 @@ export function lirePreferencesColonnes(
 }
 
 /** Les identifiants connus d'une liste lue (stockage), sans doublon, dans
- *  son ordre. */
+ *  son ordre : la partie citée d'`ordonner`, seule règle de nettoyage. */
 function connues(valeur: unknown, colonnes: readonly string[]): string[] {
   if (!Array.isArray(valeur)) return []
-  return [
-    ...new Set(
-      valeur.filter(
-        (id): id is string => typeof id === "string" && colonnes.includes(id)
-      )
-    ),
-  ]
+  const citees = new Set(valeur)
+  return ordonner(valeur, colonnes).filter((id) => citees.has(id))
 }
 
 /** Liste stable tant que son contenu ne change pas (tableaux écrits en
@@ -158,14 +158,19 @@ export function useColumnPrefs({
 
   return useMemo(() => {
     const prefs = lirePreferencesColonnes(brute, colonnes, visiblesParDefaut)
-    const estDisponible = (id: string) => disponibles.includes(id)
+    // Réglables : disponibles ici, connues des préférences, pas fixes en
+    // tête. Les seules que le panneau « Colonnes » propose.
+    const reglables = disponibles.filter(
+      (id) => colonnes.includes(id) && !fixesEnTete.includes(id)
+    )
+    const estDisponible = (id: string) => reglables.includes(id)
     // Toujours à partir de la valeur enregistrée la plus récente.
     const modifier = (maj: (avant: ColumnPrefs) => ColumnPrefs) =>
       setBrute((avant: unknown) =>
         maj(lirePreferencesColonnes(avant, colonnes, visiblesParDefaut))
       )
     const visibiliteDe = (p: ColumnPrefs): ColumnVisibilityState =>
-      Object.fromEntries(disponibles.map((id) => [id, p.visible.includes(id)]))
+      Object.fromEntries(reglables.map((id) => [id, p.visible.includes(id)]))
     const ordreDe = (p: ColumnPrefs): ColumnOrderState => [
       ...fixesEnTete,
       ...p.order.filter(estDisponible),
@@ -194,7 +199,7 @@ export function useColumnPrefs({
               ...p,
               visible: [
                 ...p.visible.filter((id) => !estDisponible(id)),
-                ...disponibles.filter((id) => suivante[id] !== false),
+                ...reglables.filter((id) => suivante[id] !== false),
               ],
             }
           }),
@@ -210,6 +215,7 @@ export function useColumnPrefs({
               functionalUpdate(maj, ordreDe(p))
             ),
           })),
+        colonnesReglables: reglables,
       },
     }
   }, [brute, setBrute, colonnes, visiblesParDefaut, disponibles, fixesEnTete])

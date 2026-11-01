@@ -8,7 +8,7 @@ Tableaux : `useDataTable` filtre, trie et pagine côté client. `paginationClien
 
 `DataTableViewOptions` et `DataTableBulkActions` servent aussi un tableau rendu à la main, sans `useDataTable` : `colonnes` et les options de colonnes de `useDataTable` (`visibiliteColonnes`, `ordreColonnes` et leurs `on…Change`) pour l'un ; `nombre`, `onToutDeselectionner` et `racine` pour l'autre.
 
-`useColumnPrefs` et `usePersistedState` (sous la portée `PorteeStockageLocal`) gardent dans le navigateur, par personne, les colonnes d'une liste et un réglage simple. Les clés et le format sont ceux d'ETIC Members : ses réglages sont repris tels quels. `prefs.optionsTableau` s'étale dans `useDataTable` comme dans `DataTableViewOptions`.
+`useColumnPrefs` et `usePersistedState` (sous la portée `PorteeStockageLocal`) gardent dans le navigateur, par personne, les colonnes d'une liste et un réglage simple. Les clés et le format sont ceux d'ETIC Members : ses réglages sont repris tels quels. `prefs.optionsTableau` s'étale dans `useDataTable` comme dans `DataTableViewOptions` ; avec `colonnesReglables`, le panneau « Colonnes » ne propose plus que les colonnes des préférences (ni les colonnes fixes en tête, ni les autres).
 
 Correctifs :
 

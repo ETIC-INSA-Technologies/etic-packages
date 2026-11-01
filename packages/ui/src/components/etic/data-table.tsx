@@ -141,30 +141,45 @@ export interface DataTableMeta {
   racine: RefObject<HTMLDivElement | null>
   /** Identifiant du détail d'une ligne dépliée (cible d'`aria-controls`). */
   idDetail: (idLigne: string) => string
+  /** Voir `colonnesReglables` de `useDataTable`. */
+  colonnesReglables?: readonly string[]
 }
 
 /**
- * Textes normalisés des cellules, par tableau de données (`donnees`) puis
+ * Textes normalisés des cellules, par tableau de données (`donnees`) et par
+ * définitions de colonnes (un accesseur changé lit une autre valeur), puis
  * par ligne et colonne : une frappe dans la recherche ne renormalise pas
- * toute la liste. Un nouveau tableau de données repart d'un cache vide.
+ * toute la liste. De nouvelles données ou de nouvelles colonnes repartent
+ * d'un cache vide.
  */
-const textesNormalises = new WeakMap<object, Map<string, string | undefined>>()
+const textesNormalises = new WeakMap<
+  object,
+  WeakMap<object, Map<string, string | undefined>>
+>()
 
 /** Ce que le filtre lit d'une ligne (sans le type de `dataTableFeatures`,
  *  qui dépend de ce filtre). */
 interface LigneFiltree {
   id: string
   getValue: (colonne: string) => unknown
-  table: { options: { data: unknown } }
+  table: { options: { data: unknown; columns: unknown } }
+}
+
+function cacheDe(row: LigneFiltree): Map<string, string | undefined> {
+  const { data, columns } = row.table.options
+  let parColonnes = textesNormalises.get(data as object)
+  if (!parColonnes)
+    textesNormalises.set(data as object, (parColonnes = new WeakMap()))
+  let cache = parColonnes.get(columns as object)
+  if (!cache) parColonnes.set(columns as object, (cache = new Map()))
+  return cache
 }
 
 function texteNormaliseDe(
   row: LigneFiltree,
   colonne: string
 ): string | undefined {
-  const donnees = row.table.options.data as object
-  let cache = textesNormalises.get(donnees)
-  if (!cache) textesNormalises.set(donnees, (cache = new Map()))
+  const cache = cacheDe(row)
   const cle = `${row.id}\u0000${colonne}`
   if (cache.has(cle)) return cache.get(cle)
   const valeur = row.getValue(colonne)
@@ -185,7 +200,12 @@ const filterFn_texteFr = constructFilterFn({
     cherche: string,
     row: LigneFiltree,
     colonne: string
-  ): boolean => texteNormaliseDe(row, colonne)?.includes(cherche) ?? false,
+  ): boolean =>
+    // Recherche vide (après normalisation et rognage) : toute ligne passe,
+    // même une cellule vide. TanStack retire d'ordinaire un tel filtre
+    // (`autoRemove`), mais pas un filtre déjà résolu ni un appel direct.
+    cherche === "" ||
+    (texteNormaliseDe(row, colonne)?.includes(cherche) ?? false),
   autoRemove: (cherche: unknown) =>
     normaliserRecherche(String(cherche ?? "")) === "",
   resolveFilterValue: (cherche: unknown) =>
@@ -392,6 +412,10 @@ export interface UseDataTableOptions<TData extends RowData> {
   /** Identifiants des colonnes dans l'ordre d'affichage. */
   ordreColonnes?: ColumnOrderState
   onOrdreColonnesChange?: OnChangeFn<ColumnOrderState>
+  /** Colonnes que « Colonnes » (`DataTableViewOptions`) peut masquer et
+   *  déplacer ; les autres y restent fixes, à leur place. Toutes les
+   *  masquables par défaut. Donné par `useColumnPrefs`. */
+  colonnesReglables?: readonly string[]
 
   /** Sélection contrôlée : `{ [idLigne]: true }`. */
   selection?: RowSelectionState
@@ -491,6 +515,7 @@ export function useDataTable<TData extends RowData>({
   onVisibiliteColonnesChange,
   ordreColonnes,
   onOrdreColonnesChange,
+  colonnesReglables,
   selection,
   onSelectionChange,
   ligneSelectionnable,
@@ -631,6 +656,7 @@ export function useDataTable<TData extends RowData>({
       },
       racine,
       idDetail: (id) => `${prefixe}detail-${encodeURIComponent(id)}`,
+      colonnesReglables,
     },
   })
 
@@ -699,33 +725,41 @@ export function useDataTable<TData extends RowData>({
 
   // Un filtre ou un tri changé ramène à la première page (pagination côté
   // client) : la page 4 d'une recherche qui n'en a plus qu'une serait vide.
-  // Comparés par référence : l'état de TanStack garde ses objets tant qu'ils
-  // ne changent pas (les valeurs contrôlées doivent être stables).
+  // L'effet ne s'exécute que si une référence change ; le contenu est alors
+  // comparé (un `filtresColonnes` recréé à l'identique ne change rien).
   const { columnFilters, globalFilter, sorting, pagination: page } = table.state
-  const criteres = useRef([columnFilters, globalFilter, sorting])
+  const criteres = useRef<string | null>(null)
   const premierePage = useEffectEvent(() => {
     if (paginationClient && table.state.pagination.pageIndex !== 0)
       table.setPageIndex(0)
   })
   useLayoutEffect(() => {
-    const suivants = [columnFilters, globalFilter, sorting]
-    if (suivants.every((critere, i) => critere === criteres.current[i])) return
+    const suivants = JSON.stringify([columnFilters, globalFilter, sorting])
+    const precedents = criteres.current
     criteres.current = suivants
-    premierePage()
+    if (precedents !== null && precedents !== suivants) premierePage()
   }, [columnFilters, globalFilter, sorting])
 
   // Page au-delà de la fin (dernières lignes supprimées) : la dernière page
   // existante, plutôt qu'une page vide sous un numéro surligné. Seul endroit
   // qui le fait pour une pagination côté client, que `DataTablePagination`
-  // soit affichée ou non.
+  // soit affichée ou non. Pas tant qu'il n'y a aucune ligne : c'est souvent
+  // une liste pas encore chargée, et une page venue de l'URL ou de
+  // `etatInitial` serait ramenée à la première.
   const nombrePages = table.getPageCount()
+  const nombreLignes = table.getRowCount()
   const ramener = useEffectEvent(() =>
     table.setPageIndex(Math.max(0, nombrePages - 1))
   )
   useLayoutEffect(() => {
-    if (paginationClient && page.pageIndex > 0 && page.pageIndex >= nombrePages)
+    if (
+      paginationClient &&
+      nombreLignes > 0 &&
+      page.pageIndex > 0 &&
+      page.pageIndex >= nombrePages
+    )
       ramener()
-  }, [paginationClient, page.pageIndex, nombrePages])
+  }, [paginationClient, nombreLignes, page.pageIndex, nombrePages])
 
   return table
 }
@@ -1131,12 +1165,16 @@ function useFocusDeLaLigne(
 }
 
 /** Suivi du focus d'une ligne (`onFocus`, qui remonte aussi des portails
- *  React) : la ligne l'a, et dans quelle cellule. */
+ *  React) : la ligne l'a, et dans quelle cellule. Dans la ligne de détail
+ *  dépliée (`rang` faux), la cellule ne correspond à aucune colonne : la
+ *  dernière connue reste. */
 function noterFocus(
   event: FocusEvent<HTMLTableRowElement>,
-  focus: FocusDeLaLigne
+  focus: FocusDeLaLigne,
+  rang = true
 ) {
   focus.actif = true
+  if (!rang) return
   const cellule = (event.target as Element).closest("td, th")
   if (
     cellule instanceof HTMLTableCellElement &&
@@ -1145,14 +1183,13 @@ function noterFocus(
     focus.rang = cellule.cellIndex
 }
 
-/** Vers un élément hors de la ligne : elle n'a plus le focus. Le passage à
- *  un dialogue ouvert depuis elle redonne aussitôt un `onFocus` ; vers rien
- *  (élément retiré), l'état reste. */
-function noterPerte(
-  event: FocusEvent<HTMLTableRowElement>,
-  focus: FocusDeLaLigne
-) {
-  if (event.relatedTarget) focus.actif = false
+/**
+ * Le focus quitte la ligne : elle ne l'a plus, y compris vers rien (clic
+ * dans le vide). S'il va ailleurs dans la ligne, ou dans un dialogue ou un
+ * menu ouvert depuis elle (portail), l'`onFocus` qui suit le lui rend.
+ */
+function noterPerte(focus: FocusDeLaLigne) {
+  focus.actif = false
 }
 
 function LigneTableauBrute<TData extends RowData>({
@@ -1173,7 +1210,7 @@ function LigneTableauBrute<TData extends RowData>({
       <TableRow
         ref={ligneRef}
         onFocus={(event) => noterFocus(event, focus.current)}
-        onBlur={(event) => noterPerte(event, focus.current)}
+        onBlur={() => noterPerte(focus.current)}
         data-state={selectionnee ? "selected" : undefined}
         className={cn(cliquable && "cursor-pointer")}
         onClick={
@@ -1197,6 +1234,9 @@ function LigneTableauBrute<TData extends RowData>({
         <TableRow
           data-slot="data-table-detail"
           className="bg-muted/30 hover:bg-muted/30"
+          // Une commande du détail compte comme une commande de la ligne.
+          onFocus={(event) => noterFocus(event, focus.current, false)}
+          onBlur={() => noterPerte(focus.current)}
         >
           <TableCell
             id={metaDe(table).idDetail(row.id)}

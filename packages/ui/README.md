@@ -670,9 +670,12 @@ toutes les colonnes à accesseur, sans casse ni accents (« tresorerie » trouve
 `filtresColonnes` applique la fonction de chaque colonne (`filterFn`). Le tri nommé
 `texteFr` (`sortFn: "texteFr"`) suit l'ordre alphabétique français de `comparerFr`, accents
 compris, et « Poste 2 » avant « Poste 10 » ; le filtre nommé `texteFr` est celui de la
-recherche (`normaliserRecherche`). Un changement de filtre ou de tri ramène à la première page
-(filtres et tri contrôlés : des références stables, sinon la page revient à 1 à chaque rendu) ;
-supprimer une ligne garde la page courante (la dernière page existante si elle disparaît).
+recherche (`normaliserRecherche`) ; une recherche vide ne filtre rien. Un changement de filtre
+ou de tri ramène à la première page : le contenu est comparé, un `filtresColonnes` recréé à
+l'identique à chaque rendu ne change pas la page. Supprimer une ligne garde la page courante (la
+dernière page existante si elle disparaît) ; une page de départ (`etatInitial`, ou lue dans
+l'URL) est gardée tant que les données ne sont pas arrivées. Changer le nombre de lignes par
+page revient à la première page en une seule mise à jour (`setPagination`).
 `DataTablePagination table={…}` sans `paginationClient` n'affiche rien et prévient dans la
 console : la table ne découpe pas de pages.
 
@@ -725,7 +728,10 @@ contredirait le bandeau. Sans `enChargement`, `isFetching` en tient lieu.
 ordre (`localStorage`, format `{ order, visible }`) ; `optionsTableau` s'étale dans
 `useDataTable`. Une colonne apparue depuis l'enregistrement s'ajoute à la fin, affichée si elle
 l'est par défaut ; une colonne non offerte ici (`disponibles` : droit manquant) garde son état et
-sa place ; `fixesEnTete` reste hors préférences ; `reinitialiser()` revient aux valeurs par
+sa place ; `fixesEnTete` reste hors préférences. `optionsTableau.colonnesReglables` (une option
+de `useDataTable` et de `DataTableViewOptions`) limite le panneau « Colonnes » aux colonnes des
+préférences : les fixes et les autres n'y sont ni masquables ni déplaçables. `reinitialiser()`
+revient aux valeurs par
 défaut. `usePersistedState(cle, defaut, { accepter })` garde de même un réglage simple (un filtre
 choisi) ; rien n'est écrit tant que rien n'est choisi, et `accepter` écarte une valeur
 enregistrée devenue invalide. La portée (la personne connectée) se fournit une fois :

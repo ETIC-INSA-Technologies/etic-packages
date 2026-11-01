@@ -460,6 +460,14 @@ const DETAIL_COLONNES = aide.columns([
 
 const detail = (p: Personne) => <p>{`${p.nom} habite ${p.ville}.`}</p>
 
+/** Colonnes avec une commande par ligne, sans effet. */
+const COLONNES_AVEC_BOUTON = [
+  ...COLONNES,
+  dataTableActionsColumn<Personne>({
+    actions: (p) => <Button size="sm">{`Ouvrir ${p.nom}`}</Button>,
+  }),
+]
+
 describe("DataTable, lignes dépliables", () => {
   it("déplie une ligne par son bouton, au clavier, avec aria-expanded et aria-controls", async () => {
     const user = userEvent.setup()
@@ -817,6 +825,66 @@ describe("DataTable : requête, largeurs, cases et colonnes prêtes à l'emploi"
       expect(document.activeElement).toBe(
         screen.getByRole("button", { name: "Retirer Alan" })
       )
+    )
+  })
+
+  it("ne vole pas le focus quand il a quitté la ligne avant qu'elle disparaisse", async () => {
+    const user = userEvent.setup()
+    function Retirable({ donnees }: { donnees: Personne[] }) {
+      const table = useDataTable({
+        donnees,
+        colonnes: COLONNES_AVEC_BOUTON,
+        idLigne: (p) => p.id,
+      })
+      return <DataTable table={table} libelle="Personnes" />
+    }
+    const { rerender } = render(<Retirable donnees={PERSONNES.slice(0, 3)} />)
+    await user.click(screen.getByRole("button", { name: "Ouvrir Grace" }))
+    // Clic dans le vide : le focus part sur la page, sans cible.
+    await user.click(document.body)
+    expect(document.activeElement).toBe(document.body)
+    rerender(<Retirable donnees={[PERSONNES[0], PERSONNES[2]]} />)
+    await new Promise((fin) => setTimeout(fin, 0))
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it("rend le focus quand la ligne disparaît depuis une commande de son détail", async () => {
+    const user = userEvent.setup()
+    function AvecDetail() {
+      const [donnees, setDonnees] = useState(PERSONNES.slice(0, 3))
+      const table = useDataTable({
+        donnees,
+        colonnes: DETAIL_COLONNES,
+        idLigne: (p) => p.id,
+      })
+      return (
+        <DataTable
+          table={table}
+          libelle="Personnes"
+          rendreDetail={(p) => (
+            <Button
+              size="sm"
+              onClick={() =>
+                setDonnees((avant) => avant.filter((x) => x.id !== p.id))
+              }
+            >
+              {`Supprimer ${p.nom}`}
+            </Button>
+          )}
+        />
+      )
+    }
+    render(<AvecDetail />)
+    await user.click(screen.getByRole("button", { name: "Détail de Grace" }))
+    await user.click(screen.getByRole("button", { name: "Supprimer Grace" }))
+    // La ligne suivante prend le focus (une de ses commandes : le détail
+    // n'a pas de colonne qui lui corresponde).
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("row", { name: /Alan/ })
+          .contains(document.activeElement)
+      ).toBe(true)
     )
   })
 

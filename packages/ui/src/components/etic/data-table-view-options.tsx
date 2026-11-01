@@ -41,6 +41,7 @@ import {
 import {
   CASE_VERROUILLEE,
   libelleColonne,
+  metaDe,
   type DataTableInstance,
 } from "@etic-ui/components/etic/data-table"
 import { ordonner, replacer } from "@etic-ui/lib/ordre-colonnes"
@@ -99,6 +100,9 @@ export interface DataTableViewOptionsColonnesProps extends DataTableViewOptionsC
   /** Ordre complet après un déplacement. Sans lui, les colonnes ne se
    *  réordonnent pas (pas de poignée). */
   onOrdreColonnesChange?: OnChangeFn<ColumnOrderState>
+  /** Colonnes que le panneau peut masquer et déplacer ; les autres restent
+   *  fixes, à leur place. Toutes par défaut. Donné par `useColumnPrefs`. */
+  colonnesReglables?: readonly string[]
 }
 
 export type DataTableViewOptionsProps<TData extends RowData = RowData> =
@@ -123,14 +127,25 @@ interface ModeleVue {
   changerOrdre?: (ordre: string[]) => void
 }
 
+/** Une colonne que le panneau peut masquer et déplacer : toutes sans liste
+ *  `colonnesReglables`, sinon celles qu'elle cite. */
+function estReglable(
+  colonnesReglables: readonly string[] | undefined
+): (id: string) => boolean {
+  if (!colonnesReglables) return () => true
+  const reglables = new Set(colonnesReglables)
+  return (id) => reglables.has(id)
+}
+
 function modeleDuTableau<TData extends RowData>(
   table: DataTableInstance<TData>
 ): ModeleVue {
+  const reglable = estReglable(metaDe(table).colonnesReglables)
   return {
     toutes: table.getAllLeafColumns().map((colonne) => ({
       id: colonne.id,
       libelle: libelleColonne(colonne),
-      masquable: colonne.getCanHide(),
+      masquable: colonne.getCanHide() && reglable(colonne.id),
       visible: colonne.getIsVisible(),
       // Colonne de données : à accesseur, ou de rendu (`display`) masquable ;
       // jamais la sélection, le dépliage ni les actions de ligne.
@@ -150,16 +165,18 @@ function modeleDesColonnes({
   onVisibiliteColonnesChange,
   ordreColonnes,
   onOrdreColonnesChange,
+  colonnesReglables,
 }: DataTableViewOptionsColonnesProps): ModeleVue {
   const parId = new Map(colonnes.map((colonne) => [colonne.id, colonne]))
   const ids = ordonner(
     ordreColonnes,
     colonnes.map((colonne) => colonne.id)
   )
+  const reglable = estReglable(colonnesReglables)
   return {
     toutes: ids.map((id) => {
       const colonne = parId.get(id)!
-      const masquable = colonne.masquable ?? true
+      const masquable = (colonne.masquable ?? true) && reglable(id)
       return {
         id,
         libelle: colonne.libelle,
