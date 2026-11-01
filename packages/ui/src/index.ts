@@ -109,6 +109,7 @@ export {
 } from "./components/ui/combobox"
 export {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -330,6 +331,7 @@ export {
   ConfirmDialog,
   type ConfirmDialogProps,
   type ConfirmDialogSaisie,
+  type ConfirmDialogTaille,
   type DialogFinalFocus,
 } from "./components/etic/confirm-dialog"
 export { CopyButton, type CopyButtonProps } from "./components/etic/copy-button"
@@ -351,6 +353,10 @@ export {
   type DisclosureTriggerProps,
   type DisclosureVariante,
 } from "./components/etic/disclosure"
+export {
+  DraftResumeDialog,
+  type DraftResumeDialogProps,
+} from "./components/etic/draft-resume-dialog"
 export { EmptyState, type EmptyStateProps } from "./components/etic/empty-state"
 export {
   ErrorBanner,
@@ -362,6 +368,7 @@ export {
 } from "./components/etic/error-boundary"
 export {
   FormDialog,
+  type FormDialogActionSecondaire,
   type FormDialogProps,
   type FormDialogTaille,
 } from "./components/etic/form-dialog"
@@ -424,6 +431,12 @@ export {
   TooltipButton,
   type TooltipButtonProps,
 } from "./components/etic/tooltip-button"
+export {
+  type UnsavedChangesBlocage,
+  UnsavedChangesDialog,
+  type UnsavedChangesDialogProps,
+} from "./components/etic/unsaved-changes"
+export { useUnsavedChangesWarning } from "./components/etic/use-unsaved-changes-warning"
 
 // Formulaires (components/etic) : champs, sélecteurs, fichiers, brouillon.
 export {

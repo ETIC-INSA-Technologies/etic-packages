@@ -51,7 +51,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-x-hidden overflow-y-auto rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}
@@ -74,6 +74,30 @@ function DialogContent({
         )}
       </DialogPrimitive.Popup>
     </DialogPortal>
+  )
+}
+
+/**
+ * Corps d'un dialogue (absent de shadcn), entre l'en-tête et le pied : seul
+ * à défiler quand le dialogue atteint sa hauteur maximale, en-tête, croix et
+ * pied restant visibles. Il déborde dans la marge du dialogue (`-mx-4 px-4`,
+ * `-my-1 py-1`) pour que la barre de défilement soit au bord et que l'anneau
+ * de focus d'un champ ne soit pas rogné. Sans lui, tout le contenu défile.
+ * Sert aussi dans un `AlertDialogContent`.
+ */
+function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="dialog-body"
+      className={cn(
+        // Grille à lignes `min-content` : ses enfants gardent leur hauteur
+        // (une liste qui défile elle-même n'est pas écrasée), le corps défile.
+        // Une colonne `minmax(0, 1fr)` : un mot trop long ne l'élargit pas.
+        "-mx-4 -my-1 grid min-h-0 auto-rows-min grid-cols-1 gap-4 overflow-x-hidden overflow-y-auto px-4 py-1",
+        className
+      )}
+      {...props}
+    />
   )
 }
 
@@ -145,6 +169,7 @@ function DialogDescription({
 
 export {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,

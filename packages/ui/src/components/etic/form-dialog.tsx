@@ -11,6 +11,7 @@ import { XIcon } from "lucide-react"
 import { Button } from "@etic-ui/components/ui/button"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -26,6 +27,10 @@ import {
 import type { DialogFinalFocus } from "@etic-ui/components/etic/confirm-dialog"
 import { ErrorBanner } from "@etic-ui/components/etic/error-banner"
 import { TooltipButton } from "@etic-ui/components/etic/tooltip-button"
+import {
+  LARGEURS_DIALOGUE,
+  type TailleDialogue,
+} from "@etic-ui/components/etic/tailles-dialogue"
 
 /**
  * Premier champ où l'on tape : ni case, ni bouton radio, ni fichier, ni
@@ -43,15 +48,45 @@ const PREMIER_CHAMP = [
   )
   .join(", ")
 
-/** Largeur du dialogue, selon la densité du formulaire. */
-export type FormDialogTaille = "sm" | "md" | "lg" | "xl"
-
-const LARGEURS: Record<FormDialogTaille, string> = {
-  sm: "sm:max-w-sm",
-  md: "sm:max-w-lg",
-  lg: "sm:max-w-2xl",
-  xl: "sm:max-w-4xl",
+/** Affiché : ni `display: none` (classe `hidden`, panneau replié…) ni
+ *  `visibility: hidden`, jusqu'à la racine. */
+function estVisible(element: HTMLElement) {
+  return typeof element.checkVisibility === "function"
+    ? element.checkVisibility({ visibilityProperty: true })
+    : element.getClientRects().length > 0
 }
+
+/** Premier élément affiché de `racine` qui répond à `accepte`. */
+function premier(
+  racine: HTMLElement | null,
+  selecteur: string,
+  accepte: (element: HTMLElement) => boolean = () => true
+) {
+  if (!racine) return null
+  return (
+    Array.from(racine.querySelectorAll<HTMLElement>(selecteur)).find(
+      (element) => accepte(element) && estVisible(element)
+    ) ?? null
+  )
+}
+
+/**
+ * À défaut de champ où l'on tape (cases seules, liste, choix segmenté…) :
+ * le premier contrôle actif atteignable à la tabulation. Sans ce second
+ * niveau, le focus allait à « Annuler ».
+ */
+function estTabulableActif(element: HTMLElement) {
+  return (
+    element.tabIndex >= 0 &&
+    !element.matches(
+      ':disabled, [data-disabled], [aria-disabled="true"], [readonly]'
+    ) &&
+    !element.closest('[aria-hidden="true"], [hidden], [inert]')
+  )
+}
+
+/** Largeur du dialogue, selon la densité du formulaire. */
+export type FormDialogTaille = TailleDialogue
 
 type ChampValidable = HTMLElement & {
   willValidate: boolean
@@ -124,6 +159,13 @@ function nomDuChamp(champ: ChampValidable) {
   return nomme || champ.name || "Champ"
 }
 
+export interface FormDialogActionSecondaire {
+  libelle: string
+  onChoisir: () => void
+  /** En rouge (texte), pour une sortie qui détruit. */
+  destructif?: boolean
+}
+
 export interface FormDialogProps {
   titre: string
   description?: ReactNode
@@ -142,6 +184,14 @@ export interface FormDialogProps {
   onEnvoyer: (event: FormEvent<HTMLFormElement>) => unknown
   /** « Enregistrer » par défaut. */
   libelleEnvoyer?: string
+  /** « Annuler » par défaut : « Plus tard »… Le bouton ferme le dialogue. */
+  libelleAnnuler?: string
+  /**
+   * Une troisième sortie, en tête du pied (à gauche sur ordinateur), discrète :
+   * « Se déconnecter »… Occupée comme « Annuler » pendant l'envoi. Elle ne
+   * ferme pas le dialogue d'elle-même.
+   */
+  actionSecondaire?: FormDialogActionSecondaire
   /** Bouton d'envoi désactivé : formulaire incomplet, rien de modifié… */
   envoiDesactive?: boolean
   /** Envoi impossible, et pourquoi : le bouton reste focalisable et son
@@ -171,6 +221,8 @@ export function FormDialog({
   children,
   onEnvoyer,
   libelleEnvoyer = "Enregistrer",
+  libelleAnnuler = "Annuler",
+  actionSecondaire,
   envoiDesactive = false,
   verrouEnvoi,
   taille = "md",
@@ -185,7 +237,6 @@ export function FormDialog({
   const [invalides, setInvalides] = useState<{ nom: string; raison: string }[]>(
     []
   )
-  const formulaire = useRef<HTMLFormElement>(null)
   const champs = useRef<HTMLFieldSetElement>(null)
   const boutonEnvoi = useRef<HTMLButtonElement>(null)
   // Contrôles visibles marqués `aria-invalid` par le dialogue (et non par
@@ -261,13 +312,11 @@ export function FormDialog({
       {declencheur ? <DialogTrigger render={declencheur} /> : null}
       <DialogContent
         showCloseButton={false}
-        className={cn(
-          "max-h-[calc(100dvh-2rem)] overflow-y-auto",
-          LARGEURS[taille],
-          className
-        )}
+        className={cn(LARGEURS_DIALOGUE[taille], className)}
         initialFocus={() =>
-          formulaire.current?.querySelector<HTMLElement>(PREMIER_CHAMP) ?? true
+          premier(champs.current, PREMIER_CHAMP) ??
+          premier(champs.current, "*", estTabulableActif) ??
+          true
         }
         finalFocus={finalFocus}
       >
@@ -278,7 +327,6 @@ export function FormDialog({
           ) : null}
         </DialogHeader>
         <form
-          ref={formulaire}
           onSubmit={envoyer}
           // Un champ corrigé perd sa marque dès la saisie (ou en sortant
           // d'un composite, dont l'entrée cachée n'émet rien).
@@ -287,35 +335,59 @@ export function FormDialog({
           onBlur={() => demarquer()}
           noValidate
           aria-busy={action.enCours || undefined}
-          className="flex flex-col gap-4"
+          // Peut rétrécir : seul le corps défile, le pied reste visible.
+          className="flex min-h-0 flex-col gap-4"
         >
-          <ErrorBanner erreur={action.erreur} />
-          <ErrorBanner
-            erreur={invalides.length > 0}
-            titre="Le formulaire est incomplet."
-            description={
-              <ul className="list-disc pl-4">
-                {invalides.map(({ nom, raison }, index) => (
-                  <li key={index}>
-                    {nom}&nbsp;: {raison}
-                  </li>
-                ))}
-              </ul>
-            }
-          />
-          {/* Champs figés pendant l'envoi : une modification faite pendant
-              l'attente serait perdue sans le savoir. */}
-          <fieldset ref={champs} disabled={action.enCours} className="contents">
-            {children}
-          </fieldset>
+          <DialogBody>
+            <ErrorBanner erreur={action.erreur} />
+            <ErrorBanner
+              erreur={invalides.length > 0}
+              titre="Le formulaire est incomplet."
+              description={
+                <ul className="list-disc pl-4">
+                  {invalides.map(({ nom, raison }, index) => (
+                    <li key={index}>
+                      {nom}&nbsp;: {raison}
+                    </li>
+                  ))}
+                </ul>
+              }
+            />
+            {/* Champs figés pendant l'envoi : une modification faite pendant
+                l'attente serait perdue sans le savoir. */}
+            <fieldset
+              ref={champs}
+              disabled={action.enCours}
+              className="contents"
+            >
+              {children}
+            </fieldset>
+          </DialogBody>
           <DialogFooter>
+            {actionSecondaire ? (
+              // Sans cadre et rangée à part : elle ne répond pas au
+              // formulaire, elle en sort.
+              <Button
+                variant="ghost"
+                className={cn(
+                  "sm:mr-auto",
+                  actionSecondaire.destructif &&
+                    "text-destructive hover:text-destructive"
+                )}
+                disabled={action.enCours}
+                focusableWhenDisabled
+                onClick={actionSecondaire.onChoisir}
+              >
+                {actionSecondaire.libelle}
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               disabled={action.enCours}
               focusableWhenDisabled
               onClick={() => ouverture.changer(false)}
             >
-              Annuler
+              {libelleAnnuler}
             </Button>
             <TooltipButton
               ref={boutonEnvoi}

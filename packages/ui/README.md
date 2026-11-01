@@ -166,6 +166,8 @@ chargement d'une image) et, au besoin, son composant de lien (`lien`, comme pour
 | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ConfirmDialog`                                                          | Confirmation (`AlertDialog`) : `titre` qui nomme l'action, `description` qui nomme ce qu'elle touche, `saisie` pour exiger de taper une valeur non affichée (action critique). L'erreur de l'action s'affiche dans le dialogue, qui reste ouvert.                                                                                                                                                                       |
 | `FormDialog`                                                             | Formulaire dans un `Dialog` : pied « Annuler / Enregistrer », curseur dans le premier champ à remplir, état d'envoi (champs figés), erreur en tête, `taille` `sm` à `xl`, `verrouEnvoi` pour dire pourquoi l'envoi est impossible. Les contraintes des champs (`required`, `type`, `pattern`…) sont vérifiées sans la bulle du navigateur : la liste des champs à corriger s'affiche en français.                       |
+| `DraftResumeDialog`                                                      | Ouverture d'un utilitaire à brouillon (compagnon de `useDraftAutosave`) : « Quitter », `libelleRepartir` (suppression du brouillon, `onRepartir` attendue, bouton occupé, erreur affichée, comme `erreur` venue d'ailleurs) et « Reprendre au même point » si `reprenable`. Sans croix ; Échap quitte, jamais pendant la suppression.                                                                                   |
+| `UnsavedChangesDialog`, `useUnsavedChangesWarning`                       | Garde « modifications non enregistrées », sans routeur : `useUnsavedChangesWarning(modifie)` (booléen, ou fonction lue au moment de quitter) retient la fermeture de l'onglet ; le dialogue confirme une navigation retenue par l'application (`blocage` : `state`, `proceed`, `reset`, la forme du `useBlocker` de react-router).                                                                                      |
 | `PageContainer`                                                          | Conteneur de page dans `AppShell` : marges, `largeur` maximale, espacement entre les blocs.                                                                                                                                                                                                                                                                                                                             |
 | `PageHeader`, `DetailHeader`                                             | En-tête de page (`<h1>`, description, actions) ; en-tête de fiche avec fil d'Ariane (`chemin`), badges, méta, actions et menu « Plus d'actions » (`actionsSecondaires` : `onChoisir`, `destructif`, `verrou` affiché sous le libellé ; `tailleActions="lg"` pour des actions en `size="lg"`), `compact` quand la fiche répète déjà son nom.                                                                             |
 | `SectionCard`, `DetailList`, `DetailItem`                                | Carte de section titrée (`<h2>`) ; grille `<dl>` de paires libellé / valeur, « — » pour une valeur absente (`null`, `undefined`, `false`, chaîne vide) ; `discret` pour des métadonnées secondaires : « libellé : valeur » en petit, en ligne.                                                                                                                                                                          |
@@ -208,6 +210,34 @@ Un envoi de `FormDialog` refusé par les contraintes marque chaque champ fautif
 (`aria-invalid`, retiré dès qu'il est corrigé) et le nomme par son libellé, y compris une
 liste (`Select`, `SearchSelect`…) dont l'entrée cachée porte la valeur : le libellé de son
 `FormField`, et le focus va à son contrôle visible.
+
+Options de `ConfirmDialog` : `verrou` (confirmation impossible, et pourquoi : bouton focalisable,
+raison en infobulle et en description), `libelleAnnuler` (« Revenir au tableau »), `taille`
+(`sm` par défaut, `md` ou `lg` pour un récapitulatif), `elements` et `libelleElements` (liste
+nommée des éléments concernés, qui défile au-delà d'une dizaine de lignes), `onAnnuler`
+(appelé quand la personne renonce : « Annuler » ou Échap ; jamais après une
+réussite, alors que `onOuvertChange(false)` suit les deux). Si `saisie.attendu` change pendant
+l'ouverture (le nombre d'éléments a changé côté serveur), la saisie est vidée, sans remonter le
+dialogue : pas de `key` à forcer. `FormDialog` prend `libelleAnnuler` (« Plus tard ») et
+`actionSecondaire` (`libelle`, `onChoisir`, `destructif`) : une troisième sortie discrète en
+tête du pied (« Se déconnecter »), occupée pendant l'envoi, qui ne ferme pas le dialogue
+d'elle-même. Sans champ où l'on tape, il s'ouvre sur le premier contrôle actif et affiché (case,
+liste, choix segmenté… ; un panneau replié est ignoré). Tous les dialogues plafonnent leur
+hauteur à l'écran et gardent le focus : Tab et Maj+Tab en font le tour sans en sortir. Dans
+`FormDialog`, `ConfirmDialog` et `DraftResumeDialog`, seul le corps défile : titre, croix et
+pied restent visibles. Un dialogue composé à la main obtient la même chose en plaçant son
+contenu dans `DialogBody` (aussi dans un `AlertDialogContent`) ; sans lui, tout le contenu
+défile.
+
+```tsx
+// Garde « modifications non enregistrées » avec react-router (routeur « data »).
+useUnsavedChangesWarning(modifie)
+const blocage = useBlocker(
+  ({ currentLocation, nextLocation }) =>
+    modifie && currentLocation.pathname !== nextLocation.pathname
+)
+<UnsavedChangesDialog blocage={blocage} />
+```
 
 Une action qui fait disparaître le déclencheur (ligne supprimée) passe `finalFocus` (un ref
 ou une fonction, comme le `finalFocus` de Base UI) : le focus va à la ligne suivante ou au
@@ -738,7 +768,16 @@ npm run build      # dist/ : un module par composant, types, styles.css
     la hauteur d'un badge qui porte un bouton « Retirer ») ;
   - `progress.tsx` : `ton` (piste à 15 % et remplissage de la couleur, `StatusTon`, classes
     dans `lib/ton.ts`) et `size="lg"` (piste de 8 px au lieu de 4), au lieu de recolorer la
-    piste et le remplissage par sélecteurs `[data-slot=…]`.
+    piste et le remplissage par sélecteurs `[data-slot=…]` ;
+  - `dialog.tsx` et `alert-dialog.tsx` : hauteur plafonnée à l'écran
+    (`max-h-[calc(100dvh-2rem)]`), sans quoi le bas d'un long dialogue (et ses boutons) sortait
+    de l'écran sur téléphone. Le contenu est une colonne (`flex flex-col` au lieu de `grid`) ;
+    `DialogBody`, ajouté à `dialog.tsx`, est la zone qui défile seule (`min-h-0
+overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le contenu
+    défile (`overflow-y-auto`), jamais à l'horizontale (`overflow-x-hidden`) ;
+  - `alert-dialog.tsx` : à la taille par défaut et sans `AlertDialogMedia`, titre et
+    description alignés à gauche dès le téléphone (shadcn les centre sous `sm`), comme la liste
+    et les champs du corps ; avec un média, la grille de shadcn reste telle quelle.
 
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 

@@ -7,6 +7,8 @@ import {
   useState,
 } from "react"
 
+import { useUnsavedChangesWarning } from "@etic-ui/components/etic/use-unsaved-changes-warning"
+
 /**
  * Sauvegarde automatique d'un brouillon de formulaire long (import, saisie en
  * masse…), là où l'application le range : son API, ou le stockage du
@@ -245,13 +247,7 @@ export function useDraftAutosave<T>({
     // l'attente.
   }, [json, aContenu, delai, arreterMinuterie, ajouter])
 
-  useEffect(() => {
-    function avantDeQuitter(event: BeforeUnloadEvent) {
-      if (nonEnregistre()) event.preventDefault()
-    }
-    window.addEventListener("beforeunload", avantDeQuitter)
-    return () => window.removeEventListener("beforeunload", avantDeQuitter)
-  }, [nonEnregistre])
+  useUnsavedChangesWarning(nonEnregistre)
 
   return useMemo(
     () => ({

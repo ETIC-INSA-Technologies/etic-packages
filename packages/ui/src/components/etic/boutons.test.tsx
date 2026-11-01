@@ -140,6 +140,25 @@ describe("TooltipButton", () => {
   it("sans infobulle ni verrou, est un simple bouton", () => {
     render(<TooltipButton>Valider</TooltipButton>)
     expect(screen.getByRole("button", { name: "Valider" })).toBeEnabled()
+    // Toujours reconnu comme un Button par les sélecteurs.
+    expect(screen.getByRole("button")).toHaveAttribute("data-slot", "button")
+  })
+
+  it("garde le même bouton, et le focus, quand le verrou apparaît ou disparaît", async () => {
+    const { rerender } = render(
+      <TooltipButton verrou="Chargement…">Supprimer</TooltipButton>
+    )
+    const bouton = screen.getByRole("button", { name: "Supprimer" })
+    bouton.focus()
+    rerender(<TooltipButton>Supprimer</TooltipButton>)
+    expect(screen.getByRole("button", { name: "Supprimer" })).toBe(bouton)
+    expect(document.activeElement).toBe(bouton)
+    expect(bouton).toBeEnabled()
+    expect(bouton).not.toHaveAttribute("aria-disabled", "true")
+    rerender(<TooltipButton verrou="Chargement…">Supprimer</TooltipButton>)
+    expect(screen.getByRole("button", { name: "Supprimer" })).toBe(bouton)
+    expect(document.activeElement).toBe(bouton)
+    expect(bouton).toHaveAccessibleDescription("Chargement…")
   })
 
   it("verrouillé, ne fait rien mais reste focalisable et décrit", async () => {

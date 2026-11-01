@@ -10,10 +10,18 @@ import { describe, expect, it, vi } from "vitest"
 import { MOBILE_MEDIA_QUERY } from "@etic-ui/hooks/use-mobile"
 import {
   Alert,
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Avatar,
   AvatarFallback,
   Button,
   Calendar,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogTitle,
   SidebarProvider,
   SidebarTrigger,
   Slider,
@@ -329,5 +337,82 @@ describe("écarts avec shadcn", () => {
     } finally {
       vi.unstubAllGlobals()
     }
+  })
+
+  it("dialogues : hauteur plafonnée à l'écran, seul le corps défile", () => {
+    render(
+      createElement(
+        Dialog,
+        { open: true },
+        createElement(
+          DialogContent,
+          null,
+          createElement(DialogTitle, null, "D"),
+          createElement(DialogBody, null, "Corps")
+        )
+      )
+    )
+    render(
+      createElement(
+        AlertDialog,
+        { open: true },
+        createElement(
+          AlertDialogContent,
+          null,
+          createElement(AlertDialogTitle, null, "A")
+        )
+      )
+    )
+    // Le second dialogue modal masque le premier (`aria-hidden`).
+    for (const dialogue of [
+      screen.getByRole("dialog", { hidden: true }),
+      screen.getByRole("alertdialog"),
+    ]) {
+      // Colonne flexible : un corps (`DialogBody`) peut rétrécir et défiler
+      // seul ; sans corps, tout le contenu défile. Jamais à l'horizontale.
+      expect(dialogue).toHaveClass(
+        "flex",
+        "flex-col",
+        "max-h-[calc(100dvh-2rem)]",
+        "overflow-y-auto",
+        "overflow-x-hidden"
+      )
+    }
+    expect(screen.getByText("Corps")).toHaveClass(
+      "min-h-0",
+      "overflow-y-auto",
+      "grid-cols-1"
+    )
+  })
+
+  it("alert-dialog : titre et description à gauche dès le téléphone, sauf avec un média", () => {
+    render(
+      createElement(
+        AlertDialog,
+        { open: true },
+        createElement(
+          AlertDialogContent,
+          null,
+          createElement(
+            AlertDialogHeader,
+            null,
+            createElement(AlertDialogTitle, null, "Titre")
+          )
+        )
+      )
+    )
+    const entete = screen.getByText("Titre").parentElement
+    // Sans préfixe `sm:` : la règle vaut aussi sous 640 px, mais pas avec un
+    // média, dont la grille de shadcn centre l'icône au-dessus du titre (jsdom
+    // n'applique pas Tailwind : on vérifie la condition portée par la classe).
+    expect(entete).toHaveClass(
+      "group-data-[size=default]/alert-dialog-content:not-has-data-[slot=alert-dialog-media]:place-items-start",
+      "group-data-[size=default]/alert-dialog-content:not-has-data-[slot=alert-dialog-media]:text-left",
+      // Au-delà de 640 px, à gauche avec ou sans média, comme shadcn.
+      "sm:group-data-[size=default]/alert-dialog-content:text-left"
+    )
+    expect(entete).not.toHaveClass(
+      "group-data-[size=default]/alert-dialog-content:text-left"
+    )
   })
 })

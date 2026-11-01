@@ -75,18 +75,10 @@ export function TooltipButton({
     destructif && !verrou && CLASSES_DESTRUCTIF_AU_SURVOL,
     className
   )
-  if (!infobulle && !verrou) {
-    return (
-      <Button
-        disabled={disabled}
-        className={classes}
-        aria-describedby={decritPar}
-        {...props}
-      >
-        {children}
-      </Button>
-    )
-  }
+  // Un seul arbre, avec ou sans infobulle : un verrou qui apparaît ou
+  // disparaît (confirmation qui devient possible) ne remonte pas le bouton,
+  // qui garde le focus. Sans texte, l'infobulle est seulement désactivée.
+  const texte = verrou ?? infobulle
   // Nom d'un bouton à icône seule : l'infobulle, jamais la raison du verrou
   // (elle est sa description). Un bouton à texte garde son texte pour nom
   // (WCAG 2.5.3).
@@ -97,10 +89,13 @@ export function TooltipButton({
     props["aria-labelledby"] === undefined
   return (
     <>
-      <Tooltip>
+      <Tooltip disabled={!texte}>
         <TooltipTrigger
           render={
             <Button
+              // Sans infobulle, il reste un `Button` ordinaire pour les
+              // sélecteurs (`data-slot="button"`), sauf `data-slot` reçu.
+              {...(texte ? {} : { "data-slot": "button" })}
               {...props}
               // Après les props : un `aria-label={undefined}` explicite
               // n'efface pas le nom tiré de l'infobulle.
@@ -121,7 +116,7 @@ export function TooltipButton({
         >
           {children}
         </TooltipTrigger>
-        <TooltipContent>{verrou ?? infobulle}</TooltipContent>
+        {texte ? <TooltipContent>{texte}</TooltipContent> : null}
       </Tooltip>
       {raison}
     </>

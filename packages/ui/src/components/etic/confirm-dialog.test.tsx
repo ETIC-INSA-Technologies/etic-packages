@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useRef, useState } from "react"
 import { describe, expect, it, vi } from "vitest"
@@ -10,6 +10,7 @@ import {
   type ConfirmDialogProps,
 } from "@etic-ui/index"
 import { trouverInfobulle } from "@etic-ui/test/infobulle"
+import { verifierPiegeFocus } from "@etic-ui/test/piege-focus"
 
 function Controle(props: Partial<ConfirmDialogProps>) {
   const [ouvert, setOuvert] = useState(true)
@@ -194,6 +195,11 @@ describe("ConfirmDialog", () => {
       const champ = await screen.findByLabelText(SAISIE.libelle)
       await waitFor(() => expect(document.activeElement).toBe(champ))
       expect(champ).toHaveAttribute("inputmode", "numeric")
+      // Pas un identifiant : les gestionnaires de mots de passe s'abstiennent.
+      expect(champ).toHaveAttribute("autocomplete", "off")
+      expect(champ).toHaveAttribute("data-1p-ignore")
+      expect(champ).toHaveAttribute("data-lpignore", "true")
+      expect(champ).toHaveAttribute("data-bwignore")
       expect(
         screen.getByRole("button", { name: "Supprimer définitivement" })
       ).toHaveAttribute("aria-disabled", "true")
@@ -246,6 +252,176 @@ describe("ConfirmDialog", () => {
       await userEvent.click(screen.getByRole("button", { name: "Ouvrir" }))
       expect(await screen.findByLabelText(SAISIE.libelle)).toHaveValue("")
     })
+
+    it("vide la saisie quand l'attendu change, sans remonter le dialogue", async () => {
+      const { rerender } = render(<Controle saisie={SAISIE} />)
+      const champ = await screen.findByLabelText(SAISIE.libelle)
+      await userEvent.type(champ, "14")
+      expect(
+        screen.getByRole("button", { name: "Supprimer définitivement" })
+      ).toHaveAttribute("aria-disabled", "false")
+      // Le nombre a changé côté serveur (409) : la page passe le nouveau.
+      rerender(<Controle saisie={{ ...SAISIE, attendu: "15" }} />)
+      const apres = screen.getByLabelText(SAISIE.libelle)
+      expect(apres).toBe(champ)
+      expect(apres).toHaveValue("")
+      expect(document.activeElement).toBe(champ)
+      expect(
+        screen.getByRole("button", { name: "Supprimer définitivement" })
+      ).toHaveAttribute("aria-disabled", "true")
+      await userEvent.type(champ, "15")
+      expect(
+        screen.getByRole("button", { name: "Supprimer définitivement" })
+      ).toHaveAttribute("aria-disabled", "false")
+    })
+  })
+
+  it("verrou : confirmation focalisable mais refusée, raison annoncée et en infobulle", async () => {
+    const onConfirmer = vi.fn()
+    render(
+      <Controle
+        verrou="Chargement des conséquences…"
+        onConfirmer={onConfirmer}
+      />
+    )
+    const bouton = await screen.findByRole("button", {
+      name: "Supprimer définitivement",
+    })
+    expect(bouton).toHaveAttribute("aria-disabled", "true")
+    expect(bouton).toHaveAccessibleDescription("Chargement des conséquences…")
+    bouton.focus()
+    expect(await trouverInfobulle()).toHaveTextContent(
+      "Chargement des conséquences…"
+    )
+    await userEvent.click(bouton)
+    expect(onConfirmer).not.toHaveBeenCalled()
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument()
+  })
+
+  it("libelleAnnuler renomme « Annuler », qui ferme toujours", async () => {
+    render(<Controle libelleAnnuler="Revenir au tableau" />)
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Revenir au tableau" })
+    )
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+    )
+  })
+
+  it("onAnnuler : appelé par « Annuler » et Échap, pas après une réussite", async () => {
+    const onAnnuler = vi.fn()
+    const onOuvertChange = vi.fn()
+    render(
+      <ConfirmDialog
+        titre="Archiver"
+        description="Le dossier sera archivé."
+        onConfirmer={() => {}}
+        onAnnuler={onAnnuler}
+        onOuvertChange={onOuvertChange}
+        declencheur={<Button>Ouvrir</Button>}
+      />
+    )
+    const ouvrir = () =>
+      userEvent.click(screen.getByRole("button", { name: "Ouvrir" }))
+    const ferme = () =>
+      waitFor(() =>
+        expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+      )
+
+    await ouvrir()
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Confirmer" })
+    )
+    await ferme()
+    expect(onOuvertChange).toHaveBeenLastCalledWith(false)
+    expect(onAnnuler).not.toHaveBeenCalled()
+
+    await ouvrir()
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Annuler" })
+    )
+    await ferme()
+    expect(onAnnuler).toHaveBeenCalledOnce()
+
+    await ouvrir()
+    await screen.findByRole("alertdialog")
+    await userEvent.keyboard("{Escape}")
+    await ferme()
+    expect(onAnnuler).toHaveBeenCalledTimes(2)
+  })
+
+  it("taille : élargit le dialogue, sur toute la largeur du téléphone", async () => {
+    render(<Controle taille="lg" />)
+    const dialogue = await screen.findByRole("alertdialog")
+    expect(dialogue).toHaveClass(
+      "data-[size=default]:sm:max-w-2xl",
+      "data-[size=default]:max-w-[calc(100%-2rem)]"
+    )
+    expect(dialogue).not.toHaveClass(
+      "data-[size=default]:sm:max-w-sm",
+      "data-[size=default]:max-w-xs"
+    )
+  })
+
+  it("liste nommée et défilante des éléments concernés", async () => {
+    const courriel = "prenom.nom-tres-long-sans-espace@sous-domaine.example.org"
+    render(
+      <Controle
+        elements={["Ada Lovelace", courriel]}
+        libelleElements="Comptes à supprimer"
+      />
+    )
+    const liste = await screen.findByRole("list", {
+      name: "Comptes à supprimer",
+    })
+    // Défile au-delà d'une dizaine de lignes ; une adresse sans espace passe
+    // à la ligne (overflow-wrap: anywhere) au lieu d'élargir le dialogue.
+    expect(liste).toHaveClass("max-h-48", "overflow-y-auto", "wrap-anywhere")
+    expect(
+      within(liste)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent)
+    ).toEqual(["Ada Lovelace", courriel])
+  })
+
+  it("seul le corps défile : titre et pied restent hors de la zone qui défile", async () => {
+    render(<Controle elements={["Ada Lovelace"]} saisie={SAISIE} />)
+    const dialogue = await screen.findByRole("alertdialog")
+    const corps = dialogue.querySelector('[data-slot="dialog-body"]')
+    expect(corps).toHaveClass("min-h-0", "overflow-y-auto")
+    expect(corps).toContainElement(screen.getByRole("list"))
+    expect(corps).toContainElement(screen.getByLabelText(SAISIE.libelle))
+    expect(corps).not.toContainElement(screen.getByRole("heading"))
+    expect(corps).not.toContainElement(
+      screen.getByRole("button", { name: "Annuler" })
+    )
+  })
+
+  it("garde le focus sur la confirmation quand son verrou disparaît", async () => {
+    const { rerender } = render(<Controle verrou="Chargement…" />)
+    const bouton = await screen.findByRole("button", {
+      name: "Supprimer définitivement",
+    })
+    bouton.focus()
+    rerender(<Controle />)
+    expect(
+      screen.getByRole("button", { name: "Supprimer définitivement" })
+    ).toBe(bouton)
+    expect(document.activeElement).toBe(bouton)
+    expect(bouton).toHaveAttribute("aria-disabled", "false")
+  })
+
+  it("Tab ne sort pas du dialogue", async () => {
+    render(
+      <>
+        <Button>Derrière</Button>
+        <Controle />
+      </>
+    )
+    await verifierPiegeFocus(
+      await screen.findByRole("alertdialog"),
+      screen.getByRole("button", { name: "Derrière", hidden: true })
+    )
   })
 })
 

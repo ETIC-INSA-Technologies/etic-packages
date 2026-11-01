@@ -5,3 +5,18 @@ import { afterEach } from "vitest"
 afterEach(() => {
   cleanup()
 })
+
+// jsdom n'a pas `checkVisibility` (tous les navigateurs visés l'ont), et son
+// `getClientRects` est toujours vide : sans ce substitut, tout élément y
+// paraîtrait masqué. Il suit `display: none` (style ou attribut `hidden`)
+// jusqu'à la racine, ce que jsdom calcule.
+if (typeof HTMLElement.prototype.checkVisibility !== "function") {
+  const affiche = (element: HTMLElement | null): boolean =>
+    !element ||
+    (!element.hidden &&
+      getComputedStyle(element).display !== "none" &&
+      affiche(element.parentElement))
+  HTMLElement.prototype.checkVisibility = function (this: HTMLElement) {
+    return affiche(this)
+  }
+}

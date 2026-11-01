@@ -17,6 +17,7 @@ import {
   type FormDialogProps,
 } from "@etic-ui/index"
 import { trouverInfobulle } from "@etic-ui/test/infobulle"
+import { verifierPiegeFocus } from "@etic-ui/test/piege-focus"
 
 function rendre(props: Partial<FormDialogProps> = {}) {
   render(
@@ -233,5 +234,154 @@ describe("FormDialog", () => {
     )
     await userEvent.hover(envoyer)
     expect(await trouverInfobulle()).toHaveTextContent("Aucune modification")
+  })
+
+  it("sans champ à remplir, s'ouvre sur la première case active", async () => {
+    render(
+      <FormDialog
+        titre="Groupes du membre"
+        onEnvoyer={() => {}}
+        declencheur={<Button>Ouvrir</Button>}
+      >
+        <Label>
+          <Checkbox disabled /> Bureau (figé)
+        </Label>
+        <Label>
+          <Checkbox /> DSI
+        </Label>
+        <Label>
+          <Checkbox /> Trésorerie
+        </Label>
+      </FormDialog>
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Ouvrir" }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("checkbox", { name: "DSI" })
+      )
+    )
+  })
+
+  it("ne donne pas le focus initial à un contrôle masqué", async () => {
+    render(
+      <FormDialog
+        titre="Options"
+        onEnvoyer={() => {}}
+        declencheur={<Button>Ouvrir</Button>}
+      >
+        {/* Panneau replié : champ et case masqués par CSS. */}
+        <div style={{ display: "none" }}>
+          <Label htmlFor="cache">Caché</Label>
+          <Input id="cache" />
+          <Label>
+            <Checkbox /> Case cachée
+          </Label>
+        </div>
+        <Label>
+          <Checkbox /> Visible
+        </Label>
+      </FormDialog>
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Ouvrir" }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("checkbox", { name: "Visible" })
+      )
+    )
+  })
+
+  it("sans champ à remplir, s'ouvre sur une liste si elle vient d'abord", async () => {
+    render(
+      <FormDialog
+        titre="Changer de pôle"
+        onEnvoyer={() => {}}
+        declencheur={<Button>Ouvrir</Button>}
+      >
+        <FormField libelle="Pôle">
+          <Select name="pole" defaultValue="dsi">
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dsi">DSI</SelectItem>
+            </SelectContent>
+          </Select>
+        </FormField>
+        <Label>
+          <Checkbox /> Prévenir le membre
+        </Label>
+      </FormDialog>
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Ouvrir" }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("combobox", { name: "Pôle" })
+      )
+    )
+  })
+
+  it("libelleAnnuler et actionSecondaire : une troisième sortie dans le pied, occupée pendant l'envoi", async () => {
+    const onChoisir = vi.fn()
+    await rendre({
+      libelleAnnuler: "Plus tard",
+      actionSecondaire: { libelle: "Se déconnecter", onChoisir },
+      onEnvoyer: () => new Promise(() => {}),
+    })
+    const pied = (await screen.findByRole("dialog")).querySelector(
+      '[data-slot="dialog-footer"]'
+    ) as HTMLElement
+    expect(
+      within(pied)
+        .getAllByRole("button")
+        .map((b) => b.textContent)
+    ).toEqual(["Se déconnecter", "Plus tard", "Enregistrer"])
+    await userEvent.click(
+      screen.getByRole("button", { name: "Se déconnecter" })
+    )
+    expect(onChoisir).toHaveBeenCalledOnce()
+    // Elle ne ferme pas le dialogue d'elle-même.
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }))
+    expect(
+      screen.getByRole("button", { name: "Se déconnecter" })
+    ).toHaveAttribute("aria-disabled", "true")
+    await userEvent.click(
+      screen.getByRole("button", { name: "Se déconnecter" })
+    )
+    expect(onChoisir).toHaveBeenCalledOnce()
+  })
+
+  it("« Plus tard » (libelleAnnuler) ferme le dialogue", async () => {
+    await rendre({ libelleAnnuler: "Plus tard" })
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Plus tard" })
+    )
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    )
+  })
+
+  it("seul le corps défile : titre, croix et pied restent hors de la zone qui défile", async () => {
+    await rendre()
+    const dialogue = await screen.findByRole("dialog")
+    const corps = dialogue.querySelector('[data-slot="dialog-body"]')
+    expect(corps).toHaveClass("min-h-0", "overflow-y-auto")
+    expect(corps).toContainElement(screen.getByLabelText(/Nom/))
+    expect(corps?.closest("form")).toHaveClass("min-h-0")
+    for (const horsCorps of [
+      screen.getByRole("heading", { name: "Nouveau groupe" }),
+      screen.getByRole("button", { name: "Fermer" }),
+      screen.getByRole("button", { name: "Enregistrer" }),
+    ]) {
+      expect(corps).not.toContainElement(horsCorps)
+    }
+  })
+
+  it("Tab ne sort pas du dialogue", async () => {
+    await rendre()
+    await verifierPiegeFocus(
+      await screen.findByRole("dialog"),
+      screen.getByRole("button", { name: "Créer", hidden: true })
+    )
   })
 })
