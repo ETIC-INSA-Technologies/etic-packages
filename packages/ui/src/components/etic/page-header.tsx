@@ -239,7 +239,13 @@ function MenuActions({
         </TooltipTrigger>
         <TooltipContent>Plus d'actions</TooltipContent>
       </Tooltip>
-      <DropdownMenuContent align="end" className="min-w-48">
+      {/* L'écart suit la taille du bouton : 4 px sous un bouton de 32, 6 sous
+          un de 36 — collé à de grands boutons, le menu paraissait à l'étroit. */}
+      <DropdownMenuContent
+        align="end"
+        sideOffset={taille === "lg" ? 6 : 4}
+        className="min-w-48"
+      >
         {actions.map(
           ({ libelle, onChoisir, icone: Icone, destructif, verrou }, index) => (
             <DropdownMenuItem

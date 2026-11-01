@@ -12,7 +12,6 @@ import { cn } from "cn"
 import { XIcon } from "lucide-react"
 
 import { Button } from "@etic-ui/components/ui/button"
-import { Kbd } from "@etic-ui/components/ui/kbd"
 import { Separator } from "@etic-ui/components/ui/separator"
 import {
   focaliserTableau,
@@ -181,9 +180,6 @@ export function DataTableBulkActions<TData extends RowData>({
             <XIcon data-icon="inline-start" />
             {/* Sur mobile, l'icône seule garde la barre sur une ligne. */}
             <span className="max-sm:sr-only">Tout désélectionner</span>
-            <Kbd aria-hidden className="ml-1 max-sm:hidden">
-              Échap
-            </Kbd>
           </Button>
         </div>
       ) : null}

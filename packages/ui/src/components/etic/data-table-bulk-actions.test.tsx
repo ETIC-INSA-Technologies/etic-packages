@@ -133,6 +133,11 @@ describe("DataTableBulkActions", () => {
     await user.click(screen.getByRole("button", { name: "Supprimer" }))
     expect(supprimer).toHaveBeenCalledWith(["1", "2"])
 
+    // Le raccourci est annoncé, pas affiché : aucune touche « Échap » dans la
+    // barre.
+    expect(boutonDeLaBarre()).toHaveAttribute("aria-keyshortcuts", "Escape")
+    expect(barre).not.toHaveTextContent("Échap")
+
     await user.click(boutonDeLaBarre())
     expect(screen.queryByRole("toolbar")).toBeNull()
     expect(
