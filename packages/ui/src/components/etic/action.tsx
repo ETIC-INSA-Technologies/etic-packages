@@ -63,25 +63,27 @@ export function useOuvertureDialogue(
     setOuvertInterne(suivant)
     onOuvertChange?.(suivant)
   }
-  const changer = (suivant: boolean) => {
-    if (suivant) definir(true)
-    else fermerSaufEnCours(enCours, () => definir(false))(suivant)
+  return {
+    ouvert: ouvert ?? ouvertInterne,
+    definir,
+    changer: fermerSaufEnCours(enCours, definir),
   }
-  return { ouvert: ouvert ?? ouvertInterne, definir, changer }
 }
 
 /**
  * `onOpenChange` d'un dialogue composé à la main qui ne se ferme pas pendant
  * son action (Échap, clic sur le voile, croix, « Annuler ») : le fermer ne
- * l'arrêterait pas, elle aboutirait après coup. `ConfirmDialog` et
+ * l'arrêterait pas, elle aboutirait après coup. Toute demande d'ouverture
+ * (`DialogTrigger`) passe, et une fermeture hors de l'action aussi :
+ * `onOpenChange={fermerSaufEnCours(enCours, setOuvert)}`. `ConfirmDialog` et
  * `FormDialog` le font d'eux-mêmes.
  */
 export function fermerSaufEnCours(
   enCours: boolean,
-  onFermer: () => void
+  onOuvertChange: (ouvert: boolean) => void
 ): (ouvert: boolean) => void {
-  return (ouvert) => {
-    if (!ouvert && !enCours) onFermer()
+  return (suivant) => {
+    if (suivant || !enCours) onOuvertChange(suivant)
   }
 }
 

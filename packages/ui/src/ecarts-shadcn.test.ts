@@ -56,9 +56,12 @@ describe("écarts avec shadcn", () => {
 
   it("Button : aria-disabled estompé, sans enfoncement ni pointer-events-none", () => {
     const button = lire("components/ui/button.tsx")
-    expect(button).toContain(
-      "aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
-    )
+    for (const classe of [
+      " aria-disabled:opacity-50 ",
+      " aria-disabled:not-data-en-cours:cursor-not-allowed ",
+      " data-en-cours:cursor-progress ",
+    ])
+      expect(button).toContain(classe)
     expect(button).toContain(
       "active:not-aria-[haspopup]:not-aria-disabled:translate-y-px"
     )

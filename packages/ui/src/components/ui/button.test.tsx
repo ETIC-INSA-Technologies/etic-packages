@@ -1,9 +1,17 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SaveIcon } from "lucide-react"
+import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { Button, fermerSaufEnCours } from "@etic-ui/index"
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+  fermerSaufEnCours,
+} from "@etic-ui/index"
 
 describe("Button désactivé mais focalisable", () => {
   it("prend l'allure désactivée avec aria-disabled, sans couper le survol", () => {
@@ -17,8 +25,9 @@ describe("Button désactivé mais focalisable", () => {
     expect(bouton).not.toBeDisabled()
     expect(bouton).toHaveClass(
       "aria-disabled:opacity-50",
-      "aria-disabled:cursor-not-allowed"
+      "aria-disabled:not-data-en-cours:cursor-not-allowed"
     )
+    expect(bouton).not.toHaveAttribute("data-en-cours")
     // Ni enfoncement au clic, ni pointer-events-none (l'infobulle d'un
     // verrou doit rester survolable).
     expect(bouton.className).toContain(
@@ -58,19 +67,62 @@ describe("Button en cours", () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 
-  it("remplace ses icônes par une roue muette", () => {
+  it("à icône seule, la roue muette remplace l'icône", () => {
     render(
       <Button size="icon" aria-label="Enregistrer" enCours>
-        <SaveIcon />
+        <SaveIcon data-testid="icone" />
       </Button>
     )
     const bouton = screen.getByRole("button", { name: "Enregistrer" })
     const roue = bouton.querySelector('[data-slot="spinner"]')
     expect(roue).toHaveAttribute("aria-hidden", "true")
     expect(roue).not.toHaveAttribute("role")
-    expect(bouton).toHaveClass("[&>svg:not([data-slot=spinner])]:hidden")
+    // L'icône n'est plus rendue du tout (pas seulement masquée).
+    expect(screen.queryByTestId("icone")).toBeNull()
+    expect(bouton.querySelectorAll("svg")).toHaveLength(1)
     // Pas de second statut « Chargement » annoncé.
     expect(screen.queryByRole("status")).toBeNull()
+  })
+
+  it("à texte, la roue prend la place des icônes : les marges has-data-[icon] suivent", () => {
+    render(
+      <Button enCours>
+        <SaveIcon data-icon="inline-start" />
+        Enregistrer
+        <SaveIcon data-icon="inline-end" />
+      </Button>
+    )
+    const bouton = screen.getByRole("button", { name: "Enregistrer" })
+    const icones = bouton.querySelectorAll("[data-icon]")
+    // Une seule icône : la roue, en tête ; plus rien ne déclenche
+    // `has-data-[icon=inline-end]:pr-2`.
+    expect(icones).toHaveLength(1)
+    expect(icones[0]).toHaveAttribute("data-slot", "spinner")
+    expect(icones[0]).toHaveAttribute("data-icon", "inline-start")
+    expect(bouton.querySelector('[data-icon="inline-end"]')).toBeNull()
+    expect(bouton).toHaveTextContent("Enregistrer")
+  })
+
+  it("curseur d'attente et pas de survol ; l'interdit reste aux vrais aria-disabled", () => {
+    render(
+      <>
+        <Button variant="outline" enCours className="hover:underline">
+          Enregistrer
+        </Button>
+        <Button variant="outline">Annuler</Button>
+      </>
+    )
+    const enCours = screen.getByRole("button", { name: "Enregistrer" })
+    expect(enCours).toHaveAttribute("data-en-cours")
+    expect(enCours).toHaveClass(
+      "data-en-cours:cursor-progress",
+      "aria-disabled:not-data-en-cours:cursor-not-allowed"
+    )
+    expect(enCours.className).not.toMatch(/(^|\s|:)hover:/)
+    // Hors action, le survol est là.
+    expect(screen.getByRole("button", { name: "Annuler" })).toHaveClass(
+      "hover:bg-muted"
+    )
   })
 
   it("sans libelleEnCours, garde son contenu", () => {
@@ -79,6 +131,25 @@ describe("Button en cours", () => {
       "aria-busy",
       "true"
     )
+  })
+})
+
+describe("Button rendu par un autre élément", () => {
+  // Garde-fou : Base UI 1.9 garde déjà ces enfants ; le Button n'en passe
+  // aucun s'il n'en reçoit pas, pour ne pas dépendre de cette fusion.
+  it("garde les enfants de l'élément render quand il n'en reçoit pas", () => {
+    render(
+      <Button
+        nativeButton={false}
+        render={
+          <span>
+            Voir <strong>la fiche</strong>
+          </span>
+        }
+      />
+    )
+    const bouton = screen.getByRole("button", { name: "Voir la fiche" })
+    expect(bouton.querySelector("strong")).toHaveTextContent("la fiche")
   })
 })
 
@@ -96,14 +167,36 @@ describe("Button en ligne", () => {
 })
 
 describe("fermerSaufEnCours", () => {
-  it("ne ferme pas pendant l'action, ferme sinon", () => {
-    const onFermer = vi.fn()
-    fermerSaufEnCours(true, onFermer)(false)
-    expect(onFermer).not.toHaveBeenCalled()
-    fermerSaufEnCours(false, onFermer)(true)
-    expect(onFermer).not.toHaveBeenCalled()
-    fermerSaufEnCours(false, onFermer)(false)
-    expect(onFermer).toHaveBeenCalledOnce()
+  it("laisse passer l'ouverture, refuse la fermeture pendant l'action", () => {
+    const onOuvertChange = vi.fn()
+    fermerSaufEnCours(true, onOuvertChange)(false)
+    expect(onOuvertChange).not.toHaveBeenCalled()
+    // Un `DialogTrigger` doit pouvoir ouvrir, même pendant l'action.
+    fermerSaufEnCours(true, onOuvertChange)(true)
+    expect(onOuvertChange).toHaveBeenLastCalledWith(true)
+    fermerSaufEnCours(false, onOuvertChange)(false)
+    expect(onOuvertChange).toHaveBeenLastCalledWith(false)
+    expect(onOuvertChange).toHaveBeenCalledTimes(2)
+  })
+
+  it("ouvre un dialogue par son déclencheur", async () => {
+    function Exemple() {
+      const [ouvert, setOuvert] = useState(false)
+      return (
+        <Dialog
+          open={ouvert}
+          onOpenChange={fermerSaufEnCours(false, setOuvert)}
+        >
+          <DialogTrigger render={<Button />}>Ouvrir</DialogTrigger>
+          <DialogContent>
+            <DialogTitle>Dialogue</DialogTitle>
+          </DialogContent>
+        </Dialog>
+      )
+    }
+    render(<Exemple />)
+    await userEvent.click(screen.getByRole("button", { name: "Ouvrir" }))
+    expect(await screen.findByRole("dialog")).toBeInTheDocument()
   })
 })
 

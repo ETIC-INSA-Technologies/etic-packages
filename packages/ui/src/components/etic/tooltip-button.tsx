@@ -101,8 +101,12 @@ export function TooltipButton({
         <TooltipTrigger
           render={
             <Button
-              aria-label={estIconeSansNom ? infobulle : undefined}
               {...props}
+              // Après les props : un `aria-label={undefined}` explicite
+              // n'efface pas le nom tiré de l'infobulle.
+              aria-label={
+                props["aria-label"] ?? (estIconeSansNom ? infobulle : undefined)
+              }
               disabled={disabled || !!verrou}
               // Un bouton désactivé nativement ne reçoit ni survol ni focus :
               // l'infobulle de la raison ne s'afficherait jamais. L'allure

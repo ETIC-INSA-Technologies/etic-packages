@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { LockIcon, PencilIcon } from "lucide-react"
 import { useState, type ComponentProps } from "react"
@@ -14,6 +14,8 @@ import {
   TooltipButton,
 } from "@etic-ui/index"
 import { trouverInfobulle } from "@etic-ui/test/infobulle"
+
+import { BOUTONS } from "../../../atelier/Boutons"
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -207,6 +209,17 @@ describe("TooltipButton", () => {
     expect(bouton).not.toHaveAttribute("aria-label")
   })
 
+  it("à icône seule, un aria-label={undefined} explicite n'efface pas le nom", () => {
+    // Cas d'une enveloppe qui relaie ses props sans les filtrer.
+    const props: { "aria-label"?: string } = { "aria-label": undefined }
+    render(
+      <TooltipButton size="icon-sm" infobulle="Modifier" {...props}>
+        <PencilIcon />
+      </TooltipButton>
+    )
+    expect(screen.getByRole("button", { name: "Modifier" })).toBeVisible()
+  })
+
   it("destructif : gris au repos, rouge au survol seulement", () => {
     render(
       <>
@@ -255,6 +268,23 @@ describe("TooltipButton", () => {
     expect(bouton).toHaveAttribute("aria-busy", "true")
     expect(bouton).toHaveFocus()
     expect(bouton).toHaveAccessibleName("Actualiser")
+  })
+})
+
+describe("Démo d'atelier : bouton en cours", () => {
+  it("sa minuterie est annulée au démontage", () => {
+    vi.useFakeTimers()
+    try {
+      const { unmount } = render(<>{BOUTONS[0].rendu()}</>)
+      const avant = vi.getTimerCount()
+      // `fireEvent` : un clic sans survol, donc sans minuterie d'infobulle.
+      fireEvent.click(screen.getAllByRole("button", { name: "Enregistrer" })[0])
+      expect(vi.getTimerCount()).toBe(avant + 1)
+      unmount()
+      expect(vi.getTimerCount()).toBe(avant)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

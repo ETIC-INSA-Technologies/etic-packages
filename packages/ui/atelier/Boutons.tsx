@@ -1,5 +1,5 @@
 // Démonstrations des boutons : états, liens, bouton de copie dans un groupe.
-import { useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { ArrowLeftIcon, SaveIcon, Trash2Icon, XIcon } from "lucide-react"
 
 import {
@@ -15,9 +15,17 @@ import {
 /** Bouton en cours d'action deux secondes après un clic. */
 function DemoEnCours() {
   const [enCours, setEnCours] = useState(false)
+  const minuterie = useRef<ReturnType<typeof setTimeout>>(undefined)
+  // Minuterie annulée au démontage (navigation dans l'atelier).
+  useEffect(() => () => clearTimeout(minuterie.current), [])
   const lancer = () => {
+    // Une seule action à la fois : un second clic n'empile rien.
+    if (minuterie.current !== undefined) return
     setEnCours(true)
-    setTimeout(() => setEnCours(false), 2000)
+    minuterie.current = setTimeout(() => {
+      minuterie.current = undefined
+      setEnCours(false)
+    }, 2000)
   }
   return (
     <>
