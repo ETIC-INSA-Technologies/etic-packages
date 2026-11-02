@@ -521,22 +521,22 @@ La famille `DataTable` suit le [guide Data Table de shadcn](https://ui.shadcn.co
 sur [TanStack Table v9](https://tanstack.com/table/latest) : les colonnes se déclarent avec
 l'assistant typé, `useDataTable` crée l'instance, les composants la reçoivent en `table`.
 
-| Composant                  | Rôle                                                                                                                      |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `useDataTable`             | instance TanStack : tri, filtre et pagination (côté client, ou serveur avec `triManuel`), colonnes, sélection, dépliage   |
-| `DataTable`                | la Table de shadcn ; état vide, lignes fantômes du chargement, bandeau d'erreur (`requete`), clic de ligne, détail déplié |
-| `DataTableColumnHeader`    | en-tête triable : un clic trie par ordre croissant, le suivant inverse le sens                                            |
-| `dataTableSelectionColumn` | colonne de cases ; Maj+clic sélectionne une plage ; raison d'une case verrouillée                                         |
-| `dataTableExpandColumn`    | colonne du chevron qui déplie une ligne (`aria-expanded`, `aria-controls`)                                                |
-| `dataTableActionsColumn`   | colonne des commandes d'une ligne : en-tête lu mais invisible, commandes à droite                                         |
-| `DataTableCellLink`        | titre d'une ligne : vrai lien (`href`, routeur par `lien`) ou bouton                                                      |
-| `DataTableRowActions`      | menu « … » d'une ligne                                                                                                    |
-| `DataTableViewOptions`     | bouton « Colonnes » : afficher, masquer, réordonner (glisser-déposer, clavier compris)                                    |
-| `DataTableToolbar`         | recherche, filtres (`DataTableSelectFilter`), compteur (`DataTableCount`), commandes                                      |
-| `DataTablePagination`      | pagination par décalage (offset/limit, total connu), ou celle du tableau (`table`)                                        |
-| `DataTableBulkActions`     | barre d'actions groupées, collante en bas, avec la sélection ; Échap désélectionne                                        |
-| `useColumnPrefs`           | colonnes affichées et leur ordre, gardés dans le navigateur par liste et par personne                                     |
-| `usePersistedState`        | `useState` gardé dans le navigateur (filtre choisi…), sous la portée `PorteeStockageLocal`                                |
+| Composant                  | Rôle                                                                                                                                                       |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useDataTable`             | instance TanStack : tri, filtre et pagination (côté client, ou serveur avec `triManuel`), colonnes, sélection, dépliage                                    |
+| `DataTable`                | la Table de shadcn ; état vide, lignes fantômes du chargement, bandeau d'erreur (`requete`), clic de ligne, détail déplié                                  |
+| `DataTableColumnHeader`    | en-tête triable : un clic trie par ordre croissant, le suivant inverse le sens                                                                             |
+| `dataTableSelectionColumn` | colonne de cases ; Maj+clic sélectionne une plage ; raison d'une case verrouillée                                                                          |
+| `dataTableExpandColumn`    | colonne du chevron qui déplie une ligne (`aria-expanded`, `aria-controls`)                                                                                 |
+| `dataTableActionsColumn`   | colonne des commandes d'une ligne : en-tête lu mais invisible, commandes à droite                                                                          |
+| `DataTableCellLink`        | titre d'une ligne : vrai lien (`href`, routeur par `lien`) ou bouton                                                                                       |
+| `DataTableRowActions`      | menu « … » d'une ligne                                                                                                                                     |
+| `DataTableViewOptions`     | bouton « Colonnes » : afficher, masquer, réordonner (glisser-déposer, clavier compris)                                                                     |
+| `DataTableToolbar`         | recherche, filtres (`DataTableSelectFilter`), compteur (`DataTableCount`), commandes                                                                       |
+| `DataTablePagination`      | pagination par décalage (offset/limit, total connu), ou celle du tableau (`table`)                                                                         |
+| `DataTableBulkActions`     | barre d'actions groupées, collante en bas, avec la sélection ; actions moins fréquentes dans « … » (`actionsSecondaires`) ; croix et Échap désélectionnent |
+| `useColumnPrefs`           | colonnes affichées et leur ordre, gardés dans le navigateur par liste et par personne                                                                      |
+| `usePersistedState`        | `useState` gardé dans le navigateur (filtre choisi…), sous la portée `PorteeStockageLocal`                                                                 |
 
 ```tsx
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
@@ -689,13 +689,14 @@ const supprimer = () =>
     : api.supprimer(table.getSelectedRowIds())
 ```
 
-Quand toute la page est cochée et que `total` compte d'autres éléments, `DataTableBulkActions`
-propose « Sélectionner les 137 » à côté de son compte (l'icône seule sur téléphone, le nom complet
-« Sélectionner les 137 éléments » pour les lecteurs d'écran) : dans la barre, qui flotte, rien
-n'est inséré au-dessus des lignes et le tableau ne bouge pas. Une fois accepté, la barre compte le
-total (« 137 éléments sélectionnés »), le bouton disparaît et le focus passe à « Tout
-désélectionner » ; `DataTable` l'annonce (« Les 137 éléments sont sélectionnés », accordé par ses
-`unite` et `feminin`). **Sans `DataTableBulkActions`, rien ne propose de tout sélectionner.**
+Avec `total`, le compte de `DataTableBulkActions` situe la sélection (« 25 éléments sur 137
+sélectionnés »). Quand toute la page est cochée et que `total` compte d'autres éléments, son menu
+« … » propose « Sélectionner les 137 éléments », au-dessus de ses `actionsSecondaires` : dans la
+barre, qui flotte, rien n'est inséré au-dessus des lignes et le tableau ne bouge pas. Une fois
+accepté, la barre compte le total (« 137 éléments sélectionnés ») ; si « … » n'a plus rien à
+proposer, il disparaît et le focus passe à « Tout désélectionner » ; `DataTable` l'annonce (« Les
+137 éléments sont sélectionnés », accordé par ses `unite` et `feminin`). **Sans
+`DataTableBulkActions`, rien ne propose de tout sélectionner.**
 
 L'état repasse à `false` dès qu'une ligne de la page n'est plus cochée (par le tableau ou par
 l'application), quand la page change (même avec `conserverSelection`) et par « Tout
