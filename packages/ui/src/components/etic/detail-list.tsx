@@ -8,7 +8,9 @@ import { cn } from "cn"
 
 /** Mise en page des paires d'une `DetailList` :
  *  - `grille` : libellé au-dessus de la valeur, une colonne sur téléphone,
- *    autant que la largeur en permet au-delà ;
+ *    au-delà autant que la largeur en permet, quatre au plus (deux paires sur
+ *    un écran large : la moitié gauche, de l'air à droite, pas deux colonnes
+ *    étroites devant six vides) ;
  *  - `pile` : libellé au-dessus de la valeur, une seule colonne sur toute la
  *    largeur quelle que soit la place (carte étroite, dialogue, valeurs
  *    longues) ;
@@ -20,8 +22,12 @@ export type DetailListDisposition = "grille" | "pile" | "ligne"
 const DispositionContext = createContext<DetailListDisposition>("grille")
 
 const CLASSES_LISTE: Record<DetailListDisposition, string> = {
+  // Colonnes d'au moins 14rem et d'au moins un quart de la largeur (trois
+  // écarts de `gap-x-6` déduits, 1px de marge pour que l'arrondi ne tombe pas
+  // à trois) : quatre colonnes au plus. `auto-fill` garde les colonnes vides,
+  // qui laissent de l'air à droite d'une liste courte.
   grille:
-    "grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]",
+    "grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-[repeat(auto-fill,minmax(max(14rem,calc((100%-4.5rem)/4-1px)),1fr))]",
   pile: "grid grid-cols-1 gap-y-4",
   ligne: "flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground",
 }

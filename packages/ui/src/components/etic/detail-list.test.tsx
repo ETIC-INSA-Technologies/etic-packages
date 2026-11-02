@@ -51,10 +51,10 @@ describe("DetailList et DetailItem", () => {
 
   it("est en grille par défaut", () => {
     render(<Exemple />)
-    expect(screen.getByLabelText("Détails")).toHaveAttribute(
-      "data-disposition",
-      "grille"
-    )
+    const liste = screen.getByLabelText("Détails")
+    expect(liste).toHaveAttribute("data-disposition", "grille")
+    // Quatre colonnes au plus : un quart de la largeur, écarts déduits.
+    expect(liste.className).toContain("calc((100%-4.5rem)/4-1px)")
   })
 
   it.each<DetailListDisposition>(["grille", "pile", "ligne"])(
