@@ -1,6 +1,6 @@
 {
   "name": "@etic-insa/auth",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Session ETIC Members côté navigateur pour les applications ETIC (React).",
   "license": "MIT",
   "repository": {
