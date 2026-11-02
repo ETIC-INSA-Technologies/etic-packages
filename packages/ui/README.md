@@ -708,8 +708,9 @@ Sur le modèle de TanStack (`rowExpandingFeature`) et des exemples shadcn : `dat
 ajoute le chevron (bouton à icône seule, infobulle, `aria-expanded`, `aria-controls`), et
 `rendreDetail` de `DataTable` rend le détail sous la ligne, sur toute la largeur. Sans
 `onActiverLigne`, un clic sur la ligne la déplie aussi ; la sélection et les commandes de la
-ligne restent indépendantes. Sur mobile, le détail suit la largeur visible du cadre : il reste
-lisible pendant que les colonnes défilent.
+ligne restent indépendantes. La ligne dépliée et son détail forment un seul bloc : même fond
+(celui de la sélection si la ligne est cochée), sans filet entre eux. Sur mobile, le détail suit
+la largeur visible du cadre : il reste lisible pendant que les colonnes défilent.
 
 ```tsx
 const colonnes = aide.columns([

@@ -489,6 +489,9 @@ describe("DataTable, lignes dépliables", () => {
     const lignes = screen.getAllByRole("row")
     const rang = lignes.indexOf(bouton.closest("tr")!)
     expect(lignes[rang + 1]).toContainElement(contenu)
+    // Un seul bloc : même fond, sans filet entre la ligne et son détail.
+    expect(lignes[rang]).toHaveClass("border-b-0", "bg-muted/50")
+    expect(lignes[rang + 1]).toHaveClass("bg-muted/50")
     expect(document.activeElement).toBe(bouton)
 
     await user.keyboard(" ")
@@ -506,9 +509,10 @@ describe("DataTable, lignes dépliables", () => {
     await user.click(screen.getByRole("checkbox", { name: "Sélectionner Ada" }))
     expect(selection()).toEqual(["1"])
     expect(screen.getByText("Ada habite Lyon.")).toBeInTheDocument()
-    expect(
-      screen.getByRole("cell", { name: "Ada" }).closest("tr")
-    ).toHaveAttribute("data-state", "selected")
+    const ligne = screen.getByRole("cell", { name: "Ada" }).closest("tr")!
+    expect(ligne).toHaveAttribute("data-state", "selected")
+    // Le détail suit la teinte de la sélection.
+    expect(ligne.nextElementSibling).toHaveClass("bg-muted")
   })
 
   it("laisse le clic de ligne à onActiverLigne quand il est fourni", async () => {

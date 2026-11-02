@@ -1217,9 +1217,15 @@ function LigneTableauBrute<TData extends RowData>({
         onFocus={(event) => noterFocus(event, focus.current)}
         onBlur={() => noterPerte(focus.current)}
         data-state={selectionnee ? "selected" : undefined}
-        // group/ligne : les commandes de dataTableActionsColumn suivent le
-        // survol de la ligne.
-        className={cn("group/ligne", cliquable && "cursor-pointer")}
+        className={cn(
+          // group/ligne : les commandes de dataTableActionsColumn suivent le
+          // survol de la ligne.
+          "group/ligne",
+          cliquable && "cursor-pointer",
+          // Ligne et détail se lisent comme un seul bloc : même fond, sans
+          // filet entre eux.
+          depliee && rendreDetail && "border-b-0 bg-muted/50"
+        )}
         onClick={
           cliquable
             ? (event) => {
@@ -1240,7 +1246,12 @@ function LigneTableauBrute<TData extends RowData>({
       {depliee && rendreDetail ? (
         <TableRow
           data-slot="data-table-detail"
-          className="bg-muted/30 hover:bg-muted/30"
+          // Le fond de sa ligne, sélection comprise ; pas de survol propre.
+          className={
+            selectionnee
+              ? "bg-muted hover:bg-muted"
+              : "bg-muted/50 hover:bg-muted/50"
+          }
           // Une commande du détail compte comme une commande de la ligne.
           onFocus={(event) => noterFocus(event, focus.current, false)}
           onBlur={() => noterPerte(focus.current)}
