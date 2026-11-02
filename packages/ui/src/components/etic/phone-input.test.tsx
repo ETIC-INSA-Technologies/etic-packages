@@ -192,6 +192,28 @@ describe("PhoneInput", () => {
     expect(donnees.getAll("telephone")).toEqual(["+33612345678"])
   })
 
+  it("au focus du numéro, le groupe est entouré comme un seul champ : bordures bleues, un halo", async () => {
+    const user = userEvent.setup()
+    render(<Demo />)
+    const numero = screen.getByRole("textbox", { name: "Téléphone" })
+    const groupe = numero.parentElement!
+    expect(groupe).toHaveClass(
+      "has-[[data-slot=input]:not([aria-invalid=true]):focus-visible]:ring-3",
+      "has-[[data-slot=input]:not([aria-invalid=true]):focus-visible]:ring-ring/50",
+      "has-[[data-slot=input]:not([aria-invalid=true]):focus-visible]:*:data-[slot=combobox-trigger]:border-ring",
+      // Le halo propre du numéro cède à celui du groupe.
+      "*:data-[slot=input]:focus-visible:ring-0"
+    )
+    const auFocus =
+      ":has([data-slot=input]:not([aria-invalid=true]):focus-visible)"
+    expect(groupe.matches(auFocus)).toBe(false)
+    // Au clavier : le sélecteur de pays, puis le numéro.
+    await user.tab()
+    await user.tab()
+    expect(numero).toHaveFocus()
+    expect(groupe.matches(auFocus)).toBe(true)
+  })
+
   it("en erreur, le groupe est traité comme un seul champ : bordures rouges, un halo", () => {
     // Dérivé en CSS de l'`aria-invalid` du numéro. jsdom ne compile pas
     // Tailwind mais évalue ses sélecteurs : le groupe porte les règles, ses

@@ -199,6 +199,10 @@ export function PhoneInput({
           // perd le sien, qui chevauchait le bouton). Dérivé en CSS de
           // l'`aria-invalid` du numéro ; `aria-invalid` sur un bouton
           // n'aurait pas de sens.
+          // De même au focus du numéro, hors erreur : bordure bleue sur le
+          // sélecteur de pays et halo du groupe, à la place de celui du
+          // numéro, qui n'en entourait que la moitié.
+          "has-[[data-slot=input]:not([aria-invalid=true]):focus-visible]:ring-3 has-[[data-slot=input]:not([aria-invalid=true]):focus-visible]:ring-ring/50 has-[[data-slot=input]:not([aria-invalid=true]):focus-visible]:*:data-[slot=combobox-trigger]:border-ring *:data-[slot=input]:focus-visible:ring-0",
           "rounded-lg has-[[data-slot=input][aria-invalid=true]]:ring-3 has-[[data-slot=input][aria-invalid=true]]:ring-destructive/20 has-[[data-slot=input][aria-invalid=true]]:*:data-[slot=combobox-trigger]:border-destructive *:data-[slot=input]:aria-invalid:ring-0 dark:has-[[data-slot=input][aria-invalid=true]]:ring-destructive/40 dark:has-[[data-slot=input][aria-invalid=true]]:*:data-[slot=combobox-trigger]:border-destructive/50",
           className
         )}
