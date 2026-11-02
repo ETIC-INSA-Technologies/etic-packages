@@ -105,6 +105,18 @@ describe("AppShell", () => {
     expect(screen.queryByRole("button", { name: "Ouvrir le menu" })).toBeNull()
   })
 
+  it("logo de la marque : 32 px, la hauteur utile de son bouton", () => {
+    simulerLargeur(false)
+    rendre({
+      application: {
+        nom: "ETIC Members",
+        logo: <svg data-testid="logo" />,
+      },
+    })
+    // jsdom n'applique pas les styles : la taille se lit aux classes.
+    expect(screen.getByTestId("logo").parentElement).toHaveClass("size-8")
+  })
+
   it("se replie en icônes et retrouve ce repli à la visite suivante", async () => {
     simulerLargeur(false)
     const user = userEvent.setup()

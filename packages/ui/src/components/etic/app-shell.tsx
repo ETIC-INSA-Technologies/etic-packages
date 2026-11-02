@@ -101,7 +101,8 @@ export interface AppShellProps {
   application: {
     nom: string
     sousTitre?: string
-    /** Image ou icône, 28 px de côté environ. */
+    /** Image ou icône, carrée : 32 px dans la barre latérale, 24 px dans la
+     *  barre du haut sur mobile. */
     logo?: ReactNode
     /** Lien de la marque ; « / » par défaut. */
     href?: string
@@ -303,7 +304,10 @@ function Marque({
           size="lg"
           render={<Lien href={application.href ?? "/"} />}
         >
-          <Logo application={application} className="size-7" />
+          {/* 32 px, comme le sélecteur d'équipe de shadcn : toute la hauteur
+              utile du bouton (48 px moins ses marges) ; dans la barre
+              repliée, il remplit le bouton de 32 px, donc centré. */}
+          <Logo application={application} className="size-8" />
           <span className="grid flex-1 text-left leading-tight">
             <span className="truncate font-semibold">{application.nom}</span>
             {application.sousTitre ? (
