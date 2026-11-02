@@ -83,15 +83,15 @@ qui reste la surface blanche de shadcn (onglet actif, bouton `outline`, calendri
 compris.
 
 Un tableau se détache de la surface qui le porte : son cadre est en `bg-tableau` (jeton
-ajouté), qui vaut `--card` sur la page et le fond de la page (`--page`) dans une surface
-surélevée — toute surface de la bibliothèque peinte en `bg-card` ou `bg-popover` : `Card`
+ajouté), qui vaut `--card` sur la page et `--tableau-encart` (jeton ajouté, un cran plus
+sombre que la carte) dans une surface surélevée — toute surface de la bibliothèque peinte en `bg-card` ou `bg-popover` : `Card`
 (donc `SectionCard`), `Alert`, dialogue, `AlertDialog`, tiroir (`Sheet`), popover, menu
 déroulant, liste d'un `Select` ou d'un `Combobox`, `SaveBar`, barre d'actions groupées, barre
 latérale, `Disclosure` `variante="carte"`. La liste de ces surfaces est tenue une fois dans
 `styles.css` (règle qui pose `--tableau-fond`, héritée) ; le cadre de `DataTable` la suit sans
 rien à passer. Un cadre de tableau propre à une application prend `bg-tableau` plutôt que
-`bg-card`. Couleurs du preset seulement : écart de fond de 1,04:1 en clair (blanc / zinc-50, le
-filet `--border` le rend net), 1,12:1 en sombre (zinc-900 / zinc-950). Les lignes gardent le
+`bg-card`. Dans une surface, l'écart de fond est le même, discret, dans les deux thèmes (1,05:1,
+le filet `--border` le rend net) : le tableau se détache de sa carte sans s'y creuser. Les lignes gardent le
 survol et la sélection de shadcn (`bg-muted/50`, `bg-muted`).
 
 #### Thème clair, sombre ou système

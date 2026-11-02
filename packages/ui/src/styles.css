@@ -80,7 +80,8 @@
   --color-background: var(--background);
   --color-page: var(--page);
   /* Ajout d'ETIC : fond d'un cadre de tableau (bg-tableau), --card sur la
-     page, --page dans une surface surélevée (règle --tableau-fond plus bas). */
+     page, --tableau-encart dans une surface surélevée (règle --tableau-fond
+     plus bas). */
   --color-tableau: var(--tableau-fond, var(--card));
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -95,11 +96,15 @@
   color-scheme: light;
   /* Fond de page (ajout d'ETIC, bg-page) : zinc-50. Cartes et menus
      (bg-card, bg-popover) restent blancs et s'en détachent, comme en sombre
-     où les cartes (zinc-900) sont plus claires que la page (zinc-950). Un
-     tableau (bg-tableau) prend --card sur la page, --page dans une surface.
-     --background garde le blanc du registre : shadcn l'emploie aussi pour des
-     surfaces posées sur --muted ou une carte. */
+     où les cartes sont plus claires que la page. Un
+     tableau (bg-tableau) prend --card sur la page, --tableau-encart dans une
+     surface. --background garde le blanc du registre : shadcn l'emploie
+     aussi pour des surfaces posées sur --muted ou une carte. */
   --page: oklch(0.985 0 0);
+  /* Fond d'un tableau posé dans une carte, un dialogue ou un menu (ajout
+     d'ETIC) : un gris entre zinc-50 et zinc-100, 1,05:1 sur une carte
+     blanche (zinc-50 n'y donnait que 1,04:1), filet --border encore net. */
+  --tableau-encart: oklch(0.981 0.001 286.375);
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
@@ -132,15 +137,10 @@
   --input: oklch(0.92 0.004 286.32);
   /* Bord d'une case à cocher ou d'une radio vide, rail d'un switch éteint :
      --input se voyait à peine sur le blanc
-     (et restait sous 2:1 en sombre). --muted-foreground à 80 % : ≥ 3:1 sur
-     le fond et sur --muted (contrôle, WCAG 1.4.11), en clair comme en
-     sombre (redéclaré dans .dark, pour un « dark » posé plus bas que
-     <html>). */
-  --control-border: color-mix(
-    in oklab,
-    var(--muted-foreground) 80%,
-    transparent
-  );
+     (et restait sous 2:1 en sombre). --muted-foreground plein : ≥ 4,3:1 sur
+     le fond et sur --muted (contrôle, WCAG 1.4.11 : ≥ 3:1) ; à 80 %, il
+     restait trop pâle sur le blanc. */
+  --control-border: var(--muted-foreground);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -161,36 +161,48 @@
 
 .dark {
   color-scheme: dark;
-  /* En sombre, la page est le fond du registre : rien ne change. */
+  /* En sombre, la page est le fond. */
   --page: var(--background);
-  --background: oklch(0.141 0.005 285.823);
+  /* Écart au registre : fonds sombres éclaircis, gris très foncé plutôt que
+     presque noir. Le registre pose zinc-950 (0.141) pour le fond, zinc-900
+     (0.21) pour les cartes et zinc-800 (0.274) pour --muted ; l'échelle
+     remonte d'un cran en gardant ses écarts (cartes 1,10:1 sur la page,
+     --muted 1,17:1 sur une carte). */
+  --background: oklch(0.2 0.006 285.9);
+  /* Entre la page et la carte : 1,05:1 sur une carte, comme en clair. Le
+     fond de la page creusait trop le tableau dans sa carte. */
+  --tableau-encart: oklch(0.22 0.006 285.9);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
+  --card: oklch(0.24 0.006 285.9);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
+  --popover: oklch(0.24 0.006 285.9);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.92 0.004 286.32);
   --primary-foreground: oklch(0.21 0.006 285.885);
   --primary-text: oklch(0.92 0.004 286.32);
   --ring: oklch(0.552 0.016 285.938);
-  --secondary: oklch(0.274 0.006 286.033);
+  --secondary: oklch(0.29 0.006 285.9);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
+  --muted: oklch(0.29 0.006 285.9);
   --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
+  --accent: oklch(0.29 0.006 285.9);
   --accent-foreground: oklch(0.985 0 0);
   /* Plus clair que le registre (oklch(0.704 0.191 22.216)) : ≥ 4,5:1 sur sa
-     teinte à 20 %, y compris dans un pied de dialogue (bg-muted/50). */
-  --destructive: #ff8a8a;
+     teinte à 20 %, y compris dans un pied de dialogue (bg-muted/50), sur
+     les fonds sombres éclaircis. */
+  --destructive: #ff9999;
   --success: #6fd7a7;
   --warning: #f0b25f;
   --info: #7cb4f5;
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  /* Même règle qu'en clair : --input (blanc à 15 %) restait sous 2:1. */
+  /* Même règle qu'en clair : --input (blanc à 15 %) restait sous 2:1. Mais
+     --muted-foreground, clair, s'atténue ici : à 65 %, ≥ 3:1 sur le fond et
+     sur --muted sans éclater sur le gris foncé (à 80 % : jusqu'à 4,9:1).
+     Redéclaré ici en entier, pour un « dark » posé plus bas que <html>. */
   --control-border: color-mix(
     in oklab,
-    var(--muted-foreground) 80%,
+    var(--muted-foreground) 65%,
     transparent
   );
   --chart-1: oklch(0.488 0.243 264.376);
@@ -198,11 +210,11 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
+  --sidebar: oklch(0.24 0.006 285.9);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent: oklch(0.29 0.006 285.9);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: var(--ring);
@@ -222,7 +234,7 @@
   /* Un tableau se détache toujours de la surface qui le porte (bg-tableau,
      cadre de DataTable) : sur la page, il prend --card ; dans une surface
      surélevée de la bibliothèque, peinte en bg-card ou bg-popover (ou
-     bg-sidebar, de même valeur), il prend le fond de la page. La variable est
+     bg-sidebar, de même valeur), il prend --tableau-encart. La variable est
      héritée : posée ici une fois, sans variante sur chaque cadre. Toute
      nouvelle surface en bg-card ou bg-popover s'ajoute à cette liste. */
   :where(
@@ -242,7 +254,7 @@
     [data-slot="sidebar-inner"],
     [data-slot="disclosure"][data-variante="carte"]
   ) {
-    --tableau-fond: var(--page);
+    --tableau-fond: var(--tableau-encart);
   }
   /* Coquille sur mobile : la barre du haut (h-12) colle au haut de l'écran ;
      une ancre ou un élément qu'on fait défiler jusqu'à lui s'arrête dessous,

@@ -187,8 +187,8 @@ export function DemoTableaux() {
       <h3 className="mt-4 text-base font-medium">Tableau dans une carte</h3>
       <p className="text-sm text-muted-foreground">
         Dans une carte (ou un dialogue, un tiroir, une Disclosure « carte »), le
-        cadre prend le fond de la page au lieu de celui de la carte : il s'en
-        détache, comme sur la page.
+        cadre prend --tableau-encart, un cran plus sombre que la carte : il s'en
+        détache discrètement, comme sur la page.
       </p>
       <DemoTableauDansCarte />
     </>

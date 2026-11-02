@@ -266,8 +266,9 @@ describe("écarts avec shadcn", () => {
 
   // Thème : couleur de base zinc de shadcn au lieu de neutral. Écarts avec
   // le registre (--control-border dérivé de --muted-foreground en sombre
-  // aussi ; couleurs sémantiques) et ajout de --page (fond de
-  // la page, zinc-50 en clair) : voir ECARTS de theme.test.ts, qui compare
+  // aussi ; couleurs sémantiques ; fonds sombres éclaircis) et ajouts de
+  // --page (fond de la page, zinc-50 en clair) et de --tableau-encart (fond
+  // d'un tableau dans une surface) : voir ECARTS de theme.test.ts, qui compare
   // chaque jeton au registre et vérifie les contrastes.
   // CenteredScreen sur bg-muted/40 : centered-screen.test.tsx ; contenu
   // d'AppShell sur bg-page : app-shell.test.tsx.
@@ -280,13 +281,13 @@ describe("écarts avec shadcn", () => {
   })
 
   // Le cadre de DataTable est en bg-tableau (ajout d'ETIC, pas bg-card) :
-  // --card sur la page, le fond de la page dans une surface surélevée, pour
+  // --card sur la page, --tableau-encart dans une surface surélevée, pour
   // se détacher toujours de ce qui le porte. Les surfaces sont listées une
   // fois, dans styles.css (règle --tableau-fond) ; jsdom ne l'applique pas, la
   // liste y est donc lue et confrontée aux sources et au rendu.
   const surfacesTableau = (() => {
     const regle =
-      /:where\(([^)]*)\)\s*\{\s*--tableau-fond: var\(--page\);/.exec(
+      /:where\(([^)]*)\)\s*\{\s*--tableau-fond: var\(--tableau-encart\);/.exec(
         lire("styles.css")
       )
     return regle ? regle[1].replace(/\s+/g, " ").trim() : ""

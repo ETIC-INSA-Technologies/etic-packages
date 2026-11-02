@@ -85,11 +85,24 @@ const ECARTS = {
   // Lisibilité : ≥ 4,5:1 sur la teinte de --destructive.
   // --sidebar : blanche en clair (var(--background)) au lieu de zinc-50.
   clair: ["destructive", "sidebar"],
-  sombre: ["destructive"],
+  // Fonds sombres éclaircis (gris très foncé, pas presque noir) : l'échelle
+  // fond / carte / --muted remonte en gardant ses écarts.
+  sombre: [
+    "destructive",
+    "background",
+    "card",
+    "popover",
+    "secondary",
+    "muted",
+    "accent",
+    "sidebar",
+    "sidebar-accent",
+  ],
   // Jetons ajoutés, absents du registre : --page, fond de la page (bg-page :
   // body, contenu d'AppShell), zinc-50 en clair (cartes blanches qui s'en
-  // détachent), --background en sombre.
-  ajouts: ["page"],
+  // détachent), --background en sombre ; --tableau-encart, fond d'un tableau
+  // dans une surface surélevée.
+  ajouts: ["page", "tableau-encart"],
 }
 
 // oklch(L C H) → sRGB hexadécimal (conversion d'OKLab de Björn Ottosson,
@@ -247,10 +260,10 @@ describe("couleur de base", () => {
     expect(css).toContain("--color-page: var(--page);")
   })
 
-  it("--sidebar : blanche en clair, inchangée en sombre ; l'élément actif et le filet s'en distinguent", () => {
+  it("--sidebar : blanche en clair, une carte en sombre ; l'élément actif et le filet s'en distinguent", () => {
     expect(racineCss.brute("sidebar")).toBe("var(--background)")
     expect(racineCss.valeur("sidebar")).toBe(racineCss.valeur("background"))
-    expect(sombreCss.brute("sidebar")).toBe(REGISTRE_ZINC.sombre.sidebar)
+    expect(sombreCss.brute("sidebar")).toBe(sombreCss.brute("card"))
     // Pas un contraste de texte : l'élément survolé ou actif et le filet
     // doivent seulement rester perceptibles (zinc-100 sur blanc, zinc-200
     // entre la barre blanche et la page zinc-50).
@@ -306,25 +319,29 @@ describe("couleur de base", () => {
     }
   )
 
-  // Cadre de tableau (bg-tableau, ajout d'ETIC) : --card sur la page, fond de
-  // la page dans une carte, un dialogue ou un tiroir (règle --tableau-fond de
-  // styles.css, vérifiée par ecarts-shadcn.test.ts). Il diffère donc toujours
-  // de son support : 1,04:1 en clair (blanc / zinc-50, le filet --border fait
-  // le reste), 1,12:1 en sombre (zinc-900 / zinc-950).
-  it("tableaux : bg-tableau vaut --card, ou --page dans une surface", () => {
+  // Cadre de tableau (bg-tableau, ajout d'ETIC) : --card sur la page,
+  // --tableau-encart dans une carte, un dialogue ou un tiroir (règle
+  // --tableau-fond de styles.css, vérifiée par ecarts-shadcn.test.ts). Il
+  // diffère donc toujours de son support, du même écart discret dans les deux
+  // thèmes (1,05:1 ; le filet --border fait le reste).
+  it("tableaux : bg-tableau vaut --card, ou --tableau-encart dans une surface", () => {
     expect(css).toContain("--color-tableau: var(--tableau-fond, var(--card));")
-    expect(css).toMatch(/\{\s*--tableau-fond: var\(--page\);\s*\}/)
+    expect(css).toMatch(/\{\s*--tableau-fond: var\(--tableau-encart\);\s*\}/)
   })
 
   it.each(THEMES)(
-    "$nom : un tableau se détache de la page comme d'une carte",
+    "$nom : un tableau se détache de sa surface, sans s'y creuser",
     ({ nom, vars, page, card }) => {
+      expect(contraste(page, card), nom).toBeGreaterThan(1.03)
+      const encart = vars.valeur("tableau-encart")
       for (const support of [card, vars.valeur("popover")]) {
-        expect(contraste(page, support), nom).toBeGreaterThan(1.03)
+        const ecart = contraste(encart, support)
+        expect(ecart, nom).toBeGreaterThan(1.05)
+        expect(ecart, nom).toBeLessThan(1.08)
       }
       if (nom === "clair") {
-        // Écart de fond presque nul : le filet doit se voir sur les deux.
-        for (const fond of [page, card]) {
+        // Écart de fond faible : le filet doit se voir sur chacun.
+        for (const fond of [page, card, encart]) {
           expect(contraste(vars.valeur("border"), fond)).toBeGreaterThan(1.2)
         }
       }
@@ -399,18 +416,26 @@ describe("couleur de base", () => {
     }
   )
 
-  // Bord d'une case à cocher vide : --muted-foreground à 80 %, déclaré dans
-  // les deux blocs (un `dark` posé sur un sous-arbre le recalcule aussi).
+  // Bord d'une case à cocher vide : --muted-foreground, plein en clair, à
+  // 65 % en sombre (où il est clair et éclatait sur le gris foncé), déclaré
+  // dans les deux blocs (un `dark` posé sur un sous-arbre le recalcule
+  // aussi). Vérifié aussi sur le fond d'un tableau dans une carte.
+  const BORD_CONTROLE = {
+    clair: { brute: "var(--muted-foreground)", part: 1 },
+    sombre: {
+      brute: "color-mix( in oklab, var(--muted-foreground) 65%, transparent )",
+      part: 0.65,
+    },
+  }
   it.each(THEMES)(
     "$nom : le bord d'une case à cocher se voit",
     ({ nom, vars, fonds }) => {
-      expect(vars.brute("control-border")).toBe(
-        "color-mix( in oklab, var(--muted-foreground) 80%, transparent )"
-      )
+      const { brute, part } = BORD_CONTROLE[nom]
+      expect(vars.brute("control-border")).toBe(brute)
       const couleur = vars.valeur("muted-foreground")
-      for (const fond of fonds) {
+      for (const fond of [...fonds, vars.valeur("tableau-encart")]) {
         lisible(
-          teinte(couleur, fond, 0.8),
+          teinte(couleur, fond, part),
           fond,
           NON_TEXTE,
           `${nom}, bord de case`
@@ -427,15 +452,16 @@ describe("couleur de base", () => {
     "$nom : contour de radio et rail de switch éteint se voient",
     ({ nom, vars, fonds, surfaces }) => {
       const couleur = vars.valeur("muted-foreground")
+      const { part } = BORD_CONTROLE[nom]
       for (const fond of fonds) {
-        const rail = teinte(couleur, fond, 0.8)
+        const rail = teinte(couleur, fond, part)
         lisible(rail, fond, NON_TEXTE, `${nom}, contour de radio / rail`)
       }
       const pouce = vars.valeur(nom === "clair" ? "background" : "foreground")
       for (const fond of surfaces) {
         lisible(
           pouce,
-          teinte(couleur, fond, 0.8),
+          teinte(couleur, fond, part),
           NON_TEXTE,
           `${nom}, pouce sur rail éteint`
         )

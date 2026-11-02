@@ -155,7 +155,7 @@ export function Disclosure({
     <Collapsible
       data-slot="disclosure"
       // Lu par styles.css : un tableau posé dans la variante « carte » prend
-      // le fond de la page (bg-tableau).
+      // --tableau-encart (bg-tableau).
       data-variante={variante}
       defaultOpen={defautOuvert}
       open={ouvert}
