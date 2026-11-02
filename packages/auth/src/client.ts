@@ -467,14 +467,13 @@ export function creerClientHttp(options: OptionsClientHttp = {}): ClientHttp {
         // appelé que si le jeton courant est encore celui de la requête (ou
         // si la requête n'en portait pas). L'erreur est levée dans tous les
         // cas.
-        if (
-          erreur.status === 401 &&
-          options.surNonAuthentifie &&
-          (!jeton || options.jeton?.() === jeton)
-        ) {
-          // Le rappel ne remplace pas l'erreur 401 et n'est pas tu.
+        if (erreur.status === 401 && options.surNonAuthentifie) {
+          // Ni le rappel ni la relecture du jeton ne remplacent l'erreur 401,
+          // et leur exception n'est pas tue.
           try {
-            options.surNonAuthentifie(erreur)
+            if (!jeton || options.jeton?.() === jeton) {
+              options.surNonAuthentifie(erreur)
+            }
           } catch (exception) {
             signalerException(exception)
           }

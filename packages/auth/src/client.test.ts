@@ -661,6 +661,29 @@ describe("client HTTP commun", () => {
     expect(jeton).toBe("nouveau-jeton")
   })
 
+  it("rend l'erreur 401 même si la relecture du jeton lève, et signale l'exception", async () => {
+    const signaler = vi.fn()
+    vi.stubGlobal("reportError", signaler)
+    const panne = new Error("stockage illisible")
+    let lectures = 0
+    const surNonAuthentifie = vi.fn()
+    simulerFetch(() => ({ status: 401 }))
+    const erreur = await creerClientHttp({
+      jeton: () => {
+        lectures += 1
+        if (lectures > 1) throw panne
+        return JETON
+      },
+      surNonAuthentifie,
+    })
+      .get("/x")
+      .then(rate, echec)
+    expect(erreur).toBeInstanceOf(ErreurApi)
+    expect(erreur.status).toBe(401)
+    expect(surNonAuthentifie).not.toHaveBeenCalled()
+    expect(signaler).toHaveBeenCalledWith(panne)
+  })
+
   it("rend l'erreur 401 même si surNonAuthentifie lève, et signale l'exception", async () => {
     const signaler = vi.fn()
     vi.stubGlobal("reportError", signaler)
