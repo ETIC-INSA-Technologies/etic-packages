@@ -416,58 +416,25 @@ describe("couleur de base", () => {
     }
   )
 
-  // Bord d'une case à cocher vide : --muted-foreground, plein en clair, à
-  // 65 % en sombre (où il est clair et éclatait sur le gris foncé), déclaré
-  // dans les deux blocs (un `dark` posé sur un sous-arbre le recalcule
-  // aussi). Vérifié aussi sur le fond d'un tableau dans une carte.
-  const BORD_CONTROLE = {
-    clair: { brute: "var(--muted-foreground)", part: 1 },
-    sombre: {
-      brute: "color-mix( in oklab, var(--muted-foreground) 65%, transparent )",
-      part: 0.65,
-    },
-  }
-  it.each(THEMES)(
-    "$nom : le bord d'une case à cocher se voit",
-    ({ nom, vars, fonds }) => {
-      const { brute, part } = BORD_CONTROLE[nom]
-      expect(vars.brute("control-border")).toBe(brute)
-      const couleur = vars.valeur("muted-foreground")
-      for (const fond of [...fonds, vars.valeur("tableau-encart")]) {
-        lisible(
-          teinte(couleur, fond, part),
-          fond,
-          NON_TEXTE,
-          `${nom}, bord de case`
-        )
-      }
+  // Bord d'une case à cocher vide (et contour de radio, rail de switch
+  // éteint) : --muted-foreground en clair, ≥ 3:1 sur la page, une carte,
+  // --muted et le fond d'un tableau dans une carte ; le pouce du switch
+  // (bg-background, comme switch.tsx) reste distinct du rail. En sombre,
+  // --input du registre (exception assumée à 1.4.11 : plus discret),
+  // redéclaré dans le bloc `dark` (un `dark` posé sur un sous-arbre le
+  // recalcule aussi).
+  it("clair : bord de case, contour de radio et rail de switch se voient", () => {
+    const { vars, fonds } = CLAIR
+    expect(vars.brute("control-border")).toBe("var(--muted-foreground)")
+    const bord = vars.valeur("muted-foreground")
+    for (const fond of [...fonds, vars.valeur("tableau-encart")]) {
+      lisible(bord, fond, NON_TEXTE, "clair, bord de contrôle")
     }
-  )
-
-  // Contour de la radio non cochée et rail du switch éteint : le même
-  // --control-border que la case à cocher, ≥ 3:1 sur la page, une carte et
-  // --muted ; le pouce reste distinct du rail (bg-background en clair,
-  // bg-foreground en sombre, comme switch.tsx).
-  it.each(THEMES)(
-    "$nom : contour de radio et rail de switch éteint se voient",
-    ({ nom, vars, fonds, surfaces }) => {
-      const couleur = vars.valeur("muted-foreground")
-      const { part } = BORD_CONTROLE[nom]
-      for (const fond of fonds) {
-        const rail = teinte(couleur, fond, part)
-        lisible(rail, fond, NON_TEXTE, `${nom}, contour de radio / rail`)
-      }
-      const pouce = vars.valeur(nom === "clair" ? "background" : "foreground")
-      for (const fond of surfaces) {
-        lisible(
-          pouce,
-          teinte(couleur, fond, part),
-          NON_TEXTE,
-          `${nom}, pouce sur rail éteint`
-        )
-      }
-    }
-  )
+    lisible(vars.valeur("background"), bord, NON_TEXTE, "clair, pouce sur rail")
+  })
+  it("sombre : bord de contrôle en --input, comme shadcn", () => {
+    expect(SOMBRE.vars.brute("control-border")).toBe("var(--input)")
+  })
 })
 
 describe("couleurs sémantiques", () => {

@@ -282,8 +282,8 @@ describe("écarts avec shadcn", () => {
   })
 
   // Thème : couleur de base zinc de shadcn au lieu de neutral. Écarts avec
-  // le registre (--control-border dérivé de --muted-foreground en sombre
-  // aussi ; couleurs sémantiques ; fonds sombres éclaircis) et ajouts de
+  // le registre (--control-border dérivé de --muted-foreground en clair ;
+  // couleurs sémantiques ; fonds sombres éclaircis) et ajouts de
   // --page (fond de la page, zinc-50 en clair) et de --tableau-encart (fond
   // d'un tableau dans une surface) : voir ECARTS de theme.test.ts, qui compare
   // chaque jeton au registre et vérifie les contrastes.

@@ -196,15 +196,11 @@
   --info: #7cb4f5;
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  /* Même règle qu'en clair : --input (blanc à 15 %) restait sous 2:1. Mais
-     --muted-foreground, clair, s'atténue ici : à 65 %, ≥ 3:1 sur le fond et
-     sur --muted sans éclater sur le gris foncé (à 80 % : jusqu'à 4,9:1).
-     Redéclaré ici en entier, pour un « dark » posé plus bas que <html>. */
-  --control-border: color-mix(
-    in oklab,
-    var(--muted-foreground) 65%,
-    transparent
-  );
+  /* --input du registre, comme shadcn : exception assumée à WCAG 1.4.11
+     (blanc à 15 %, sous 2:1). Le bord dérivé de --muted-foreground
+     ressortait trop sur le gris foncé, colonne de sélection d'un tableau en
+     tête. Redéclaré ici, pour un « dark » posé plus bas que <html>. */
+  --control-border: var(--input);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
