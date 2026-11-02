@@ -212,22 +212,33 @@ describe("AppShell", () => {
     expect(onChoisir).toHaveBeenCalledOnce()
   })
 
-  it("montre le thème choisi et enregistre un nouveau choix", async () => {
+  it("le thème est une entrée du menu du compte : pas de second bouton dans le pied", async () => {
     simulerLargeur(false)
     const user = userEvent.setup()
     const { onValeurChange } = rendre()
+    expect(screen.queryByRole("button", { name: /^Thème\s:/ })).toBeNull()
 
+    await user.click(screen.getByRole("button", { name: /menu du compte/ }))
     // Espace insécable avant « : » dans le nom.
-    await user.click(screen.getByRole("button", { name: /^Thème\s:\sSombre$/ }))
+    const entree = await screen.findByRole("menuitem", {
+      name: /^Thème\s:\sSombre$/,
+    })
+    // Au clavier : jsdom laisse le menu parent en pointer-events: none
+    // pendant que le sous-menu s'ouvre.
+    entree.focus()
+    await user.keyboard("{ArrowRight}")
     expect(
       await screen.findByRole("menuitemradio", { name: "Sombre" })
     ).toHaveAttribute("aria-checked", "true")
-    await user.click(screen.getByRole("menuitemradio", { name: "Clair" }))
+    await waitFor(() =>
+      expect(screen.getByRole("menuitemradio", { name: "Clair" })).toHaveFocus()
+    )
+    await user.keyboard("{Enter}")
     expect(onValeurChange).toHaveBeenCalledWith("light")
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull())
   })
 
-  it("signale un thème non enregistré", async () => {
+  it("signale un thème non enregistré, au-dessus du menu du compte", async () => {
     simulerLargeur(false)
     const user = userEvent.setup()
     rendre({
@@ -237,15 +248,52 @@ describe("AppShell", () => {
       },
     })
 
-    await user.click(
-      screen.getByRole("button", { name: /^Thème\s:\sSystème$/ })
+    await user.click(screen.getByRole("button", { name: /menu du compte/ }))
+    ;(
+      await screen.findByRole("menuitem", { name: /^Thème\s:\sSystème$/ })
+    ).focus()
+    await user.keyboard("{ArrowRight}")
+    const sombre = await screen.findByRole("menuitemradio", { name: "Sombre" })
+    await waitFor(() =>
+      expect(screen.getByRole("menuitemradio", { name: "Clair" })).toHaveFocus()
     )
-    await user.click(
-      await screen.findByRole("menuitemradio", { name: "Sombre" })
-    )
+    // Clair, Système, Sombre.
+    await user.keyboard("{ArrowDown}{ArrowDown}")
+    expect(sombre).toHaveFocus()
+    await user.keyboard("{Enter}")
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Thème non enregistré"
     )
+  })
+
+  it("sur mobile, les choix de thème sont dans le menu du compte, sans sous-menu", async () => {
+    simulerLargeur(true)
+    const user = userEvent.setup()
+    const { onValeurChange } = rendre()
+
+    await user.click(screen.getByRole("button", { name: "Ouvrir le menu" }))
+    await user.click(
+      await screen.findByRole("button", { name: /menu du compte/ })
+    )
+    expect(await screen.findByText("Thème de l'interface")).toBeInTheDocument()
+    expect(screen.queryByRole("menuitem", { name: /^Thème\s:/ })).toBeNull()
+    expect(
+      screen.getByRole("menuitemradio", { name: "Sombre" })
+    ).toHaveAttribute("aria-checked", "true")
+    await user.click(screen.getByRole("menuitemradio", { name: "Clair" }))
+    expect(onValeurChange).toHaveBeenCalledWith("light")
+  })
+
+  it("sans compte, le thème garde son propre bouton dans le pied", async () => {
+    simulerLargeur(false)
+    const user = userEvent.setup()
+    const { onValeurChange } = rendre({ compte: undefined })
+
+    await user.click(screen.getByRole("button", { name: /^Thème\s:\sSombre$/ }))
+    await user.click(
+      await screen.findByRole("menuitemradio", { name: "Clair" })
+    )
+    expect(onValeurChange).toHaveBeenCalledWith("light")
   })
 
   it("sur mobile seulement, réserve la hauteur de la barre collante aux ancres", () => {
@@ -306,24 +354,24 @@ describe("AppShell", () => {
     expect(barre).not.toHaveClass("bg-background")
   })
 
-  it("pied de barre cohérent : thème sur le fond de la barre, avatar carré arrondi", () => {
+  it("pied de barre : compte sans contour, avatar carré arrondi", () => {
     rendre()
+    const boutonCompte = screen.getByRole("button", { name: /menu du compte/ })
+    expect(boutonCompte).toHaveClass("rounded-lg")
+    expect(boutonCompte).not.toHaveClass("rounded-md")
+    // Comme le nav-user de shadcn : le survol seul, sans contour.
+    expect(boutonCompte.className).not.toMatch(/shadow-\[0_0_0_1px/)
+    const avatar = boutonCompte.querySelector('[data-slot="avatar"]')
+    expect(avatar).toHaveClass("rounded-lg", "after:rounded-lg")
+    expect(avatar).not.toHaveClass("rounded-full")
+  })
+
+  it("sans compte, le bouton de thème est sur le fond de la barre", () => {
+    rendre({ compte: undefined })
     const theme = screen.getByRole("button", { name: /^Thème\s:/ })
     // Le fond de l'outline en sombre (dark:bg-input/30) tranchait sur la barre.
     expect(theme).toHaveClass("bg-sidebar", "dark:bg-sidebar")
     expect(theme).not.toHaveClass("dark:bg-input/30")
-    const boutonCompte = screen.getByRole("button", { name: /menu du compte/ })
-    expect(boutonCompte).toHaveClass("rounded-lg")
-    expect(boutonCompte).not.toHaveClass("rounded-md")
-    // Le contour du bouton de thème (outline), en ombre.
-    expect(theme).toHaveClass("border-border", "dark:border-input")
-    expect(boutonCompte).toHaveClass(
-      "shadow-[0_0_0_1px_var(--border)]",
-      "dark:shadow-[0_0_0_1px_var(--input)]"
-    )
-    const avatar = boutonCompte.querySelector('[data-slot="avatar"]')
-    expect(avatar).toHaveClass("rounded-lg", "after:rounded-lg")
-    expect(avatar).not.toHaveClass("rounded-full")
   })
 
   it("rend le bandeau dans le contenu, avant la page", () => {

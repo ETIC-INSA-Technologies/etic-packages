@@ -27,7 +27,11 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@etic-ui/components/ui/dropdown-menu"
 import {
@@ -50,9 +54,14 @@ import {
 import { TooltipProvider } from "@etic-ui/components/ui/tooltip"
 import { GOUTTIERES_PAGE } from "@etic-ui/components/etic/page-container"
 import {
+  EchecTheme,
   ThemeMenu,
+  ThemeRadioGroup,
+  themeActuel,
+  useChoixTheme,
   type ThemeMenuProps,
 } from "@etic-ui/components/etic/theme-menu"
+import type { ThemePreference } from "@etic-ui/theme"
 import { TooltipButton } from "@etic-ui/components/etic/tooltip-button"
 import { useLien, type LienComposant } from "@etic-ui/components/etic/lien"
 
@@ -109,6 +118,8 @@ export interface AppShellProps {
   }
   sections: AppShellSection[]
   compte?: AppShellCompte
+  /** Choix du thème : entrée « Thème » du menu du compte, ou son propre
+   *  bouton dans le pied de la barre sans `compte`. */
   theme?: Pick<ThemeMenuProps, "valeur" | "onValeurChange">
   /** Composant de lien du routeur ; par défaut, celui du `LienProvider`,
    *  sinon un `<a>`. */
@@ -172,14 +183,17 @@ export function AppShell({
           </SidebarContent>
           {compte || theme ? (
             <SidebarFooter className="flex-row items-center gap-2 group-data-[collapsible=icon]:flex-col">
-              {compte ? <MenuCompte compte={compte} Lien={Lien} /> : null}
-              {theme ? (
+              {/* Avec un compte, le thème est une entrée de son menu (comme le
+                  nav-user de shadcn) : le pied garde toute sa largeur pour le
+                  nom et l'adresse. Sans compte, son propre bouton. */}
+              {compte ? (
+                <MenuCompte compte={compte} theme={theme} Lien={Lien} />
+              ) : theme ? (
                 <ThemeMenu
                   {...theme}
                   side="top"
-                  // Sans fond propre, comme le menu du compte voisin (le
-                  // dark:bg-input/30 d'outline tranchait sur la barre), et
-                  // son survol.
+                  // Sans fond propre (le dark:bg-input/30 d'outline tranchait
+                  // sur la barre), le survol des entrées de la barre.
                   className="size-12 shrink-0 bg-sidebar group-data-[collapsible=icon]:size-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground dark:bg-sidebar dark:hover:bg-sidebar-accent"
                 />
               ) : null}
@@ -367,37 +381,74 @@ function Navigation({
   )
 }
 
+/** Entrée « Thème : Sombre » du menu du compte, qui ouvre Clair / Système /
+ *  Sombre. Choisir ferme le menu. Dans le tiroir mobile, trop étroit pour un
+ *  sous-menu à côté du menu (il s'ouvrait dessous, sur « Se déconnecter »),
+ *  les trois choix sont dans le menu, sous un intitulé. */
+function MenuTheme({
+  valeur,
+  onChoisir,
+}: {
+  valeur: ThemePreference
+  onChoisir: (theme: ThemePreference) => void
+}) {
+  const { isMobile } = useSidebar()
+  const { libelle, Icone } = themeActuel(valeur)
+  if (isMobile)
+    return (
+      <DropdownMenuGroup>
+        <DropdownMenuLabel>Thème de l'interface</DropdownMenuLabel>
+        <ThemeRadioGroup valeur={valeur} onChoisir={onChoisir} />
+      </DropdownMenuGroup>
+    )
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <Icone />
+        {libelle}
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="w-40">
+        <ThemeRadioGroup valeur={valeur} onChoisir={onChoisir} />
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  )
+}
+
 function MenuCompte({
   compte,
+  theme,
   Lien,
 }: {
   compte: AppShellCompte
+  theme?: AppShellProps["theme"]
   Lien: LienComposant
 }) {
   const [confirmer, setConfirmer] = useState(false)
+  const { echec, effacerEchec, choisir } = useChoixTheme({
+    valeur: theme?.valeur ?? "system",
+    onValeurChange: theme?.onValeurChange ?? (() => {}),
+  })
 
   return (
     <>
-      <SidebarMenu className="min-w-0 flex-1">
+      {/* relative : y pose « Thème non enregistré », au-dessus du bouton. */}
+      <SidebarMenu className="relative min-w-0 flex-1">
         <SidebarMenuItem>
-          <DropdownMenu>
+          <DropdownMenu onOpenChange={(ouvert) => ouvert && effacerEchec()}>
             <DropdownMenuTrigger
               render={
                 <SidebarMenuButton
                   size="lg"
                   isActive={compte.actif}
                   aria-label={`${compte.nom}, menu du compte`}
-                  // rounded-lg : le survol épouse l'avatar et le bouton de thème.
-                  // Le contour du bouton de thème voisin (outline : --border,
-                  // --input en sombre), tracé en ombre comme la variante
-                  // outline de SidebarMenuButton : une bordure rognerait
-                  // l'avatar de la barre repliée (size-8, p-0).
-                  className="rounded-lg shadow-[0_0_0_1px_var(--border)] data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground dark:shadow-[0_0_0_1px_var(--input)]"
+                  // Sans contour, comme le nav-user de shadcn : le survol dit
+                  // qu'il s'ouvre. rounded-lg : le survol épouse l'avatar.
+                  className="rounded-lg data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground"
                 />
               }
             >
               {/* Carré arrondi, comme le nav-user de shadcn : la forme du
-                  survol du bouton et du bouton de thème. */}
+                  survol du bouton. */}
               <Avatar className="rounded-lg after:rounded-lg">
                 {compte.photo ? (
                   <AvatarImage
@@ -441,6 +492,12 @@ function MenuCompte({
                   <DropdownMenuSeparator />
                 </>
               ) : null}
+              {theme ? (
+                <>
+                  <MenuTheme valeur={theme.valeur} onChoisir={choisir} />
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
               <DropdownMenuItem onClick={() => setConfirmer(true)}>
                 <LogOutIcon />
                 Se déconnecter
@@ -448,6 +505,7 @@ function MenuCompte({
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarMenuItem>
+        {echec ? <EchecTheme side="top" className="left-0" /> : null}
       </SidebarMenu>
 
       <AlertDialog open={confirmer} onOpenChange={setConfirmer}>

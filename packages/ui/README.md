@@ -203,8 +203,11 @@ export function Groupes() {
 }
 ```
 
-`onValeurChange` peut renvoyer une promesse : rejetée, elle affiche « Thème non enregistré »
-quelques secondes. La déconnexion (`onSeDeconnecter`) est toujours confirmée ; une entrée du
+Le thème est une entrée du menu du compte (« Thème : Sombre », qui ouvre Clair / Système /
+Sombre), comme dans le `nav-user` de shadcn : le pied de la barre ne porte que le compte, sur
+toute sa largeur. Dans le tiroir mobile, trop étroit pour un sous-menu, les trois choix sont
+dans le menu. Sans `compte`, il garde son propre bouton. `onValeurChange` peut renvoyer une
+promesse : rejetée, elle affiche « Thème non enregistré » quelques secondes. La déconnexion (`onSeDeconnecter`) est toujours confirmée ; une entrée du
 menu du compte est un lien (`href`) ou une action (`onChoisir`). La coquille fournit l'élément
 `<main>` : les pages n'en ajoutent pas. Elle ouvre la tabulation par un lien « Aller au
 contenu », visible au focus, qui met le focus sur ce `<main>`. Sur ordinateur, un bouton de
