@@ -206,14 +206,12 @@ const api = creerClientHttp({
 })
 
 // Ou, comme ETIC Members : jeton Bearer gardé par l'application. Le rappel
-// reçoit le jeton de la requête : un 401 tardif d'une requête partie avant
-// une reconnexion ne purge pas le nouveau jeton.
+// n'est pas appelé pour le 401 tardif d'une requête partie avant une
+// reconnexion : il ne purge jamais le nouveau jeton.
 const apiMembers = creerClientHttp({
   base: API_BASE_URL,
   jeton: () => lireJeton(),
-  surNonAuthentifie: (_erreur, jetonRequete) => {
-    if (jetonRequete === lireJeton()) effacerJeton()
-  },
+  surNonAuthentifie: () => effacerJeton(),
 })
 
 await api.get<Membre[]>("/membres", { query: { statut: ["active", "alumni"] } })
@@ -237,9 +235,9 @@ location.assign(api.url("/auth/login", { suivant: "/" }))
   déduits du statut : `unauthenticated` (401), `forbidden` (403), `not_found` (404), `conflict`
   (409), `validation_error` (422), `not_implemented` (501), `external_service_unavailable`
   (502, 503), `internal_error` (autre 5xx), `http_<statut>` (autre 4xx). Ce texte de repli
-  porte le statut, avant le point de sa première phrase (« La requête n'a pas abouti
-  (HTTP 413). », « Session expirée ou absente (HTTP 401). Reconnectez-vous. ») : une erreur
-  rendue par un proxy reste diagnostiquable depuis l'écran.
+  porte le statut, à sa fin (« La requête n'a pas abouti. (HTTP 413) », « Session expirée ou
+  absente. Reconnectez-vous. (HTTP 401) ») : une erreur rendue par un proxy reste
+  diagnostiquable depuis l'écran.
 - 304 Not Modified, reçu seulement si l'appelant a posé lui-même `If-None-Match` ou
   `If-Modified-Since` dans `enTetes` (le cache du navigateur revalide sans le montrer), lève
   `not_modified` (`CODE_NON_MODIFIE`, `status` 304), en JSON comme en `lireBlob` : la réponse
@@ -263,18 +261,21 @@ location.assign(api.url("/auth/login", { suivant: "/" }))
   reçue telle quelle (Node) est refusée de même. Avec FastAPI, un chemin qui diffère de la
   route par la barre oblique finale reçoit une 307 (`redirect_slashes`) : l'écrire exactement
   comme la route.
-- `surNonAuthentifie(erreur, jeton)` est appelé sur tout 401, avant que l'erreur soit levée,
-  avec le jeton envoyé par cette requête (`null` sans jeton). Une requête partie avec un
-  ancien jeton peut répondre 401 après une reconnexion : ne purger que si le jeton courant est
-  encore celui de la requête (exemple ci-dessus). Le second argument est facultatif pour un
-  rappel qui ne le lit pas. S'il lève,
-  l'appelant reçoit quand même l'`ErreurApi` 401, et l'exception du rappel est signalée à part
-  par `reportError` (console et événement `error` de la fenêtre), à défaut relancée dans une
-  micro-tâche : ni avalée, ni à la place de l'erreur.
+- `surNonAuthentifie(erreur)` est appelé sur un 401, avant que l'erreur soit levée. Une
+  requête partie avec un ancien jeton peut répondre 401 après une reconnexion : le client
+  compare lui-même le jeton envoyé et celui que rend `jeton()` à cet instant, et n'appelle le
+  rappel que s'ils sont égaux (ou si la requête ne portait pas de jeton) ; le nouveau jeton
+  n'est donc jamais purgé par un 401 tardif. L'`ErreurApi` 401 est levée dans tous les cas.
+  Si le rappel lève, l'appelant reçoit quand même l'`ErreurApi` 401, et l'exception du rappel
+  est signalée à part par `reportError` (console et événement `error` de la fenêtre), à défaut
+  relancée dans une micro-tâche : ni avalée, ni à la place de l'erreur.
 - Un chemin commence par un seul `/`, sans espace ni caractère de contrôle (l'analyseur d'URL
   retire tabulations et retours à la ligne : `/\t/hote` deviendrait `//hote`), et l'URL résolue
   garde l'origine de la base ; `/%2F%2F…` reste un chemin. Sinon, `TypeError` : c'est une
-  erreur de programmation, hors du contrat `ErreurApi`, qu'aucun écran n'a à traiter.
+  erreur de programmation, hors du contrat `ErreurApi`, qu'aucun écran n'a à traiter. Une
+  `base` malformée (variable d'environnement mal saisie) ne fait pas échouer
+  `creerClientHttp`, donc l'import du module qui crée le client : chaque requête est rejetée
+  par une `TypeError` « Base d'API invalide ».
 - Sans `AbortSignal.any` (Safari avant 17.4), le signal de l'appelant et le délai sont combinés
   par des écouteurs, retirés en fin de requête.
 

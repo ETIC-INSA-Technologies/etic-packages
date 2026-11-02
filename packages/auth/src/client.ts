@@ -119,12 +119,12 @@ function parDefaut(status: number): [string, string] {
   )
 }
 
-/** Le statut s'insère avant le point de la première phrase : « La requête
- *  n'a pas abouti (HTTP 413). », « Session expirée ou absente (HTTP 401).
- *  Reconnectez-vous. » — un proxy qui répond sans enveloppe reste
+/** Le statut s'ajoute à la fin du message, quel qu'il soit : « La requête
+ *  n'a pas abouti. (HTTP 413) », « Session expirée ou absente.
+ *  Reconnectez-vous. (HTTP 401) » — un proxy qui répond sans enveloppe reste
  *  diagnostiquable depuis l'écran. */
 function messageDeRepli(status: number, message: string): string {
-  return message.replace(".", ` (HTTP ${status}).`)
+  return `${message} (HTTP ${status})`
 }
 
 /**
@@ -195,13 +195,13 @@ export interface OptionsClientHttp {
   /** Politique de cookie par défaut ; `"include"` pour une session par
    *  cookie. Sans valeur, celle de `fetch` (`same-origin`). */
   credentials?: RequestCredentials
-  /** Appelé sur tout 401, avant que l'erreur soit levée (vider le jeton,
-   *  `signalerNonAuthentifie`…), avec le jeton envoyé par cette requête
-   *  (`null` si aucun) : un 401 tardif d'une requête partie avec un ancien
-   *  jeton ne doit pas purger le nouveau. S'il lève, l'appelant reçoit quand
-   *  même l'`ErreurApi` 401 ; l'exception du rappel est signalée à part
-   *  (`reportError`). */
-  surNonAuthentifie?: (erreur: ErreurApi, jeton: string | null) => void
+  /** Appelé sur un 401, avant que l'erreur soit levée (vider le jeton,
+   *  `signalerNonAuthentifie`…). Pas pour le 401 tardif d'une requête partie
+   *  avec un jeton que `jeton()` ne rend plus (reconnexion entre-temps) : il
+   *  ne doit pas purger le nouveau ; l'erreur 401 est levée dans tous les
+   *  cas. S'il lève, l'appelant reçoit quand même l'`ErreurApi` 401 ;
+   *  l'exception du rappel est signalée à part (`reportError`). */
+  surNonAuthentifie?: (erreur: ErreurApi) => void
   /** Délai maximal d'une requête, corps compris, en millisecondes : 30 s
    *  par défaut, plafonné à 2^31-1 ; `Infinity` ou `null` : aucun délai.
    *  Une valeur ≤ 0 ou non finie lève une `RangeError`. */
@@ -243,7 +243,8 @@ export interface ClientHttp {
 }
 
 /** Adresse de référence pour résoudre une base relative : la page, ou une
- *  origine fictive hors navigateur (tests, rendu serveur). */
+ *  origine fictive hors navigateur (tests, rendu serveur). Lue une fois par
+ *  `creerClientHttp`. */
 function adresseDeReference(): string {
   return globalThis.location?.href ?? "http://reference.invalid/"
 }
@@ -254,12 +255,13 @@ function adresseDeReference(): string {
  * ni `/\`, quelle que soit la base), ne contient ni caractère de contrôle ni
  * espace (l'analyseur d'URL retire tabulations et retours à la ligne :
  * `/\t/hote` deviendrait `//hote`), et l'URL résolue garde l'origine de la
- * base (`origineBase`, calculée une fois par `creerClientHttp`). `%2F%2F`
- * reste un chemin.
+ * base (`origineBase`, résolue sur la même `reference`). `%2F%2F` reste un
+ * chemin.
  * Erreur de programmation, hors du contrat `ErreurApi` : `TypeError`.
  */
 function verifierChemin(
   base: string,
+  reference: string,
   origineBase: string,
   chemin: string
 ): void {
@@ -269,7 +271,7 @@ function verifierChemin(
     !/[\u0000- \u007f]/.test(chemin)
   if (
     !valide ||
-    new URL(`${base}${chemin}`, adresseDeReference()).origin !== origineBase
+    new URL(`${base}${chemin}`, reference).origin !== origineBase
   ) {
     throw new TypeError(
       "Chemin d'API invalide : il doit commencer par « / », sans espace ni caractère de contrôle, et rester sur l'origine de l'API."
@@ -399,15 +401,28 @@ type Requete = OptionsRequete & { methode: string; corps?: unknown }
 
 export function creerClientHttp(options: OptionsClientHttp = {}): ClientHttp {
   const base = (options.base ?? "").replace(/\/+$/, "")
-  // L'origine de la page ne change pas pendant sa vie : celle de la base non
-  // plus, même relative.
-  const origineBase = new URL(`${base}/`, adresseDeReference()).origin
+  // L'origine de la page ne change pas pendant sa vie : la référence est lue
+  // une fois, et la base comme chaque chemin sont résolus sur elle (deux
+  // lectures pourraient diverger, `location` absent puis présent). Une base
+  // malformée (variable d'environnement) ne fait pas échouer la création du
+  // client, donc l'import du module : chaque requête la rejette.
+  const reference = adresseDeReference()
+  let origineBase: string | undefined
+  let erreurBase: TypeError | undefined
+  try {
+    origineBase = new URL(`${base}/`, reference).origin
+  } catch (cause) {
+    erreurBase = new TypeError(`Base d'API invalide : « ${base} ».`, {
+      cause,
+    })
+  }
   const delaiClient = validerDelai(options.delaiMax, DELAI_MAX_PAR_DEFAUT_MS)
   const redirections =
     options.redirections ?? (options.jeton ? "refusees" : "suivies")
 
   function url(chemin: string, query?: ParametresRequete): string {
-    verifierChemin(base, origineBase, chemin)
+    if (origineBase === undefined) throw erreurBase
+    verifierChemin(base, reference, origineBase, chemin)
     return `${base}${chemin}${chaineRequete(query)}`
   }
 
@@ -447,10 +462,19 @@ export function creerClientHttp(options: OptionsClientHttp = {}): ClientHttp {
     // réseau deviennent des `ErreurApi`.
     const traduire = (erreur: unknown): never => {
       if (erreur instanceof ErreurApi) {
-        if (erreur.status === 401 && options.surNonAuthentifie) {
+        // Le 401 tardif d'une requête partie avec un jeton que l'application
+        // a remplacé depuis ne doit pas purger le nouveau : le rappel n'est
+        // appelé que si le jeton courant est encore celui de la requête (ou
+        // si la requête n'en portait pas). L'erreur est levée dans tous les
+        // cas.
+        if (
+          erreur.status === 401 &&
+          options.surNonAuthentifie &&
+          (!jeton || options.jeton?.() === jeton)
+        ) {
           // Le rappel ne remplace pas l'erreur 401 et n'est pas tu.
           try {
-            options.surNonAuthentifie(erreur, jeton || null)
+            options.surNonAuthentifie(erreur)
           } catch (exception) {
             signalerException(exception)
           }

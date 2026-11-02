@@ -133,18 +133,20 @@ describe("client HTTP commun", () => {
     simulerFetch(() => ({ status: 404, texte: "Not Found" }))
     const erreur = await creerClientHttp().get("/x").then(rate, echec)
     expect(erreur.code).toBe("not_found")
-    expect(erreur.message).toBe("Ressource introuvable (HTTP 404).")
+    expect(erreur.message).toBe("Ressource introuvable. (HTTP 404)")
     expect(erreur.details).toBeNull()
   })
 
-  it("repli : le statut HTTP dans le message, avant le point de la première phrase", async () => {
+  it("repli : le statut HTTP à la fin du message, quel qu'il soit", async () => {
+    // Message de plusieurs phrases ou avec « : » : rien n'est inséré au
+    // milieu, le statut s'ajoute à la fin.
     const attendus: [number, string][] = [
-      [413, "La requête n'a pas abouti (HTTP 413)."],
-      [500, "Erreur interne du serveur (HTTP 500)."],
-      [401, "Session expirée ou absente (HTTP 401). Reconnectez-vous."],
+      [413, "La requête n'a pas abouti. (HTTP 413)"],
+      [500, "Erreur interne du serveur. (HTTP 500)"],
+      [401, "Session expirée ou absente. Reconnectez-vous. (HTTP 401)"],
       [
         503,
-        "Un service est momentanément indisponible (HTTP 503). Réessayez dans quelques instants.",
+        "Un service est momentanément indisponible. Réessayez dans quelques instants. (HTTP 503)",
       ],
     ]
     for (const [status, message] of attendus) {
@@ -163,7 +165,7 @@ describe("client HTTP commun", () => {
     }))
     const erreur = await creerClientHttp().get("/x").then(rate, echec)
     expect(erreur.message).toBe(
-      "Conflit : la ressource a changé entre-temps (HTTP 409)."
+      "Conflit : la ressource a changé entre-temps. (HTTP 409)"
     )
   })
 
@@ -308,6 +310,34 @@ describe("client HTTP commun", () => {
         expect(() => client.url(chemin)).toThrow(TypeError)
       }
     }
+    expect(espion).not.toHaveBeenCalled()
+  })
+
+  it("résout base et chemins sur une même adresse de référence", async () => {
+    // Client créé hors navigateur (pas de `location`), `location` présent
+    // ensuite : la base et le chemin restent résolus sur la même référence,
+    // aucun chemin n'est refusé.
+    vi.stubGlobal("location", undefined)
+    const client = creerClientHttp({ base: "/api" })
+    vi.unstubAllGlobals()
+    expect(globalThis.location?.href).toBeTruthy()
+    const espion = simulerFetch(() => ({ corps: {} }))
+    await expect(client.get("/x")).resolves.toEqual({})
+    expect(espion.mock.calls[0]?.[0]).toBe("/api/x")
+    expect(client.url("/x")).toBe("/api/x")
+  })
+
+  it("base malformée : la création réussit, chaque requête est rejetée", async () => {
+    const espion = simulerFetch(() => ({ corps: {} }))
+    // Variable d'environnement mal saisie : l'import du module qui crée le
+    // client ne doit pas échouer.
+    const client = creerClientHttp({ base: "https://[api.exemple.org" })
+    for (let i = 0; i < 2; i++) {
+      await expect(client.get("/x")).rejects.toThrow(
+        /Base d'API invalide : « https:\/\/\[api\.exemple\.org »/
+      )
+    }
+    expect(() => client.url("/x")).toThrow(TypeError)
     expect(espion).not.toHaveBeenCalled()
   })
 
@@ -574,39 +604,60 @@ describe("client HTTP commun", () => {
     expect(surNonAuthentifie).not.toHaveBeenCalled()
     simulerFetch(() => ({ status: 401 }))
     const erreur = await client.get("/x").then(rate, echec)
-    // Sans jeton : `null` en second argument.
-    expect(surNonAuthentifie).toHaveBeenCalledWith(erreur, null)
+    // Sans jeton : le rappel est appelé, avec l'erreur seule.
+    expect(surNonAuthentifie).toHaveBeenCalledTimes(1)
+    expect(surNonAuthentifie.mock.calls[0]).toEqual([erreur])
     expect(erreur.code).toBe("unauthenticated")
   })
 
-  it("passe à surNonAuthentifie le jeton de la requête, pas le jeton courant", async () => {
-    let jeton = "ancien-jeton"
-    const recus: (string | null)[] = []
-    let repondre: (() => void) | undefined
+  /** Un `fetch` dont la réponse 401 part quand le test appelle `repondre`. */
+  function fetch401Differe() {
+    const attente: { repondre?: () => void } = {}
     vi.stubGlobal(
       "fetch",
       vi.fn(
         () =>
           new Promise<Response>((resoudre) => {
-            repondre = () => resoudre(new Response(null, { status: 401 }))
+            attente.repondre = () =>
+              resoudre(new Response(null, { status: 401 }))
           })
       )
     )
-    const client = creerClientHttp({
-      jeton: () => jeton,
-      // L'usage documenté : ne purger que si le jeton n'a pas changé.
-      surNonAuthentifie: (_erreur, jetonRequete) => {
-        recus.push(jetonRequete)
-        if (jetonRequete === jeton) jeton = ""
-      },
+    return attente
+  }
+
+  it("401 avec le jeton courant : surNonAuthentifie appelé, sans le jeton", async () => {
+    let jeton = JETON
+    const surNonAuthentifie = vi.fn(() => {
+      jeton = ""
     })
+    const attente = fetch401Differe()
+    const client = creerClientHttp({ jeton: () => jeton, surNonAuthentifie })
     const enCours = client.get("/x").then(rate, echec)
-    // Reconnexion pendant la requête : un nouveau jeton.
-    jeton = "nouveau-jeton"
-    repondre?.()
+    attente.repondre?.()
     const erreur = await enCours
     expect(erreur.status).toBe(401)
-    expect(recus).toEqual(["ancien-jeton"])
+    // Le jeton ne quitte pas l'en-tête : le rappel ne reçoit que l'erreur.
+    expect(surNonAuthentifie.mock.calls[0]).toEqual([erreur])
+    expect(jeton).toBe("")
+    sansJeton(erreur)
+  })
+
+  it("401 tardif après changement de jeton : rappel non appelé, erreur levée", async () => {
+    let jeton = "ancien-jeton"
+    const surNonAuthentifie = vi.fn(() => {
+      jeton = ""
+    })
+    const attente = fetch401Differe()
+    const client = creerClientHttp({ jeton: () => jeton, surNonAuthentifie })
+    const enCours = client.get("/x").then(rate, echec)
+    // Reconnexion pendant la requête : un nouveau jeton, à ne pas purger.
+    jeton = "nouveau-jeton"
+    attente.repondre?.()
+    const erreur = await enCours
+    expect(erreur).toBeInstanceOf(ErreurApi)
+    expect(erreur.status).toBe(401)
+    expect(surNonAuthentifie).not.toHaveBeenCalled()
     expect(jeton).toBe("nouveau-jeton")
   })
 
