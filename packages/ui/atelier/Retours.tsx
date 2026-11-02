@@ -286,6 +286,24 @@ function DemoBadges() {
         </RemovableBadge>
       </li>
       <li>
+        {/* Texte expliqué et marqueur : la bulle part du contour du badge,
+            le cadenas reste centré à côté du texte. */}
+        <RemovableBadge
+          libelleRetirer="Retirer eticmembers.directory.read"
+          onRetirer={() => {}}
+          className="font-mono"
+        >
+          <Toggletip explication="Annuaire : lecture">
+            eticmembers.directory.read
+          </Toggletip>
+          <LockIcon
+            className="size-3.5 text-warning"
+            aria-label="Droit critique"
+            role="img"
+          />
+        </RemovableBadge>
+      </li>
+      <li>
         <ExplainedBadge explication="Groupe imposé par le poste « Trésorier » : il ne peut pas être retiré manuellement.">
           <Badge variant="outline" size="lg">
             Comptabilité

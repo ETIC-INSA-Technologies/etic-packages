@@ -27,10 +27,9 @@ describe("RemovableBadge", () => {
         </RemovableBadge>
       </TooltipProvider>
     )
-    expect(screen.getByText("Bureau").parentElement).toHaveClass(
-      "h-7",
-      "bg-secondary"
-    )
+    expect(
+      screen.getByText("Bureau").closest('[data-slot="badge"]')
+    ).toHaveClass("h-7", "bg-secondary")
     await user.click(
       screen.getByRole("button", { name: "Retirer le groupe Bureau" })
     )
@@ -45,15 +44,67 @@ describe("RemovableBadge", () => {
         </RemovableBadge>
       </TooltipProvider>
     )
+    // Le texte nu est enveloppé : premier élément du libellé, il se coupe.
     const libelle = screen.getByText("Groupe au nom très long")
-    expect(libelle).toHaveClass("truncate")
-    const badge = libelle.parentElement!
+    expect(libelle.tagName).toBe("SPAN")
+    expect(libelle.parentElement).toHaveAttribute(
+      "data-slot",
+      "removable-badge-label"
+    )
+    expect(libelle.parentElement).toHaveClass("*:first:truncate")
+    const badge = libelle.closest<HTMLElement>('[data-slot="badge"]')!
     expect(badge).toHaveClass("overflow-hidden", "max-w-full")
     expect(badge).not.toHaveClass("overflow-visible")
     // jsdom n'applique pas les styles : l'anneau intérieur se lit aux classes.
     const croix = screen.getByRole("button", { name: "Retirer" })
     expect(croix).toHaveClass("focus-visible:inset-ring-2")
     expect(croix).not.toHaveClass("focus-visible:ring-3")
+  })
+
+  it("un marqueur après le libellé reste entier, centré à côté de lui", () => {
+    render(
+      <RemovableBadge>
+        <span>eticmembers.directory.read</span>
+        <span role="img" aria-label="Droit critique" />
+      </RemovableBadge>
+    )
+    const libelle = screen
+      .getByText("eticmembers.directory.read")
+      .closest('[data-slot="removable-badge-label"]')
+    // Le premier élément se coupe, les suivants ne rétrécissent pas.
+    expect(libelle).toHaveClass(
+      "flex",
+      "items-center",
+      "gap-1",
+      "*:shrink-0",
+      "*:first:shrink",
+      "*:first:truncate"
+    )
+    expect(
+      screen.getByRole("img", { name: "Droit critique" }).parentElement
+    ).toBe(libelle)
+  })
+
+  it("texte nu suivi d'un marqueur, même dans un fragment : le texte reste coupable", () => {
+    const code = "eticmembers.directory.read"
+    render(
+      <RemovableBadge>
+        <>
+          {code} ({1})
+          <span role="img" aria-label="Droit critique" />
+        </>
+      </RemovableBadge>
+    )
+    const libelle = document.querySelector(
+      '[data-slot="removable-badge-label"]'
+    )!
+    // Les textes nus forment un seul élément, premier du libellé ; le
+    // marqueur vient après lui.
+    expect(libelle.children).toHaveLength(2)
+    expect(libelle.children[0]).toHaveTextContent(`${code} (1)`)
+    expect(libelle.children[1]).toBe(
+      screen.getByRole("img", { name: "Droit critique" })
+    )
   })
 
   it("en cours : occupé, garde son nom et le focus, sans effet", async () => {
@@ -110,7 +161,9 @@ describe("RemovableBadge", () => {
 
   it("sans onRetirer : même gabarit, sans bouton", () => {
     render(<RemovableBadge>Imposé</RemovableBadge>)
-    expect(screen.getByText("Imposé").parentElement).toHaveClass("h-7")
+    expect(
+      screen.getByText("Imposé").closest('[data-slot="badge"]')
+    ).toHaveClass("h-7")
     expect(screen.queryByRole("button")).toBeNull()
   })
 })

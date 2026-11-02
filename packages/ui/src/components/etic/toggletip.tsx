@@ -58,9 +58,12 @@ export function Toggletip({
   "data-slot": slot = "toggletip",
 }: ToggletipProps) {
   const [ouverture, setOuverture] = useState<Ouverture>(null)
-  // L'élément porteur, ancre de la bulle (en état : un ref lu au rendu ne
-  // suivrait pas son montage).
+  // L'élément porteur (en état : un ref lu au rendu ne suivrait pas son
+  // montage).
   const [porteur, setPorteur] = useState<HTMLElement | null>(null)
+  // Ancre de la bulle : le porteur, ou le badge qui l'entoure (texte d'un
+  // `RemovableBadge`) — la flèche part du contour du badge, pas du texte.
+  const ancre = porteur?.closest<HTMLElement>('[data-slot="badge"]') ?? porteur
 
   // Les props de `render` sont fusionnées par `useRender` : ses gestionnaires
   // sont appelés avec les nôtres, ses classes ajoutées, sa `ref` gardée.
@@ -129,7 +132,7 @@ export function Toggletip({
         }}
       >
         <PopoverContent
-          anchor={porteur}
+          anchor={ancre}
           side="top"
           data-slot="toggletip-content"
           // Le focus reste sur l'élément : la bulle ne contient rien à
