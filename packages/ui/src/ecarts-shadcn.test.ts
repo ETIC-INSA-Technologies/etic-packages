@@ -621,6 +621,44 @@ describe("écarts avec shadcn", () => {
     expect(liste).toHaveAttribute("data-align", "start")
   })
 
+  it("select : liste à la largeur de ses options, libellé long à la ligne", async () => {
+    // shadcn : liste à la largeur exacte du champ, libellés sur une ligne —
+    // une option plus longue que le champ y était coupée net.
+    await selectOuvert(
+      createElement(SelectItem, { value: "a" }, "Responsable communication")
+    )
+    const liste = document.querySelector('[data-slot="select-content"]')
+    expect(liste).toHaveClass(
+      "w-max",
+      "max-w-(--available-width)",
+      "min-w-[max(var(--anchor-width),--spacing(36))]"
+    )
+    expect(liste).not.toHaveClass("w-(--anchor-width)")
+    const libelle = screen.getByRole("option").firstElementChild
+    expect(libelle).toHaveClass("min-w-0")
+    expect(libelle).not.toHaveClass("shrink-0", "whitespace-nowrap")
+  })
+
+  it("select : valeur trop longue tronquée par « … » dans le champ", () => {
+    // shadcn : `flex` sur la valeur, qui annule son `line-clamp-1`.
+    render(
+      createElement(
+        Select,
+        null,
+        createElement(SelectTrigger, { "aria-label": "Pôle" })
+      )
+    )
+    const champ = screen.getByRole("combobox", { name: "Pôle" })
+    expect(champ).toHaveClass(
+      "*:data-[slot=select-value]:block",
+      "*:data-[slot=select-value]:truncate"
+    )
+    expect(champ).not.toHaveClass(
+      "*:data-[slot=select-value]:flex",
+      "*:data-[slot=select-value]:line-clamp-1"
+    )
+  })
+
   it("select : options sans SelectGroup à la marge d'un groupe", async () => {
     const liste = await selectOuvert(
       createElement(SelectItem, { value: "a" }, "Alpha")

@@ -449,6 +449,9 @@ obligatoire, invalide }`, ou `null` hors d'un `FormField`. `RequiredMark` existe
   champ, loupe comprise (comme toute liste d'un `ComboboxInput`).
 - `Select` (shadcn) : la liste s'ouvre sous le champ, alignée à gauche, sans jamais le
   recouvrir (`alignItemWithTrigger` et `align` restent réglables sur `SelectContent`).
+  Elle prend la largeur de ses options, au moins celle du champ et au plus l'espace
+  disponible ; une option plus longue encore passe à la ligne au lieu d'être coupée. Dans le
+  champ, une valeur trop longue finit par « … ».
   Les options vont dans un `SelectGroup`, comme chez shadcn ; posées directement dans
   `SelectContent`, elles ont la même marge. Sans option (y compris un `SelectGroup` vide),
   la liste dit « Aucune option. » (`vide` de `SelectContent`), dans une zone de statut

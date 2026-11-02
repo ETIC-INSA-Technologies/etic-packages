@@ -176,7 +176,7 @@ describe("Select", () => {
     )?.previousElementSibling
     expect(libelle).toHaveClass("group-data-disabled/select-item:opacity-50")
     // Le libellé passe à la ligne : ni coupé, ni recouvert par la coche.
-    expect(libelle).toHaveClass("shrink", "whitespace-normal")
+    expect(libelle).toHaveClass("min-w-0")
     expect(libelle).not.toHaveClass("shrink-0")
     expect(libelle).not.toHaveClass("whitespace-nowrap")
     // Une option sans description garde l'apparence de shadcn.
