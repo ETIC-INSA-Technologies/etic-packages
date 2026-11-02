@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -211,6 +211,28 @@ describe("DatePicker", () => {
       screen.getByRole("button", { name: "Choisir dans le calendrier" })
     )
     expect(await screen.findByRole("grid")).toHaveAccessibleName("juin 2004")
+  })
+
+  it("listes du mois et de l'année : le calendrier reste ouvert et la liste garde le focus", async () => {
+    const user = userEvent.setup()
+    render(<Demo moisInitial={new Date(2004, 5, 1)} listesMoisAnnee />)
+    await user.click(
+      screen.getByRole("button", { name: "Choisir dans le calendrier" })
+    )
+    const calendrier = (await screen.findByRole("grid")).closest(
+      '[data-slot="calendar"]'
+    )
+    await user.click(screen.getByRole("combobox", { name: /mois/i }))
+    await user.click(await screen.findByRole("option", { name: "sept." }))
+    expect(screen.getByRole("grid")).toHaveAccessibleName("septembre 2004")
+    // Le mois est piloté par DatePicker : le calendrier n'est pas remonté,
+    // sa liste garde le focus.
+    expect(screen.getByRole("grid").closest('[data-slot="calendar"]')).toBe(
+      calendrier
+    )
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: /mois/i })).toHaveFocus()
+    )
   })
 
   it("une date choisie l'emporte sur moisInitial", async () => {

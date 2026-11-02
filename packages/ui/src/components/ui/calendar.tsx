@@ -5,7 +5,9 @@ import { cn } from "cn"
 import {
   DayPicker,
   getDefaultClassNames,
+  type CustomComponents,
   type DayButton,
+  type DropdownProps,
   type Locale,
 } from "react-day-picker"
 // La seule locale française : `react-day-picker/locale` les charge toutes.
@@ -13,10 +15,119 @@ import { fr } from "react-day-picker/locale/fr"
 
 import { Button, buttonVariants } from "@etic-ui/components/ui/button"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@etic-ui/components/ui/select"
+import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronDownIcon,
 } from "lucide-react"
+
+/**
+ * Liste du mois ou de l'année (`captionLayout="dropdown"`). Écart avec
+ * shadcn : son `<select>` natif, transparent sur un libellé, ouvrait la liste
+ * du système, sans le style de la bibliothèque. Ici, le `Select` de la
+ * bibliothèque, à l'allure du libellé (sans bordure ni fond). react-day-picker
+ * attend un `onChange` de `<select>` : il ne lit que `event.target.value`.
+ */
+function CalendarDropdown({
+  options = [],
+  value,
+  onChange,
+  disabled,
+  "aria-label": ariaLabel,
+}: DropdownProps) {
+  const items = options.map(({ value, label }) => ({ value, label }))
+  return (
+    <Select
+      items={items}
+      value={Number(value)}
+      disabled={disabled}
+      onValueChange={(choisie) => {
+        if (choisie === null) return
+        onChange?.({
+          target: { value: String(choisie) },
+        } as React.ChangeEvent<HTMLSelectElement>)
+      }}
+    >
+      <SelectTrigger
+        size="sm"
+        aria-label={ariaLabel}
+        // relative z-10 : au-dessus de la barre des flèches, posée en absolu
+        // sur toute la largeur, qui prenait les clics. Hauteur des flèches
+        // (--cell-size) : cible tactile de 36 px sur mobile.
+        className="relative z-10 gap-1 border-none bg-transparent px-1.5 font-medium shadow-none hover:bg-muted data-[size=sm]:h-(--cell-size) dark:bg-transparent dark:hover:bg-muted [&_svg]:size-3.5"
+      >
+        <SelectValue />
+      </SelectTrigger>
+      {/* Les douze mois tiennent sans défiler ; une liste d'années, qui peut
+          compter un siècle, défile. */}
+      <SelectContent className="max-h-[min(22rem,var(--available-height))] min-w-0">
+        {options.map((option) => (
+          <SelectItem
+            key={option.value}
+            value={option.value}
+            disabled={option.disabled}
+          >
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+function CalendarRoot({
+  className,
+  rootRef,
+  ...props
+}: CustomComponents["Root"] extends React.ComponentType<infer P> ? P : never) {
+  return (
+    <div
+      data-slot="calendar"
+      ref={rootRef}
+      className={cn(className)}
+      {...props}
+    />
+  )
+}
+
+function CalendarChevron({
+  className,
+  orientation,
+  ...props
+}: CustomComponents["Chevron"] extends React.ComponentType<infer P>
+  ? P
+  : never) {
+  if (orientation === "left") {
+    return <ChevronLeftIcon className={cn("size-4", className)} {...props} />
+  }
+
+  if (orientation === "right") {
+    return <ChevronRightIcon className={cn("size-4", className)} {...props} />
+  }
+
+  return <ChevronDownIcon className={cn("size-4", className)} {...props} />
+}
+
+function CalendarWeekNumber({
+  children,
+  ...props
+}: CustomComponents["WeekNumber"] extends React.ComponentType<infer P>
+  ? P
+  : never) {
+  return (
+    <td {...props}>
+      <div className="flex size-(--cell-size) items-center justify-center text-center">
+        {children}
+      </div>
+    </td>
+  )
+}
 
 function Calendar({
   className,
@@ -33,6 +144,24 @@ function Calendar({
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
   const defaultClassNames = getDefaultClassNames()
+  // Écart avec shadcn, qui les écrit en ligne : des composants recréés à
+  // chaque rendu sont, pour React, d'un type nouveau, et tout le calendrier
+  // était remonté quand le parent le redessinait (mois piloté par `month`,
+  // comme dans DatePicker) : le focus d'une liste du mois ou de l'année se
+  // perdait. Ils ne changent qu'avec la locale ou `components`.
+  const composants = React.useMemo(
+    () => ({
+      Root: CalendarRoot,
+      Chevron: CalendarChevron,
+      DayButton: (props: React.ComponentProps<typeof DayButton>) => (
+        <CalendarDayButton locale={locale} {...props} />
+      ),
+      Dropdown: CalendarDropdown,
+      WeekNumber: CalendarWeekNumber,
+      ...components,
+    }),
+    [locale, components]
+  )
 
   return (
     <DayPicker
@@ -141,51 +270,7 @@ function Calendar({
         hidden: cn("invisible", defaultClassNames.hidden),
         ...classNames,
       }}
-      components={{
-        Root: ({ className, rootRef, ...props }) => {
-          return (
-            <div
-              data-slot="calendar"
-              ref={rootRef}
-              className={cn(className)}
-              {...props}
-            />
-          )
-        },
-        Chevron: ({ className, orientation, ...props }) => {
-          if (orientation === "left") {
-            return (
-              <ChevronLeftIcon className={cn("size-4", className)} {...props} />
-            )
-          }
-
-          if (orientation === "right") {
-            return (
-              <ChevronRightIcon
-                className={cn("size-4", className)}
-                {...props}
-              />
-            )
-          }
-
-          return (
-            <ChevronDownIcon className={cn("size-4", className)} {...props} />
-          )
-        },
-        DayButton: ({ ...props }) => (
-          <CalendarDayButton locale={locale} {...props} />
-        ),
-        WeekNumber: ({ children, ...props }) => {
-          return (
-            <td {...props}>
-              <div className="flex size-(--cell-size) items-center justify-center text-center">
-                {children}
-              </div>
-            </td>
-          )
-        },
-        ...components,
-      }}
+      components={composants}
       {...props}
     />
   )

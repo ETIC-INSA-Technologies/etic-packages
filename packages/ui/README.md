@@ -965,6 +965,12 @@ npm run build      # dist/ : un module par composant, types, styles.css
     react-day-picker (mois, jours et libellés d'accessibilité) et `weekStartsOn={1}` ;
   - jours du calendrier de 36 px sous le seuil mobile (cible tactile), 28 px au-delà comme
     dans shadcn : `--cell-size` de `calendar.tsx` ;
+  - listes du mois et de l'année du calendrier (`captionLayout="dropdown"`, `listesMoisAnnee` de
+    `DatePicker`) : le `Select` de la bibliothèque, à l'allure du libellé, au lieu du `<select>`
+    natif transparent de shadcn, dont la liste ouverte était celle du système. Les composants
+    passés à react-day-picker sont définis une fois (shadcn les écrit en ligne) : recréés à
+    chaque rendu, ils remontaient tout le calendrier quand son parent le redessinait (mois piloté
+    par `month`), et le focus d'une liste se perdait ;
   - thème (`styles.css`) : `--destructive` plus foncé en clair et plus clair en sombre
     (≥ 4,5:1 sur sa teinte : bouton et badge `destructive`, y compris dans un pied de
     dialogue) ; contrastes vérifiés par `src/theme.test.ts` ;
