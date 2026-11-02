@@ -89,12 +89,9 @@ function Liste({
   )
 }
 
-/** « Tout désélectionner » du bandeau au-dessus des lignes (la barre a le
- *  sien, au même nom : une seule action, un seul mot). */
-const boutonDuBandeau = () =>
-  within(
-    document.querySelector<HTMLElement>('[data-slot="data-table-select-all"]')!
-  ).getByRole("button", { name: "Tout désélectionner" })
+/** « Sélectionner les 137 personnes » de la barre, s'il est proposé. */
+const proposition = (nom: string | RegExp = "Sélectionner les 137 personnes") =>
+  screen.queryByRole("button", { name: nom })
 
 const caseEntete = () =>
   screen.getByRole("checkbox", { name: "Sélectionner la page" })
@@ -278,40 +275,34 @@ describe("sélection de tous les éléments", () => {
     )
     await user.click(screen.getByRole("checkbox", { name: "Sélectionner Ada" }))
     // Page incomplète : pas de proposition.
-    expect(screen.queryByText(/de la page/)).toBeNull()
+    expect(proposition()).toBeNull()
 
     await user.click(
       screen.getByRole("checkbox", { name: "Sélectionner la page" })
     )
-    expect(
-      screen.getByText("Les 2 personnes de la page sont sélectionnées.")
-    ).toBeInTheDocument()
+    // Dans la barre, qui flotte : rien n'est inséré au-dessus des lignes, le
+    // tableau ne bouge pas.
+    const barre = screen.getByRole("toolbar", {
+      name: "2 personnes sélectionnées",
+    })
+    expect(barre).toContainElement(proposition())
 
-    await user.click(
-      screen.getByRole("button", { name: "Sélectionner les 137 personnes" })
-    )
+    await user.click(proposition()!)
     expect(onTout).toHaveBeenLastCalledWith(true)
-    // Affiché dans le bandeau, et annoncé : le bouton reste le même, seul
-    // son texte change, rien ne l'aurait dit.
-    const [zoneAnnoncee, bandeau] = screen.getAllByText(
-      "Les 137 personnes sont sélectionnées."
-    )
-    expect(
-      bandeau.closest('[data-slot="data-table-select-all"]')
-    ).not.toBeNull()
-    expect(zoneAnnoncee).toHaveAttribute("aria-live", "polite")
-    expect(document.activeElement).toBe(boutonDuBandeau())
     expect(
       screen.getByRole("toolbar", { name: "137 personnes sélectionnées" })
     ).toBeInTheDocument()
+    expect(
+      screen.getByText("Les 137 personnes sont sélectionnées.")
+    ).toHaveAttribute("aria-live", "polite")
+    // La proposition a disparu sous le focus : il passe à « Tout
+    // désélectionner », qui reste.
+    expect(proposition()).toBeNull()
+    expect(document.activeElement).toBe(boutonDeLaBarre())
 
-    await user.click(boutonDuBandeau())
+    await user.click(boutonDeLaBarre())
     expect(onTout).toHaveBeenLastCalledWith(false)
     expect(screen.queryByRole("toolbar")).toBeNull()
-    // Le bandeau a disparu sous le focus : il passe à la case d'en-tête.
-    expect(
-      document.querySelector('[data-slot="data-table-select-all"]')
-    ).toBeNull()
     expect(document.activeElement).toBe(caseEntete())
   })
 
@@ -406,9 +397,7 @@ describe("sélection de tous les éléments", () => {
     await user.click(
       screen.getByRole("checkbox", { name: "Sélectionner la page" })
     )
-    expect(
-      screen.getByText("Les 2 personnes de la page sont sélectionnées.")
-    ).toBeInTheDocument()
+    expect(proposition()).toBeInTheDocument()
     expect(
       screen.getByRole("toolbar", { name: "4 personnes sélectionnées" })
     ).toBeInTheDocument()
@@ -434,8 +423,9 @@ describe("sélection de tous les éléments", () => {
     await user.click(boutonDeLaBarre())
     expect(onTout.mock.calls).toEqual([[false]])
 
+    // Échap, depuis « Tout désélectionner » qui a reçu le focus.
     await toutCocher()
-    await user.click(boutonDuBandeau())
+    await user.keyboard("{Escape}")
     expect(onTout.mock.calls).toEqual([[false]])
   })
 
@@ -464,6 +454,7 @@ describe("sélection de tous les éléments", () => {
             Garder Ada
           </button>
           <DataTable table={table} libelle="Personnes" />
+          <DataTableBulkActions table={table}>{null}</DataTableBulkActions>
         </>
       )
     }
@@ -471,9 +462,7 @@ describe("sélection de tous les éléments", () => {
     await user.click(
       screen.getByRole("checkbox", { name: "Sélectionner la page" })
     )
-    await user.click(
-      screen.getByRole("button", { name: "Sélectionner les 137 éléments" })
-    )
+    await user.click(proposition("Sélectionner les 137 éléments")!)
     expect(onTout).toHaveBeenLastCalledWith(true)
     await user.click(screen.getByRole("button", { name: "Garder Ada" }))
     expect(onTout).toHaveBeenLastCalledWith(false)
@@ -483,8 +472,67 @@ describe("sélection de tous les éléments", () => {
       screen.getByRole("checkbox", { name: "Sélectionner Grace" })
     )
     expect(
-      screen.getByText("Les 2 éléments de la page sont sélectionnés.")
+      screen.getByRole("toolbar", { name: "2 éléments sélectionnés" })
     ).toBeInTheDocument()
+    expect(proposition("Sélectionner les 137 éléments")).toBeInTheDocument()
+  })
+
+  it("garde le focus sur la proposition quand l'application la refuse", async () => {
+    const user = userEvent.setup()
+    function Refus() {
+      const table = useDataTable({
+        donnees: DONNEES,
+        colonnes: COLONNES,
+        idLigne: (l) => l.id,
+        total: 137,
+        toutSelectionne: false,
+        onToutSelectionneChange: () => {},
+      })
+      return (
+        <>
+          <DataTable table={table} libelle="Personnes" />
+          <DataTableBulkActions table={table}>{null}</DataTableBulkActions>
+        </>
+      )
+    }
+    render(<Refus />)
+    await user.click(
+      screen.getByRole("checkbox", { name: "Sélectionner la page" })
+    )
+    const bouton = proposition("Sélectionner les 137 éléments")!
+    await user.click(bouton)
+    expect(proposition("Sélectionner les 137 éléments")).toBe(bouton)
+    expect(document.activeElement).toBe(bouton)
+  })
+
+  it("ne propose pas le total quand la sélection des pages conservées l'atteint", async () => {
+    const user = userEvent.setup()
+    const PAGE_2 = [
+      { id: "3", nom: "Alan" },
+      { id: "4", nom: "Barbara" },
+    ]
+    const { rerender } = render(
+      <Liste supprimer={vi.fn()} total={4} conserverSelection />
+    )
+    await user.click(
+      screen.getByRole("checkbox", { name: "Sélectionner la page" })
+    )
+    expect(proposition("Sélectionner les 4 personnes")).toBeInTheDocument()
+    rerender(
+      <Liste
+        supprimer={vi.fn()}
+        total={4}
+        conserverSelection
+        donnees={PAGE_2}
+      />
+    )
+    await user.click(
+      screen.getByRole("checkbox", { name: "Sélectionner la page" })
+    )
+    expect(
+      screen.getByRole("toolbar", { name: "4 personnes sélectionnées" })
+    ).toBeInTheDocument()
+    expect(proposition(/^Sélectionner les/)).toBeNull()
   })
 
   it("ne propose rien sans total, ni quand la page contient tout", async () => {
@@ -493,9 +541,10 @@ describe("sélection de tous les éléments", () => {
     await user.click(
       screen.getByRole("checkbox", { name: "Sélectionner la page" })
     )
-    expect(screen.queryByText(/de la page/)).toBeNull()
+    expect(screen.getByRole("toolbar")).toBeInTheDocument()
+    expect(proposition(/^Sélectionner les/)).toBeNull()
     rerender(<Liste supprimer={vi.fn()} total={2} />)
-    expect(screen.queryByText(/de la page/)).toBeNull()
+    expect(proposition(/^Sélectionner les/)).toBeNull()
   })
 })
 

@@ -1,10 +1,10 @@
-// Focus d'un tableau quand ce qui l'avait disparaît (bandeau, barre de
-// sélection, ligne supprimée). Sans dépendance à TanStack Table : utilisable
+// Focus d'un tableau quand ce qui l'avait disparaît (barre de sélection,
+// ligne supprimée). Sans dépendance à TanStack Table : utilisable
 // pour un tableau rendu à la main avec les primitives `Table`.
 
 /**
  * Rend le focus à un élément stable du tableau avant qu'un contrôle qui l'a
- * ne disparaisse (bandeau ou barre de sélection) : la case d'en-tête, sinon
+ * ne disparaisse (barre de sélection) : la case d'en-tête, sinon
  * le cadre lui-même.
  */
 export function focaliserTableau(racine: HTMLElement | null) {

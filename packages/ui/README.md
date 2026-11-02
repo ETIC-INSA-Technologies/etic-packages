@@ -686,15 +686,18 @@ const supprimer = () =>
     : api.supprimer(table.getSelectedRowIds())
 ```
 
-Quand toute la page est cochée et que `total` compte d'autres éléments, `DataTable` affiche
-au-dessus des lignes « Les 25 éléments de la page sont sélectionnés. Sélectionner les 137
-éléments », puis « Les 137 éléments sont sélectionnés. Tout désélectionner » (`unite` et
-`feminin` accordent le texte, comme pour `DataTableCount` et `DataTableBulkActions`).
-`DataTableBulkActions` compte alors le total. L'état repasse à `false` dès qu'une ligne de la
-page n'est plus cochée (par le tableau ou par l'application), quand la page change (même avec
-`conserverSelection`) et par « Tout désélectionner »
-(`table.options.meta.toutDeselectionner()` pour un bouton de l'application) ; l'application le
-remet à `false` quand ses filtres ou le tri changent.
+Quand toute la page est cochée et que `total` compte d'autres éléments, `DataTableBulkActions`
+propose « Sélectionner les 137 » à côté de son compte (l'icône seule sur téléphone, le nom complet
+« Sélectionner les 137 éléments » pour les lecteurs d'écran) : dans la barre, qui flotte, rien
+n'est inséré au-dessus des lignes et le tableau ne bouge pas. Une fois accepté, la barre compte le
+total (« 137 éléments sélectionnés »), le bouton disparaît et le focus passe à « Tout
+désélectionner » ; `DataTable` l'annonce (« Les 137 éléments sont sélectionnés », accordé par ses
+`unite` et `feminin`). **Sans `DataTableBulkActions`, rien ne propose de tout sélectionner.**
+
+L'état repasse à `false` dès qu'une ligne de la page n'est plus cochée (par le tableau ou par
+l'application), quand la page change (même avec `conserverSelection`) et par « Tout
+désélectionner » (`table.options.meta.toutDeselectionner()` pour un bouton de l'application) ;
+l'application le remet à `false` quand ses filtres ou le tri changent.
 
 Une ligne non sélectionnable avec `verrouLigne` garde une case focalisable, en lecture seule, qui
 dit sa raison (infobulle et description). Échap vide la sélection quand le focus est dans le

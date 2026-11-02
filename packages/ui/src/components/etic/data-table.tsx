@@ -97,10 +97,7 @@ import {
   type DataTableUnite,
 } from "@etic-ui/components/etic/data-table-format"
 import { useLien, type LienComposant } from "@etic-ui/components/etic/lien"
-import {
-  focaliserTableau,
-  rendreFocusApresLigne,
-} from "@etic-ui/components/etic/data-table-focus"
+import { rendreFocusApresLigne } from "@etic-ui/components/etic/data-table-focus"
 import {
   QueryErrorBanner,
   type QueryBoundaryRequete,
@@ -125,6 +122,10 @@ export interface DataTableColumnMeta {
 export interface DataTableMeta {
   total?: number
   toutSelectionne: boolean
+  /** Le `total` à proposer (« Sélectionner les 137 ») : page entièrement
+   *  cochée, « tous sélectionnés » pas encore demandé, et `total` compte
+   *  plus d'éléments que la sélection. `undefined` sinon. */
+  totalAProposer?: number
   changerToutSelectionne: (toutSelectionne: boolean) => void
   /** Vide la sélection et met fin à « tous sélectionnés », en un seul appel
    *  à `onToutSelectionneChange`. */
@@ -332,8 +333,8 @@ export function paginationDuTableau<TData extends RowData>(
   }
 }
 
-/** La phrase de « tous sélectionnés » : « Les 137 éléments sont
- *  sélectionnés. » (zone annoncée et bandeau). */
+/** La phrase annoncée de « tous sélectionnés » : « Les 137 éléments sont
+ *  sélectionnés. » */
 function phraseToutSelectionne(
   total: number,
   unite: DataTableUnite,
@@ -434,7 +435,7 @@ export interface UseDataTableOptions<TData extends RowData> {
    * Nombre total d'éléments, toutes pages comprises (pagination côté
    * serveur). Fourni, il permet de sélectionner tous les éléments et pas
    * seulement ceux de la page : quand la page est entièrement cochée,
-   * `DataTable` propose « Sélectionner les N éléments ». Avec
+   * `DataTableBulkActions` propose « Sélectionner les N ». Avec
    * `ligneSelectionnable`, il ne compte que les éléments sélectionnables
    * (le tableau ne connaît pas ceux des autres pages) : c'est le nombre
    * annoncé et visé par l'action groupée.
@@ -638,6 +639,12 @@ export function useDataTable<TData extends RowData>({
       // (getter : lu après la création de `table`, dont il interroge les lignes).
       get toutSelectionne(): boolean {
         return tout && pageCochee
+      },
+      get totalAProposer(): number | undefined {
+        if (total === undefined || tout || !pageCochee) return undefined
+        // Toute la sélection, pages conservées comprises : « 4 sélectionnés »
+        // ne côtoie pas « Sélectionner les 4 ».
+        return total > table.getSelectedRowIds().length ? total : undefined
       },
       changerToutSelectionne: (valeur) => {
         if (valeur) table.toggleAllPageRowsSelected(true)
@@ -852,7 +859,7 @@ export interface DataTableProps<TData extends RowData> {
    * sans `onActiverLigne`, un clic sur la ligne la déplie aussi.
    */
   rendreDetail?: (ligne: TData) => ReactNode
-  /** Nom des éléments dans la proposition « Sélectionner les N éléments ».
+  /** Nom des éléments dans l'annonce « Les N éléments sont sélectionnés ».
    *  « élément », « éléments » par défaut. */
   unite?: DataTableUnite
   /** Accorde « sélectionnées » au féminin. */
@@ -955,11 +962,6 @@ export function DataTable<TData extends RowData>({
         <p className="sr-only" aria-live="polite" aria-atomic="true">
           {annonce}
         </p>
-        <PropositionToutSelectionner
-          table={table}
-          unite={unite}
-          feminin={feminin}
-        />
         <Table aria-label={libelle} aria-busy={enChargement || undefined}>
           <TableHeader>
             {table.getHeaderGroups().map((groupe) => (
@@ -1287,74 +1289,6 @@ const LigneTableau = memo(
     avant.activer === apres.activer &&
     (!apres.depliee || avant.rendreDetail === apres.rendreDetail)
 ) as typeof LigneTableauBrute
-
-/**
- * Proposition à la Gmail, au-dessus des lignes, quand la page est entièrement
- * cochée et que `total` compte d'autres éléments : « Les 25 éléments de la
- * page sont sélectionnés. Sélectionner les 137 éléments », puis « Les 137
- * éléments sont sélectionnés. Tout désélectionner ».
- */
-function PropositionToutSelectionner<TData extends RowData>({
-  table,
-  unite,
-  feminin,
-}: {
-  table: DataTableInstance<TData>
-  unite: DataTableUnite
-  feminin: boolean
-}) {
-  const meta = metaDe(table)
-  const lignes = table.getRowModel().rows
-  const { total } = meta
-  const surPage = lignes.filter((row) => row.getIsSelected()).length
-  if (
-    total === undefined ||
-    lignes.length === 0 ||
-    !table.getIsAllPageRowsSelected() ||
-    total <= surPage
-  )
-    return null
-
-  return (
-    <div
-      data-slot="data-table-select-all"
-      className="flex flex-wrap items-center justify-center gap-x-2 border-b bg-muted/50 px-3 py-1.5 text-center text-sm"
-    >
-      {meta.toutSelectionne ? (
-        <>
-          <span>{phraseToutSelectionne(total, unite, feminin)}</span>
-          <Button
-            variant="link"
-            className="h-auto px-0"
-            onClick={() => {
-              // Le bandeau disparaît avec la sélection : le focus passe
-              // d'abord à la case d'en-tête.
-              focaliserTableau(meta.racine.current)
-              meta.toutDeselectionner()
-            }}
-          >
-            Tout désélectionner
-          </Button>
-        </>
-      ) : (
-        <>
-          <span>
-            {surPage > 1
-              ? `Les ${nombreFr(surPage)} ${unite.pluriel} de la page sont ${participe("sélectionné", 2, feminin)}.`
-              : `1 ${unite.singulier} de la page est ${participe("sélectionné", 1, feminin)}.`}
-          </span>
-          <Button
-            variant="link"
-            className="h-auto px-0"
-            onClick={() => meta.changerToutSelectionne(true)}
-          >
-            {`Sélectionner les ${nombreFr(total)} ${unite.pluriel}`}
-          </Button>
-        </>
-      )}
-    </div>
-  )
-}
 
 /** `aria-sort` sur la seule colonne triée : « non trié » sur chaque autre
  *  colonne triable serait du bruit. */

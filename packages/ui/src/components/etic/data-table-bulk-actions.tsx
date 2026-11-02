@@ -10,9 +10,10 @@ import {
 } from "react"
 import type { RowData } from "@tanstack/react-table"
 import { cn } from "cn"
-import { XIcon } from "lucide-react"
+import { ListChecksIcon, XIcon } from "lucide-react"
 
 import { Button } from "@etic-ui/components/ui/button"
+import { TooltipButton } from "@etic-ui/components/etic/tooltip-button"
 import { Separator } from "@etic-ui/components/ui/separator"
 import {
   metaDe,
@@ -77,13 +78,16 @@ export interface DataTableBulkActionsSelectionProps extends DataTableBulkActions
 export type DataTableBulkActionsProps<TData extends RowData = RowData> =
   DataTableBulkActionsTableProps<TData> | DataTableBulkActionsSelectionProps
 
-/** Nombre, remise à zéro et cadre, lus dans le tableau ou donnés. */
+/** Nombre, remise à zéro et cadre, lus dans le tableau ou donnés ; avec un
+ *  tableau, le total à proposer (« Sélectionner les 137 »). */
 function selectionDe<TData extends RowData>(
   props: DataTableBulkActionsProps<TData>
 ): {
   nombre: number
   toutDeselectionner: () => void
   racine: () => HTMLElement | null
+  /** « Sélectionner les 137 » (sans l'unité) et son action. */
+  proposition?: { libelle: string; selectionner: () => void }
 } {
   if (!props.table)
     return {
@@ -93,6 +97,7 @@ function selectionDe<TData extends RowData>(
     }
   const { table } = props
   const meta = metaDe(table)
+  const total = meta.totalAProposer
   return {
     // « Tous sélectionnés » : le total, pas seulement les lignes de la page.
     nombre:
@@ -101,6 +106,13 @@ function selectionDe<TData extends RowData>(
         : table.getSelectedRowIds().length,
     toutDeselectionner: meta.toutDeselectionner,
     racine: () => meta.racine.current,
+    proposition:
+      total === undefined
+        ? undefined
+        : {
+            libelle: `Sélectionner les ${nombreFr(total)}`,
+            selectionner: () => meta.changerToutSelectionne(true),
+          },
   }
 }
 
@@ -114,6 +126,11 @@ function selectionDe<TData extends RowData>(
  * Quand elle disparaît avec le focus dedans (« Tout désélectionner », Échap,
  * action qui vide la sélection), le focus passe à la case d'en-tête du
  * tableau plutôt que de tomber sur `<body>`.
+ *
+ * Quand toute la page est cochée et que le `total` du tableau compte
+ * d'autres éléments, elle propose « Sélectionner les 137 » (à la Gmail) :
+ * dans la barre, qui flotte, plutôt qu'en bandeau au-dessus des lignes, qui
+ * décalerait le tableau.
  *
  * Avec `table`, elle suit la sélection d'un `DataTable` ; avec `nombre`,
  * `onToutDeselectionner` et `racine`, celle d'un tableau rendu à la main.
@@ -131,12 +148,20 @@ export function DataTableBulkActions<TData extends RowData>(
   } = props
   const idResume = useId()
   const barreRef = useRef<HTMLDivElement>(null)
-  const { nombre, toutDeselectionner: vider, racine } = selectionDe(props)
+  const boutonDeselectionner = useRef<HTMLButtonElement>(null)
+  const {
+    nombre,
+    toutDeselectionner: vider,
+    racine,
+    proposition,
+  } = selectionDe(props)
   const visible = nombre > 0
   const resume = `${uniteAccordee(nombre, unite)} ${participe("sélectionné", nombre, feminin)}`
 
   // Dernier élément de la barre qui a eu le focus, tant que le focus n'est
-  // pas parti ailleurs : s'il disparaît avec la barre, on rattrape le focus.
+  // pas parti ailleurs : s'il disparaît, on rattrape le focus — au tableau
+  // si la barre est partie avec lui, sinon à « Tout désélectionner », qui
+  // reste (« Sélectionner les 137 » une fois accepté, action retirée).
   const focusDansBarre = useRef<HTMLElement | null>(null)
   const toutDeselectionner = () => {
     if (barreRef.current?.contains(document.activeElement))
@@ -144,15 +169,18 @@ export function DataTableBulkActions<TData extends RowData>(
     vider()
   }
   useLayoutEffect(() => {
-    if (visible) return
     const perdu = focusDansBarre.current
-    focusDansBarre.current = null
     if (
-      perdu &&
-      !perdu.isConnected &&
-      (!document.activeElement || document.activeElement === document.body)
-    )
-      focaliserTableau(racine())
+      !perdu ||
+      perdu.isConnected ||
+      (document.activeElement && document.activeElement !== document.body)
+    ) {
+      if (!visible) focusDansBarre.current = null
+      return
+    }
+    focusDansBarre.current = null
+    if (visible) boutonDeselectionner.current?.focus()
+    else focaliserTableau(racine())
   })
 
   // Une sélection effacée est dite : la zone garderait sinon le dernier
@@ -218,18 +246,34 @@ export function DataTableBulkActions<TData extends RowData>(
             </strong>{" "}
             {resume}
           </span>
+          {proposition ? (
+            <TooltipButton
+              variant="ghost"
+              size="sm"
+              infobulle={`${proposition.libelle} ${unite.pluriel}, toutes pages comprises`}
+              onClick={proposition.selectionner}
+            >
+              <ListChecksIcon data-icon="inline-start" />
+              {/* Sur mobile, l'icône seule, comme « × ». Le nom complet
+                  reste : « Sélectionner les 137 personnes ». */}
+              <span className="max-sm:sr-only">{proposition.libelle}</span>{" "}
+              <span className="sr-only">{unite.pluriel}</span>
+            </TooltipButton>
+          ) : null}
           <Separator
             orientation="vertical"
             className="h-5 self-center! max-sm:hidden"
           />
-          {/* Sur mobile, le compte et « Tout désélectionner » forment la
-              première ligne, les actions la suivante : la barre ne finit
+          {/* Sur mobile, le compte, l'icône de « Sélectionner les 137 » et
+              « Tout désélectionner » forment la première ligne, les actions
+              la suivante : la barre ne finit
               plus sur une croix seule. L'ordre du DOM (celui de la
               tabulation) reste celui du bureau. */}
           <div className="flex flex-wrap items-center gap-1.5 max-sm:order-last max-sm:basis-full">
             {children}
           </div>
           <Button
+            ref={boutonDeselectionner}
             variant="ghost"
             size="sm"
             onClick={toutDeselectionner}
