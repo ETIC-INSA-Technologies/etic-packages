@@ -306,6 +306,26 @@ describe("AppShell", () => {
     expect(barre).not.toHaveClass("bg-background")
   })
 
+  it("pied de barre cohérent : thème sur le fond de la barre, avatar carré arrondi", () => {
+    rendre()
+    const theme = screen.getByRole("button", { name: /^Thème\s:/ })
+    // Le fond de l'outline en sombre (dark:bg-input/30) tranchait sur la barre.
+    expect(theme).toHaveClass("bg-sidebar", "dark:bg-sidebar")
+    expect(theme).not.toHaveClass("dark:bg-input/30")
+    const boutonCompte = screen.getByRole("button", { name: /menu du compte/ })
+    expect(boutonCompte).toHaveClass("rounded-lg")
+    expect(boutonCompte).not.toHaveClass("rounded-md")
+    // Le contour du bouton de thème (outline), en ombre.
+    expect(theme).toHaveClass("border-border", "dark:border-input")
+    expect(boutonCompte).toHaveClass(
+      "shadow-[0_0_0_1px_var(--border)]",
+      "dark:shadow-[0_0_0_1px_var(--input)]"
+    )
+    const avatar = boutonCompte.querySelector('[data-slot="avatar"]')
+    expect(avatar).toHaveClass("rounded-lg", "after:rounded-lg")
+    expect(avatar).not.toHaveClass("rounded-full")
+  })
+
   it("rend le bandeau dans le contenu, avant la page", () => {
     simulerLargeur(false)
     rendre({ bandeau: <p role="alert">Reprise impossible</p> })

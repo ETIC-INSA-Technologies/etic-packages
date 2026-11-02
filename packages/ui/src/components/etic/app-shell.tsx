@@ -177,7 +177,10 @@ export function AppShell({
                 <ThemeMenu
                   {...theme}
                   side="top"
-                  className="size-12 shrink-0 bg-sidebar group-data-[collapsible=icon]:size-8"
+                  // Sans fond propre, comme le menu du compte voisin (le
+                  // dark:bg-input/30 d'outline tranchait sur la barre), et
+                  // son survol.
+                  className="size-12 shrink-0 bg-sidebar group-data-[collapsible=icon]:size-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground aria-expanded:bg-sidebar-accent aria-expanded:text-sidebar-accent-foreground dark:bg-sidebar dark:hover:bg-sidebar-accent"
                 />
               ) : null}
             </SidebarFooter>
@@ -384,15 +387,28 @@ function MenuCompte({
                   size="lg"
                   isActive={compte.actif}
                   aria-label={`${compte.nom}, menu du compte`}
-                  className="data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground"
+                  // rounded-lg : le survol épouse l'avatar et le bouton de thème.
+                  // Le contour du bouton de thème voisin (outline : --border,
+                  // --input en sombre), tracé en ombre comme la variante
+                  // outline de SidebarMenuButton : une bordure rognerait
+                  // l'avatar de la barre repliée (size-8, p-0).
+                  className="rounded-lg shadow-[0_0_0_1px_var(--border)] data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground dark:shadow-[0_0_0_1px_var(--input)]"
                 />
               }
             >
-              <Avatar>
+              {/* Carré arrondi, comme le nav-user de shadcn : la forme du
+                  survol du bouton et du bouton de thème. */}
+              <Avatar className="rounded-lg after:rounded-lg">
                 {compte.photo ? (
-                  <AvatarImage src={compte.photo} alt="" />
+                  <AvatarImage
+                    src={compte.photo}
+                    alt=""
+                    className="rounded-lg"
+                  />
                 ) : null}
-                <AvatarFallback>{compte.initiales}</AvatarFallback>
+                <AvatarFallback className="rounded-lg">
+                  {compte.initiales}
+                </AvatarFallback>
               </Avatar>
               <span className="grid flex-1 text-left leading-tight">
                 <span className="truncate font-medium">{compte.nom}</span>
