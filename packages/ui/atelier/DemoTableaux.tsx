@@ -6,6 +6,11 @@ import { PencilIcon, TrashIcon } from "lucide-react"
 
 import {
   Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   DataTable,
   DataTableBulkActions,
   DataTableCellLink,
@@ -179,6 +184,13 @@ export function DemoTableaux() {
         Supprimer une ligne rend le focus à la ligne suivante.
       </p>
       <DemoPostes />
+      <h3 className="mt-4 text-base font-medium">Tableau dans une carte</h3>
+      <p className="text-sm text-muted-foreground">
+        Dans une carte (ou un dialogue, un tiroir, une Disclosure « carte »), le
+        cadre prend le fond de la page au lieu de celui de la carte : il s'en
+        détache, comme sur la page.
+      </p>
+      <DemoTableauDansCarte />
     </>
   )
 }
@@ -593,5 +605,35 @@ function DemoJournal() {
       libelle="Journal"
       rendreDetail={(e) => <DetailEvenement evenement={e} />}
     />
+  )
+}
+
+const POSTES_BUREAU: Poste[] = [
+  { id: "b1", nom: "Président", pole: "Bureau", places: 1 },
+  { id: "b2", nom: "Trésorier", pole: "Bureau", places: 1 },
+  { id: "b3", nom: "Secrétaire générale", pole: "Bureau", places: 1 },
+]
+
+const colonnesBureau = aidePostes.columns([
+  aidePostes.accessor("nom", { header: "Poste" }),
+  aidePostes.accessor("places", { header: "Places" }),
+])
+
+function DemoTableauDansCarte() {
+  const table = useDataTable({
+    donnees: POSTES_BUREAU,
+    colonnes: colonnesBureau,
+    idLigne: (p) => p.id,
+  })
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Postes du bureau</CardTitle>
+        <CardDescription>Un DataTable posé dans une Card.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <DataTable table={table} libelle="Postes du bureau" />
+      </CardContent>
+    </Card>
   )
 }

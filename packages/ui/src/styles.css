@@ -79,6 +79,9 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   --color-page: var(--page);
+  /* Ajout d'ETIC : fond d'un cadre de tableau (bg-tableau), --card sur la
+     page, --page dans une surface surélevée (règle --tableau-fond plus bas). */
+  --color-tableau: var(--tableau-fond, var(--card));
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -217,6 +220,21 @@
   }
   html {
     @apply font-sans;
+  }
+  /* Un tableau se détache toujours de la surface qui le porte (bg-tableau,
+     cadre de DataTable) : sur la page, il prend --card ; dans une surface
+     surélevée (carte, dialogue, tiroir, popover, Disclosure « carte »), déjà
+     en --card ou --popover, il prend le fond de la page. La variable est
+     héritée : posée ici une fois, sans variante sur chaque cadre. */
+  :where(
+    [data-slot="card"],
+    [data-slot="dialog-content"],
+    [data-slot="alert-dialog-content"],
+    [data-slot="sheet-content"],
+    [data-slot="popover-content"],
+    [data-slot="disclosure"][data-variante="carte"]
+  ) {
+    --tableau-fond: var(--page);
   }
   /* Coquille sur mobile : la barre du haut (h-12) colle au haut de l'écran ;
      une ancre ou un élément qu'on fait défiler jusqu'à lui s'arrête dessous,

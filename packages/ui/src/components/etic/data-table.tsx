@@ -944,7 +944,9 @@ export function DataTable<TData extends RowData>({
         ref={racine}
         data-slot="data-table"
         className={cn(
-          "min-w-0 overflow-hidden rounded-md border bg-card",
+          // bg-tableau : --card sur la page, fond de la page dans une carte,
+          // un dialogue ou un tiroir (styles.css) ; il s'en détache toujours.
+          "min-w-0 overflow-hidden rounded-md border bg-tableau",
           className
         )}
       >

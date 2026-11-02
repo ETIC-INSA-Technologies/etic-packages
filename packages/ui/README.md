@@ -80,6 +80,15 @@ qui reste la surface blanche de shadcn (onglet actif, bouton `outline`, calendri
 `color-scheme` suit le thème (`light`, `dark`) : barres de défilement et contrôles natifs
 compris.
 
+Un tableau se détache toujours de la surface qui le porte : son cadre est en `bg-tableau`
+(jeton ajouté), qui vaut `--card` sur la page et le fond de la page (`--page`) dans une
+surface surélevée — `Card` (donc `SectionCard`), dialogue, `AlertDialog`, tiroir (`Sheet`),
+popover, `Disclosure` `variante="carte"`. La liste de ces surfaces est tenue une fois dans
+`styles.css` (règle qui pose `--tableau-fond`, héritée) ; le cadre de `DataTable` la suit sans
+rien à passer. Un cadre de tableau propre à une application prend `bg-tableau` plutôt que
+`bg-card`. Écart de fond : 1,04:1 en clair (blanc / zinc-50, le filet `--border` le rend
+net), 1,12:1 en sombre (zinc-900 / zinc-950).
+
 #### Thème clair, sombre ou système
 
 `appliquerTheme(theme)` pose la classe `dark` sur `<html>` pour `"dark"`, la retire pour
@@ -1060,8 +1069,11 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
   `theme.test.ts` compare chaque jeton au registre, écarts (`ECARTS`) exceptés, et en vérifie
   les contrastes. Hors `ui/` : `CenteredScreen` est posé sur `bg-muted/40` au lieu du
   `bg-muted` des blocs de connexion de shadcn (fond moins appuyé, en sombre surtout) ; le
-  contenu d'`AppShell` (`SidebarInset`) et sa barre mobile sont en `bg-page` ; le cadre de
-  `DataTable` et la `Disclosure` `carte` sont en `bg-card`, blancs comme une carte.
+  contenu d'`AppShell` (`SidebarInset`) et sa barre mobile sont en `bg-page` ; la
+  `Disclosure` `carte` est en `bg-card`, blanche comme une carte ; le cadre de `DataTable` est
+  en `bg-tableau` (jeton ajouté) : `--card` sur la page, `--page` dans une carte, un dialogue,
+  un tiroir, un popover ou une `Disclosure` `carte` (règle `--tableau-fond` de `styles.css`),
+  pour se détacher toujours de son support.
 
   Sans écart de code mais garanti par le même test : `Button` sans `type` rend
   `type="button"` (Base UI le fait pour un bouton natif) et ne soumet donc pas son formulaire.

@@ -306,6 +306,31 @@ describe("couleur de base", () => {
     }
   )
 
+  // Cadre de tableau (bg-tableau, ajout d'ETIC) : --card sur la page, fond de
+  // la page dans une carte, un dialogue ou un tiroir (règle --tableau-fond de
+  // styles.css, vérifiée par ecarts-shadcn.test.ts). Il diffère donc toujours
+  // de son support : 1,04:1 en clair (blanc / zinc-50, le filet --border fait
+  // le reste), 1,12:1 en sombre (zinc-900 / zinc-950).
+  it("tableaux : bg-tableau vaut --card, ou --page dans une surface", () => {
+    expect(css).toContain("--color-tableau: var(--tableau-fond, var(--card));")
+    expect(css).toMatch(/\{\s*--tableau-fond: var\(--page\);\s*\}/)
+  })
+
+  it.each(THEMES)(
+    "$nom : un tableau se détache de la page comme d'une carte",
+    ({ nom, vars, page, card }) => {
+      for (const support of [card, vars.valeur("popover")]) {
+        expect(contraste(page, support), nom).toBeGreaterThan(1.03)
+      }
+      if (nom === "clair") {
+        // Écart de fond presque nul : le filet doit se voir sur les deux.
+        for (const fond of [page, card]) {
+          expect(contraste(vars.valeur("border"), fond)).toBeGreaterThan(1.2)
+        }
+      }
+    }
+  )
+
   // Surfaces de shadcn en bg-background posées sur bg-muted (onglet actif
   // dans TabsList) : elles s'en distinguent comme dans le registre (1,10:1
   // en clair, blanc sur zinc-100 ; zinc-50 n'y donnerait que 1,05:1).

@@ -18,6 +18,8 @@ import {
   AvatarFallback,
   Button,
   Calendar,
+  Card,
+  CardContent,
   Checkbox,
   Combobox,
   ComboboxContent,
@@ -28,6 +30,7 @@ import {
   DialogBody,
   DialogContent,
   DialogTitle,
+  Disclosure,
   Select,
   SelectContent,
   SelectItem,
@@ -275,26 +278,100 @@ describe("écarts avec shadcn", () => {
     )
   })
 
-  it("tableaux : cadre de DataTable en bg-card, blanc comme une carte", () => {
-    function Tableau() {
-      const table = useDataTable({
-        donnees: [] as { id: string }[],
-        colonnes: [],
-        idLigne: (l) => l.id,
-      })
-      return createElement(DataTable<{ id: string }>, {
-        table,
-        libelle: "Vide",
-      })
-    }
-    render(createElement(Tableau))
-    expect(document.querySelector('[data-slot="data-table"]')).toHaveClass(
-      "bg-card"
-    )
+  // Le cadre de DataTable est en bg-tableau (ajout d'ETIC, pas bg-card) :
+  // --card sur la page, fond de la page dans une surface surélevée, pour se
+  // détacher toujours de ce qui le porte. Les surfaces sont listées une fois,
+  // dans styles.css (règle --tableau-fond) ; jsdom ne l'applique pas, la liste
+  // y est donc lue et confrontée au rendu.
+  const surfacesTableau = (() => {
+    const regle =
+      /:where\(([^)]*)\)\s*\{\s*--tableau-fond: var\(--page\);/.exec(
+        lire("styles.css")
+      )
+    return regle ? regle[1].replace(/\s+/g, " ").trim() : ""
+  })()
+
+  function TableauVide() {
+    const table = useDataTable({
+      donnees: [] as { id: string }[],
+      colonnes: [],
+      idLigne: (l) => l.id,
+    })
+    return createElement(DataTable<{ id: string }>, {
+      table,
+      libelle: "Vide",
+    })
+  }
+
+  it("tableaux : cadre de DataTable en bg-tableau, un seul fond", () => {
+    render(createElement(TableauVide))
+    const cadre = document.querySelector('[data-slot="data-table"]')
+    expect(cadre).toHaveClass("bg-tableau")
+    expect(cadre).not.toHaveClass("bg-card")
+    // Sur la page : aucune surface autour, il garde --card.
+    expect(cadre?.parentElement?.closest(surfacesTableau)).toBeNull()
     // Un seul fond : le Table de shadcn, dedans, n'en pose pas.
     expect(
       document.querySelector('[data-slot="table-container"]')
     ).not.toHaveClass("bg-card")
+  })
+
+  it("tableaux : dans une Card ou une Disclosure carte, le fond de la page", () => {
+    expect(surfacesTableau).not.toBe("")
+    // Chaque data-slot de la liste existe bien dans un composant.
+    const sources = [
+      ...composantsUi.map((nom) => lire(`components/ui/${nom}`)),
+      lire("components/etic/disclosure.tsx"),
+    ].join("\n")
+    for (const [, slot] of surfacesTableau.matchAll(/data-slot="([^"]+)"/g)) {
+      expect(sources).toContain(`data-slot="${slot}"`)
+    }
+    for (const surface of [
+      "card",
+      "dialog-content",
+      "alert-dialog-content",
+      "sheet-content",
+      "popover-content",
+    ]) {
+      expect(surfacesTableau).toContain(`[data-slot="${surface}"]`)
+    }
+
+    render(
+      createElement(
+        "div",
+        null,
+        createElement(
+          Card,
+          null,
+          createElement(CardContent, null, createElement(TableauVide))
+        ),
+        createElement(Disclosure, {
+          titre: "Carte",
+          variante: "carte",
+          defautOuvert: true,
+          children: createElement(TableauVide),
+        }),
+        createElement(Disclosure, {
+          titre: "Lien",
+          variante: "lien",
+          defautOuvert: true,
+          children: createElement(TableauVide),
+        })
+      )
+    )
+    const [dansCarte, dansDisclosureCarte, dansDisclosureLien] = [
+      ...document.querySelectorAll('[data-slot="data-table"]'),
+    ]
+    expect(dansCarte.closest(surfacesTableau)).toHaveAttribute(
+      "data-slot",
+      "card"
+    )
+    expect(dansDisclosureCarte.closest(surfacesTableau)).toHaveAttribute(
+      "data-slot",
+      "disclosure"
+    )
+    // La variante « lien » n'a pas de fond : le tableau garde --card.
+    expect(dansDisclosureLien.closest(surfacesTableau)).toBeNull()
   })
 
   it("case à cocher partielle : un trait sur fond plein, pas une coche", () => {
