@@ -36,6 +36,13 @@ export const CODE_REPONSE_NON_JSON = "reponse_non_json"
  *  "refusees"`, le défaut avec un jeton) : elle n'est pas suivie (status 0). */
 export const CODE_REDIRECTION_REFUSEE = "redirection_refusee"
 
+/** 304 Not Modified (status 304) : réponse à une requête conditionnelle
+ *  (`If-None-Match`, `If-Modified-Since` passés dans `enTetes`), sans corps.
+ *  Ce n'est pas une redirection ; le client n'a pas de cache où relire la
+ *  ressource, l'appelant garde la version qu'il a déjà. Le cache HTTP du
+ *  navigateur, lui, revalide sans montrer de 304 à `fetch`. */
+export const CODE_NON_MODIFIE = "not_modified"
+
 /** Au-delà, une requête est abandonnée : un proxy muet ne doit pas laisser un
  *  écran en chargement indéfini. Confortable : protège d'un blocage, pas
  *  d'une requête lente. */
@@ -84,8 +91,13 @@ const INDISPONIBLE: [string, string] = [
 ]
 
 /** Code et message d'une réponse d'erreur sans enveloppe (proxy, page HTML),
- *  alignés sur les codes des backends ETIC. */
+ *  alignés sur les codes des backends ETIC. Le statut est ajouté au message
+ *  (`messageDeRepli`). */
 const PAR_STATUT: Record<number, [string, string]> = {
+  304: [
+    CODE_NON_MODIFIE,
+    "La ressource n'a pas changé depuis la version déjà reçue.",
+  ],
   401: ["unauthenticated", "Session expirée ou absente. Reconnectez-vous."],
   403: ["forbidden", "Permission insuffisante pour cette action."],
   404: ["not_found", "Ressource introuvable."],
@@ -107,12 +119,22 @@ function parDefaut(status: number): [string, string] {
   )
 }
 
+/** Le statut s'insère avant le point de la première phrase : « La requête
+ *  n'a pas abouti (HTTP 413). », « Session expirée ou absente (HTTP 401).
+ *  Reconnectez-vous. » — un proxy qui répond sans enveloppe reste
+ *  diagnostiquable depuis l'écran. */
+function messageDeRepli(status: number, message: string): string {
+  return message.replace(".", ` (HTTP ${status}).`)
+}
+
 /**
  * Lit l'enveloppe `{ error: { code, message, details } }`, avec repli lisible
- * quand la réponse n'en porte pas (proxy, page HTML d'erreur).
+ * quand la réponse n'en porte pas (proxy, page HTML d'erreur) : code et
+ * message déduits du statut, statut compris dans le message.
  */
 export function analyserErreur(status: number, corps: unknown): ErreurApi {
-  const [codeRepli, messageRepli] = parDefaut(status)
+  const [codeRepli, messageBrut] = parDefaut(status)
+  const messageRepli = messageDeRepli(status, messageBrut)
   const erreur = (corps as Partial<EnveloppeErreur> | null | undefined)?.error
   if (erreur && typeof erreur === "object" && typeof erreur.code === "string") {
     const message =
@@ -174,10 +196,12 @@ export interface OptionsClientHttp {
    *  cookie. Sans valeur, celle de `fetch` (`same-origin`). */
   credentials?: RequestCredentials
   /** Appelé sur tout 401, avant que l'erreur soit levée (vider le jeton,
-   *  `signalerNonAuthentifie`…). S'il lève, l'appelant reçoit quand même
-   *  l'`ErreurApi` 401 ; l'exception du rappel est signalée à part
+   *  `signalerNonAuthentifie`…), avec le jeton envoyé par cette requête
+   *  (`null` si aucun) : un 401 tardif d'une requête partie avec un ancien
+   *  jeton ne doit pas purger le nouveau. S'il lève, l'appelant reçoit quand
+   *  même l'`ErreurApi` 401 ; l'exception du rappel est signalée à part
    *  (`reportError`). */
-  surNonAuthentifie?: (erreur: ErreurApi) => void
+  surNonAuthentifie?: (erreur: ErreurApi, jeton: string | null) => void
   /** Délai maximal d'une requête, corps compris, en millisecondes : 30 s
    *  par défaut, plafonné à 2^31-1 ; `Infinity` ou `null` : aucun délai.
    *  Une valeur ≤ 0 ou non finie lève une `RangeError`. */
@@ -230,19 +254,22 @@ function adresseDeReference(): string {
  * ni `/\`, quelle que soit la base), ne contient ni caractère de contrôle ni
  * espace (l'analyseur d'URL retire tabulations et retours à la ligne :
  * `/\t/hote` deviendrait `//hote`), et l'URL résolue garde l'origine de la
- * base. `%2F%2F` reste un chemin.
+ * base (`origineBase`, calculée une fois par `creerClientHttp`). `%2F%2F`
+ * reste un chemin.
  * Erreur de programmation, hors du contrat `ErreurApi` : `TypeError`.
  */
-function verifierChemin(base: string, chemin: string): void {
+function verifierChemin(
+  base: string,
+  origineBase: string,
+  chemin: string
+): void {
   const valide =
     /^\/(?![/\\])/.test(chemin) &&
     // eslint-disable-next-line no-control-regex
     !/[\u0000- \u007f]/.test(chemin)
-  const reference = adresseDeReference()
   if (
     !valide ||
-    new URL(`${base}${chemin}`, reference).origin !==
-      new URL(`${base}/`, reference).origin
+    new URL(`${base}${chemin}`, adresseDeReference()).origin !== origineBase
   ) {
     throw new TypeError(
       "Chemin d'API invalide : il doit commencer par « / », sans espace ni caractère de contrôle, et rester sur l'origine de l'API."
@@ -372,12 +399,15 @@ type Requete = OptionsRequete & { methode: string; corps?: unknown }
 
 export function creerClientHttp(options: OptionsClientHttp = {}): ClientHttp {
   const base = (options.base ?? "").replace(/\/+$/, "")
+  // L'origine de la page ne change pas pendant sa vie : celle de la base non
+  // plus, même relative.
+  const origineBase = new URL(`${base}/`, adresseDeReference()).origin
   const delaiClient = validerDelai(options.delaiMax, DELAI_MAX_PAR_DEFAUT_MS)
   const redirections =
     options.redirections ?? (options.jeton ? "refusees" : "suivies")
 
   function url(chemin: string, query?: ParametresRequete): string {
-    verifierChemin(base, chemin)
+    verifierChemin(base, origineBase, chemin)
     return `${base}${chemin}${chaineRequete(query)}`
   }
 
@@ -420,7 +450,7 @@ export function creerClientHttp(options: OptionsClientHttp = {}): ClientHttp {
         if (erreur.status === 401 && options.surNonAuthentifie) {
           // Le rappel ne remplace pas l'erreur 401 et n'est pas tu.
           try {
-            options.surNonAuthentifie(erreur)
+            options.surNonAuthentifie(erreur, jeton || null)
           } catch (exception) {
             signalerException(exception)
           }
@@ -458,11 +488,15 @@ export function creerClientHttp(options: OptionsClientHttp = {}): ClientHttp {
         credentials: opts.credentials ?? options.credentials,
         redirect: redirections === "refusees" ? "manual" : "follow",
       })
-      // Navigateur : `opaqueredirect` ; Node (undici) : le vrai statut 3xx.
+      // Navigateur : `opaqueredirect` ; Node (undici) : le vrai statut 3xx,
+      // sauf 304 (Not Modified), qui n'est pas une redirection : il devient
+      // `not_modified` par `analyserErreur`, redirections suivies ou non.
       if (
         redirections === "refusees" &&
         (reponse.type === "opaqueredirect" ||
-          (reponse.status >= 300 && reponse.status < 400))
+          (reponse.status >= 300 &&
+            reponse.status < 400 &&
+            reponse.status !== 304))
       ) {
         abandonnerCorps(reponse)
         throw new ErreurApi(

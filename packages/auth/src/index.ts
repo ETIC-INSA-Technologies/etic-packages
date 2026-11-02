@@ -4,6 +4,7 @@ export {
   analyserErreur,
   chaineRequete,
   CODE_DELAI_DEPASSE,
+  CODE_NON_MODIFIE,
   CODE_REDIRECTION_REFUSEE,
   CODE_RESEAU,
   CODE_REPONSE_NON_JSON,

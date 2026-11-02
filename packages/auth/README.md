@@ -205,11 +205,15 @@ const api = creerClientHttp({
   surNonAuthentifie: signalerNonAuthentifie,
 })
 
-// Ou, comme ETIC Members : jeton Bearer gardé par l'application.
+// Ou, comme ETIC Members : jeton Bearer gardé par l'application. Le rappel
+// reçoit le jeton de la requête : un 401 tardif d'une requête partie avant
+// une reconnexion ne purge pas le nouveau jeton.
 const apiMembers = creerClientHttp({
   base: API_BASE_URL,
   jeton: () => lireJeton(),
-  surNonAuthentifie: () => effacerJeton(),
+  surNonAuthentifie: (_erreur, jetonRequete) => {
+    if (jetonRequete === lireJeton()) effacerJeton()
+  },
 })
 
 await api.get<Membre[]>("/membres", { query: { statut: ["active", "alumni"] } })
@@ -232,7 +236,15 @@ location.assign(api.url("/auth/login", { suivant: "/" }))
   `details`) : celle de l'enveloppe `{"error": {…}}` du backend, ou un code et un texte lisibles
   déduits du statut : `unauthenticated` (401), `forbidden` (403), `not_found` (404), `conflict`
   (409), `validation_error` (422), `not_implemented` (501), `external_service_unavailable`
-  (502, 503), `internal_error` (autre 5xx), `http_<statut>` (autre 4xx).
+  (502, 503), `internal_error` (autre 5xx), `http_<statut>` (autre 4xx). Ce texte de repli
+  porte le statut, avant le point de sa première phrase (« La requête n'a pas abouti
+  (HTTP 413). », « Session expirée ou absente (HTTP 401). Reconnectez-vous. ») : une erreur
+  rendue par un proxy reste diagnostiquable depuis l'écran.
+- 304 Not Modified, reçu seulement si l'appelant a posé lui-même `If-None-Match` ou
+  `If-Modified-Since` dans `enTetes` (le cache du navigateur revalide sans le montrer), lève
+  `not_modified` (`CODE_NON_MODIFIE`, `status` 304), en JSON comme en `lireBlob` : la réponse
+  n'a pas de corps et le client pas de cache, l'appelant garde la version qu'il a. Ce n'est pas
+  une redirection : jamais `redirection_refusee`.
 - Codes propres au client, avec `status` 0 : `network_error` (`CODE_RESEAU`, pas de réponse) et
   `delai_depasse` (`CODE_DELAI_DEPASSE`). L'annulation demandée par l'appelant (`signal`)
   reste une annulation.
@@ -251,7 +263,11 @@ location.assign(api.url("/auth/login", { suivant: "/" }))
   reçue telle quelle (Node) est refusée de même. Avec FastAPI, un chemin qui diffère de la
   route par la barre oblique finale reçoit une 307 (`redirect_slashes`) : l'écrire exactement
   comme la route.
-- `surNonAuthentifie` est appelé sur tout 401, avant que l'erreur soit levée. S'il lève,
+- `surNonAuthentifie(erreur, jeton)` est appelé sur tout 401, avant que l'erreur soit levée,
+  avec le jeton envoyé par cette requête (`null` sans jeton). Une requête partie avec un
+  ancien jeton peut répondre 401 après une reconnexion : ne purger que si le jeton courant est
+  encore celui de la requête (exemple ci-dessus). Le second argument est facultatif pour un
+  rappel qui ne le lit pas. S'il lève,
   l'appelant reçoit quand même l'`ErreurApi` 401, et l'exception du rappel est signalée à part
   par `reportError` (console et événement `error` de la fenêtre), à défaut relancée dans une
   micro-tâche : ni avalée, ni à la place de l'erreur.

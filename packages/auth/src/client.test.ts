@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   chaineRequete,
   CODE_DELAI_DEPASSE,
+  CODE_NON_MODIFIE,
   CODE_REDIRECTION_REFUSEE,
   CODE_REPONSE_NON_JSON,
   CODE_RESEAU,
@@ -132,8 +133,57 @@ describe("client HTTP commun", () => {
     simulerFetch(() => ({ status: 404, texte: "Not Found" }))
     const erreur = await creerClientHttp().get("/x").then(rate, echec)
     expect(erreur.code).toBe("not_found")
-    expect(erreur.message).toBe("Ressource introuvable.")
+    expect(erreur.message).toBe("Ressource introuvable (HTTP 404).")
     expect(erreur.details).toBeNull()
+  })
+
+  it("repli : le statut HTTP dans le message, avant le point de la première phrase", async () => {
+    const attendus: [number, string][] = [
+      [413, "La requête n'a pas abouti (HTTP 413)."],
+      [500, "Erreur interne du serveur (HTTP 500)."],
+      [401, "Session expirée ou absente (HTTP 401). Reconnectez-vous."],
+      [
+        503,
+        "Un service est momentanément indisponible (HTTP 503). Réessayez dans quelques instants.",
+      ],
+    ]
+    for (const [status, message] of attendus) {
+      // Corps vide, page HTML d'un proxy : même repli.
+      for (const texte of [undefined, "<html>Erreur</html>"]) {
+        simulerFetch(() => ({ status, texte }))
+        const erreur = await creerClientHttp().get("/x").then(rate, echec)
+        expect(erreur.status).toBe(status)
+        expect(erreur.message).toBe(message)
+      }
+    }
+    // Enveloppe sans message : le repli, statut compris.
+    simulerFetch(() => ({
+      status: 409,
+      corps: { error: { code: "conflict", message: " " } },
+    }))
+    const erreur = await creerClientHttp().get("/x").then(rate, echec)
+    expect(erreur.message).toBe(
+      "Conflit : la ressource a changé entre-temps (HTTP 409)."
+    )
+  })
+
+  it("304 Not Modified : `not_modified`, pas une redirection refusée", async () => {
+    for (const redirections of ["refusees", "suivies"] as const) {
+      simulerFetch(() => ({ status: 304 }))
+      const client = creerClientHttp({ jeton: () => JETON, redirections })
+      for (const lire of [
+        () => client.get("/x", { enTetes: { "If-None-Match": '"v1"' } }),
+        () => client.lireBlob("/photo"),
+      ]) {
+        const erreur = await lire().then(rate, echec)
+        expect(erreur).toBeInstanceOf(ErreurApi)
+        expect(erreur.status).toBe(304)
+        expect(erreur.code).toBe(CODE_NON_MODIFIE)
+        expect(erreur.message).toContain("(HTTP 304)")
+        expect(erreur.reconnexionRequise).toBe(false)
+        sansJeton(erreur)
+      }
+    }
   })
 
   it("repli par statut : table, puis 5xx et autres 4xx", async () => {
@@ -524,8 +574,40 @@ describe("client HTTP commun", () => {
     expect(surNonAuthentifie).not.toHaveBeenCalled()
     simulerFetch(() => ({ status: 401 }))
     const erreur = await client.get("/x").then(rate, echec)
-    expect(surNonAuthentifie).toHaveBeenCalledWith(erreur)
+    // Sans jeton : `null` en second argument.
+    expect(surNonAuthentifie).toHaveBeenCalledWith(erreur, null)
     expect(erreur.code).toBe("unauthenticated")
+  })
+
+  it("passe à surNonAuthentifie le jeton de la requête, pas le jeton courant", async () => {
+    let jeton = "ancien-jeton"
+    const recus: (string | null)[] = []
+    let repondre: (() => void) | undefined
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resoudre) => {
+            repondre = () => resoudre(new Response(null, { status: 401 }))
+          })
+      )
+    )
+    const client = creerClientHttp({
+      jeton: () => jeton,
+      // L'usage documenté : ne purger que si le jeton n'a pas changé.
+      surNonAuthentifie: (_erreur, jetonRequete) => {
+        recus.push(jetonRequete)
+        if (jetonRequete === jeton) jeton = ""
+      },
+    })
+    const enCours = client.get("/x").then(rate, echec)
+    // Reconnexion pendant la requête : un nouveau jeton.
+    jeton = "nouveau-jeton"
+    repondre?.()
+    const erreur = await enCours
+    expect(erreur.status).toBe(401)
+    expect(recus).toEqual(["ancien-jeton"])
+    expect(jeton).toBe("nouveau-jeton")
   })
 
   it("rend l'erreur 401 même si surNonAuthentifie lève, et signale l'exception", async () => {
