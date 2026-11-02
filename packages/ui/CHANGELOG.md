@@ -1,5 +1,28 @@
 # @etic-insa/ui
 
+## 0.4.1
+
+### Patch Changes
+
+- c6553d2: `Calendar` (et `DatePicker` avec `listesMoisAnnee`) : les listes du mois et de l'année
+  s'ouvrent dans le `Select` de la bibliothèque au lieu de la liste native du système ; la liste
+  des années défile. Rien à faire côté application.
+- 4233d9f: Thème sombre : le bord d'une case à cocher vide, le contour d'une radio non cochée et le rail
+  d'un switch éteint reprennent `--input`, comme shadcn, au lieu de `--muted-foreground` à 65 % :
+  plus discrets, notamment dans la colonne de sélection d'un tableau (exception assumée à
+  WCAG 1.4.11). Thème clair inchangé ; rien à faire côté application.
+- ebcdb2d: `DropdownMenu` : quand l'entrée choisie retire le déclencheur du menu (ligne supprimée par son menu
+  « … », barre retirée), la fermeture ne renvoie plus le focus au dernier menu ou sélecteur ouvert
+  ailleurs dans la page (repli de Base UI sur son historique de focus). Il tombe sur `<body>`, où
+  les rattrapages existants (ligne supprimée d'un `DataTable`, barre d'actions groupées) le
+  reprennent. Un focus parti ailleurs (dialogue de confirmation ouvert par une entrée) y reste. Un
+  `finalFocus` passé à `DropdownMenuContent` passe d'abord ; s'il vaut `true`, la garde
+  s'applique. Rien à faire côté application. Les dialogues, sélecteurs, popovers et combobox ont le
+  même repli et ne sont pas encore corrigés.
+- ad19451: `PhoneInput` : au focus du numéro, tout le champ (sélecteur de pays compris) est entouré, comme
+  en erreur : bordure bleue sur le sélecteur de pays et un seul halo, celui du groupe, plutôt que
+  le halo du seul numéro, qui n'en entourait que la moitié. Rien à faire côté application.
+
 ## 0.4.0
 
 ### Minor Changes
