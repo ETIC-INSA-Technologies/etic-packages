@@ -912,6 +912,10 @@ describe("DataTable : requête, largeurs, cases et colonnes prêtes à l'emploi"
     expect(routeur).toHaveClass("font-medium", "focus-visible:ring-3")
 
     const bouton = screen.getByRole("button", { name: "Alan" })
+    // La ligne se surligne déjà au survol : le titre ne se souligne pas.
+    for (const titre of [routeur, bouton]) {
+      expect(titre).not.toHaveClass("hover:underline")
+    }
     expect(bouton).toHaveAttribute("type", "button")
     await user.click(bouton)
     expect(ouvrir).toHaveBeenCalledTimes(1)

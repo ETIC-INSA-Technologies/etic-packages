@@ -1711,10 +1711,11 @@ export type DataTableCellButtonProps = DataTableCellLinkCommun &
     lien?: never
   }
 
-/** Style du titre d'une ligne : texte en gras, souligné au survol, anneau
- *  de focus de la bibliothèque. */
+/** Style du titre d'une ligne : texte en gras, anneau de focus de la
+ *  bibliothèque. Pas de soulignement au survol : la ligne entière se
+ *  surligne déjà. */
 const TITRE_DE_LIGNE =
-  "rounded-sm text-left font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+  "rounded-sm text-left font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 
 /**
  * Titre d'une ligne qui mène à sa fiche : un vrai lien (`href`, routeur par
