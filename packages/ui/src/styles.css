@@ -17,9 +17,9 @@
  * Sans contrat, l'accent est le gris foncé de la base. La barre latérale suit
  * l'accent : ses variables --sidebar-primary* et --sidebar-ring en dérivent.
  *
- * Couleur de base : « gray » de shadcn (registre ui.shadcn.com/r/colors/
- * gray.json, cssVarsV4 : palette gray de Tailwind 4, neutres légèrement
- * bleutés, ceux de toute la suite), à la place de « neutral » de Nova. Les
+ * Couleur de base : « zinc » de shadcn (registre ui.shadcn.com/r/colors/
+ * zinc.json, cssVarsV4 : palette zinc de Tailwind 4, gris froid presque
+ * neutre, celui de toute la suite), à la place de « neutral » de Nova. Les
  * valeurs sont celles du registre, sauf les écarts commentés ci-dessous ;
  * src/theme.test.ts les compare au registre et vérifie les contrastes.
  *
@@ -90,45 +90,45 @@
 
 :root {
   color-scheme: light;
-  /* Fond de page (ajout d'ETIC, bg-page) : gray-50. Cartes, menus et
+  /* Fond de page (ajout d'ETIC, bg-page) : zinc-50. Cartes, menus et
      tableaux (bg-card) restent blancs et s'en détachent, comme en sombre où
-     les cartes (gray-900) sont plus claires que la page (gray-950).
+     les cartes (zinc-900) sont plus claires que la page (zinc-950).
      --background garde le blanc du registre : shadcn l'emploie aussi pour des
      surfaces posées sur --muted ou une carte. */
-  --page: oklch(0.985 0.002 247.839);
+  --page: oklch(0.985 0 0);
   --background: oklch(1 0 0);
-  --foreground: oklch(0.13 0.028 261.692);
+  --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.13 0.028 261.692);
+  --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.13 0.028 261.692);
+  --popover-foreground: oklch(0.141 0.005 285.823);
   /* Contrat d'accent : valeurs par défaut, remplacées par l'application.
      --primary-text (ajout d'ETIC) vaut --primary. */
-  --primary: oklch(0.21 0.034 264.665);
-  --primary-foreground: oklch(0.985 0.002 247.839);
-  --primary-text: oklch(0.21 0.034 264.665);
-  --ring: oklch(0.707 0.022 261.325);
-  --secondary: oklch(0.967 0.003 264.542);
-  --secondary-foreground: oklch(0.21 0.034 264.665);
-  --muted: oklch(0.967 0.003 264.542);
-  /* Plus foncé que le registre (gray-500, oklch(0.551 0.027 264.364) :
-     4,39:1 sur --muted), même teinte : ≥ 4,5:1 sur --muted (initiales
-     d'Avatar, Kbd). */
-  --muted-foreground: oklch(0.54 0.027 264.364);
-  --accent: oklch(0.967 0.003 264.542);
-  --accent-foreground: oklch(0.21 0.034 264.665);
+  --primary: oklch(0.21 0.006 285.885);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-text: oklch(0.21 0.006 285.885);
+  --ring: oklch(0.705 0.015 286.067);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.967 0.001 286.375);
+  /* Plus foncé que le registre (zinc-500, oklch(0.552 0.016 285.938) :
+     4,39:1 sur --muted), même teinte : ≥ 4,5:1 sur --muted (4,64:1 ;
+     initiales d'Avatar, Kbd). */
+  --muted-foreground: oklch(0.54 0.016 285.938);
+  --accent: oklch(0.967 0.001 286.375);
+  --accent-foreground: oklch(0.21 0.006 285.885);
   /* Plus foncé que le registre (oklch(0.577 0.245 27.325)) : ≥ 4,5:1 sur sa
      teinte à 10 % (bouton et badge destructive). */
   --destructive: #c10007;
   /* Texte sur la page, le fond, les cartes, --muted et sur leur teinte à
-     20 % : ≥ 4,5:1 (--success un cran plus foncé, #15703f avant, pour la
-     page gray-50). */
+     20 % : ≥ 4,5:1 (--success un cran plus foncé que #15703f pour la page
+     teintée : 4,62:1 sur sa teinte posée sur la page zinc-50). */
   --success: #146c3d;
   --warning: #8a5300;
   /* Information (Alert info) : même exigence. */
   --info: #1f5aa8;
-  --border: oklch(0.928 0.006 264.531);
-  --input: oklch(0.928 0.006 264.531);
+  --border: oklch(0.92 0.004 286.32);
+  --input: oklch(0.92 0.004 286.32);
   /* Bord d'une case à cocher ou d'une radio vide, rail d'un switch éteint :
      --input se voyait à peine sur le blanc
      (et restait sous 2:1 en sombre). --muted-foreground à 80 % : ≥ 3:1 sur
@@ -146,15 +146,15 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
-  /* Écart au registre (gray-50, identique à --page) : en clair la barre
+  /* Écart au registre (zinc-50, identique à --page) : en clair la barre
      latérale est blanche, comme une carte, et se détache de la page. */
   --sidebar: var(--background);
-  --sidebar-foreground: oklch(0.13 0.028 261.692);
+  --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.967 0.003 264.542);
-  --sidebar-accent-foreground: oklch(0.21 0.034 264.665);
-  --sidebar-border: oklch(0.928 0.006 264.531);
+  --sidebar-accent: oklch(0.967 0.001 286.375);
+  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+  --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: var(--ring);
 }
 
@@ -162,22 +162,22 @@
   color-scheme: dark;
   /* En sombre, la page est le fond du registre : rien ne change. */
   --page: var(--background);
-  --background: oklch(0.13 0.028 261.692);
-  --foreground: oklch(0.985 0.002 247.839);
-  --card: oklch(0.21 0.034 264.665);
-  --card-foreground: oklch(0.985 0.002 247.839);
-  --popover: oklch(0.21 0.034 264.665);
-  --popover-foreground: oklch(0.985 0.002 247.839);
-  --primary: oklch(0.928 0.006 264.531);
-  --primary-foreground: oklch(0.21 0.034 264.665);
-  --primary-text: oklch(0.928 0.006 264.531);
-  --ring: oklch(0.551 0.027 264.364);
-  --secondary: oklch(0.278 0.033 256.848);
-  --secondary-foreground: oklch(0.985 0.002 247.839);
-  --muted: oklch(0.278 0.033 256.848);
-  --muted-foreground: oklch(0.707 0.022 261.325);
-  --accent: oklch(0.278 0.033 256.848);
-  --accent-foreground: oklch(0.985 0.002 247.839);
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.21 0.006 285.885);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.92 0.004 286.32);
+  --primary-foreground: oklch(0.21 0.006 285.885);
+  --primary-text: oklch(0.92 0.004 286.32);
+  --ring: oklch(0.552 0.016 285.938);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
   /* Plus clair que le registre (oklch(0.704 0.191 22.216)) : ≥ 4,5:1 sur sa
      teinte à 20 %, y compris dans un pied de dialogue (bg-muted/50). */
   --destructive: #ff8a8a;
@@ -197,12 +197,12 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.034 264.665);
-  --sidebar-foreground: oklch(0.985 0.002 247.839);
+  --sidebar: oklch(0.21 0.006 285.885);
+  --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.278 0.033 256.848);
-  --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
+  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: var(--ring);
 }
@@ -212,7 +212,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    /* bg-page au lieu de bg-background (shadcn) : fond de page gray-50. */
+    /* bg-page au lieu de bg-background (shadcn) : fond de page zinc-50. */
     @apply bg-page text-foreground;
   }
   html {

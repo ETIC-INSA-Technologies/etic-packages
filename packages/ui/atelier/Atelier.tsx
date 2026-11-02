@@ -601,7 +601,7 @@ const VARIANTES = [
 const TAILLES = ["xs", "sm", "default", "lg"] as const
 
 // Contrats d'accent définis dans accents.css ; « aucun » = gris foncé de la
-// base gray (styles.css).
+// base zinc (styles.css).
 const ACCENTS = [
   { id: "", nom: "Aucun" },
   { id: "members", nom: "ETIC Members" },

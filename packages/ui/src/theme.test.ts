@@ -1,5 +1,5 @@
 /// <reference types="node" />
-// Thème de src/styles.css : valeurs de la couleur de base « gray » de shadcn,
+// Thème de src/styles.css : valeurs de la couleur de base « zinc » de shadcn,
 // contrastes WCAG (textes, contrôles, couleurs sémantiques) en clair et en
 // sombre, et contrats d'accent des applications (atelier/accents.css).
 // Les couleurs sont lues dans les fichiers CSS (hexadécimal ou oklch).
@@ -17,64 +17,64 @@ const TEXTE = 4.5
 const NON_TEXTE = 3
 const CONTRAT = ["primary", "primary-foreground", "primary-text", "ring"]
 
-// Couleur de base « gray » de shadcn : registre ui.shadcn.com/r/colors/
-// gray.json, cssVarsV4 (palette gray de Tailwind 4), sans chart-* ni radius.
-const REGISTRE_GRAY = {
+// Couleur de base « zinc » de shadcn : registre ui.shadcn.com/r/colors/
+// zinc.json, cssVarsV4 (palette zinc de Tailwind 4), sans chart-* ni radius.
+const REGISTRE_ZINC = {
   clair: {
     background: "oklch(1 0 0)",
-    foreground: "oklch(0.13 0.028 261.692)",
+    foreground: "oklch(0.141 0.005 285.823)",
     card: "oklch(1 0 0)",
-    "card-foreground": "oklch(0.13 0.028 261.692)",
+    "card-foreground": "oklch(0.141 0.005 285.823)",
     popover: "oklch(1 0 0)",
-    "popover-foreground": "oklch(0.13 0.028 261.692)",
-    primary: "oklch(0.21 0.034 264.665)",
-    "primary-foreground": "oklch(0.985 0.002 247.839)",
-    secondary: "oklch(0.967 0.003 264.542)",
-    "secondary-foreground": "oklch(0.21 0.034 264.665)",
-    muted: "oklch(0.967 0.003 264.542)",
-    "muted-foreground": "oklch(0.551 0.027 264.364)",
-    accent: "oklch(0.967 0.003 264.542)",
-    "accent-foreground": "oklch(0.21 0.034 264.665)",
+    "popover-foreground": "oklch(0.141 0.005 285.823)",
+    primary: "oklch(0.21 0.006 285.885)",
+    "primary-foreground": "oklch(0.985 0 0)",
+    secondary: "oklch(0.967 0.001 286.375)",
+    "secondary-foreground": "oklch(0.21 0.006 285.885)",
+    muted: "oklch(0.967 0.001 286.375)",
+    "muted-foreground": "oklch(0.552 0.016 285.938)",
+    accent: "oklch(0.967 0.001 286.375)",
+    "accent-foreground": "oklch(0.21 0.006 285.885)",
     destructive: "oklch(0.577 0.245 27.325)",
-    border: "oklch(0.928 0.006 264.531)",
-    input: "oklch(0.928 0.006 264.531)",
-    ring: "oklch(0.707 0.022 261.325)",
-    sidebar: "oklch(0.985 0.002 247.839)",
-    "sidebar-foreground": "oklch(0.13 0.028 261.692)",
-    "sidebar-primary": "oklch(0.21 0.034 264.665)",
-    "sidebar-primary-foreground": "oklch(0.985 0.002 247.839)",
-    "sidebar-accent": "oklch(0.967 0.003 264.542)",
-    "sidebar-accent-foreground": "oklch(0.21 0.034 264.665)",
-    "sidebar-border": "oklch(0.928 0.006 264.531)",
-    "sidebar-ring": "oklch(0.707 0.022 261.325)",
+    border: "oklch(0.92 0.004 286.32)",
+    input: "oklch(0.92 0.004 286.32)",
+    ring: "oklch(0.705 0.015 286.067)",
+    sidebar: "oklch(0.985 0 0)",
+    "sidebar-foreground": "oklch(0.141 0.005 285.823)",
+    "sidebar-primary": "oklch(0.21 0.006 285.885)",
+    "sidebar-primary-foreground": "oklch(0.985 0 0)",
+    "sidebar-accent": "oklch(0.967 0.001 286.375)",
+    "sidebar-accent-foreground": "oklch(0.21 0.006 285.885)",
+    "sidebar-border": "oklch(0.92 0.004 286.32)",
+    "sidebar-ring": "oklch(0.705 0.015 286.067)",
   },
   sombre: {
-    background: "oklch(0.13 0.028 261.692)",
-    foreground: "oklch(0.985 0.002 247.839)",
-    card: "oklch(0.21 0.034 264.665)",
-    "card-foreground": "oklch(0.985 0.002 247.839)",
-    popover: "oklch(0.21 0.034 264.665)",
-    "popover-foreground": "oklch(0.985 0.002 247.839)",
-    primary: "oklch(0.928 0.006 264.531)",
-    "primary-foreground": "oklch(0.21 0.034 264.665)",
-    secondary: "oklch(0.278 0.033 256.848)",
-    "secondary-foreground": "oklch(0.985 0.002 247.839)",
-    muted: "oklch(0.278 0.033 256.848)",
-    "muted-foreground": "oklch(0.707 0.022 261.325)",
-    accent: "oklch(0.278 0.033 256.848)",
-    "accent-foreground": "oklch(0.985 0.002 247.839)",
+    background: "oklch(0.141 0.005 285.823)",
+    foreground: "oklch(0.985 0 0)",
+    card: "oklch(0.21 0.006 285.885)",
+    "card-foreground": "oklch(0.985 0 0)",
+    popover: "oklch(0.21 0.006 285.885)",
+    "popover-foreground": "oklch(0.985 0 0)",
+    primary: "oklch(0.92 0.004 286.32)",
+    "primary-foreground": "oklch(0.21 0.006 285.885)",
+    secondary: "oklch(0.274 0.006 286.033)",
+    "secondary-foreground": "oklch(0.985 0 0)",
+    muted: "oklch(0.274 0.006 286.033)",
+    "muted-foreground": "oklch(0.705 0.015 286.067)",
+    accent: "oklch(0.274 0.006 286.033)",
+    "accent-foreground": "oklch(0.985 0 0)",
     destructive: "oklch(0.704 0.191 22.216)",
     border: "oklch(1 0 0 / 10%)",
     input: "oklch(1 0 0 / 15%)",
-    ring: "oklch(0.551 0.027 264.364)",
-    sidebar: "oklch(0.21 0.034 264.665)",
-    "sidebar-foreground": "oklch(0.985 0.002 247.839)",
+    ring: "oklch(0.552 0.016 285.938)",
+    sidebar: "oklch(0.21 0.006 285.885)",
+    "sidebar-foreground": "oklch(0.985 0 0)",
     "sidebar-primary": "oklch(0.488 0.243 264.376)",
-    "sidebar-primary-foreground": "oklch(0.985 0.002 247.839)",
-    "sidebar-accent": "oklch(0.278 0.033 256.848)",
-    "sidebar-accent-foreground": "oklch(0.985 0.002 247.839)",
+    "sidebar-primary-foreground": "oklch(0.985 0 0)",
+    "sidebar-accent": "oklch(0.274 0.006 286.033)",
+    "sidebar-accent-foreground": "oklch(0.985 0 0)",
     "sidebar-border": "oklch(1 0 0 / 10%)",
-    "sidebar-ring": "oklch(0.551 0.027 264.364)",
+    "sidebar-ring": "oklch(0.552 0.016 285.938)",
   },
 }
 
@@ -83,11 +83,11 @@ const ECARTS = {
   // La barre latérale suit le contrat d'accent de l'application.
   commun: ["sidebar-primary", "sidebar-primary-foreground", "sidebar-ring"],
   // Lisibilité : ≥ 4,5:1 sur --muted, sur la teinte de --destructive.
-  // --sidebar : blanche en clair (var(--background)) au lieu de gray-50.
+  // --sidebar : blanche en clair (var(--background)) au lieu de zinc-50.
   clair: ["muted-foreground", "destructive", "sidebar"],
   sombre: ["destructive"],
   // Jetons ajoutés, absents du registre : --page, fond de la page (bg-page :
-  // body, contenu d'AppShell), gray-50 en clair (cartes blanches qui s'en
+  // body, contenu d'AppShell), zinc-50 en clair (cartes blanches qui s'en
   // détachent), --background en sombre.
   ajouts: ["page"],
 }
@@ -227,22 +227,22 @@ const THEMES = [CLAIR, SOMBRE]
 
 describe("couleur de base", () => {
   it.each(THEMES)(
-    "$nom : valeurs du registre gray de shadcn",
+    "$nom : valeurs du registre zinc de shadcn",
     ({ nom, vars }) => {
       const ecarts = [...ECARTS.commun, ...ECARTS[nom]]
-      for (const [jeton, attendu] of Object.entries(REGISTRE_GRAY[nom])) {
+      for (const [jeton, attendu] of Object.entries(REGISTRE_ZINC[nom])) {
         if (ecarts.includes(jeton)) continue
         expect(vars.brute(jeton), `${nom} : --${jeton}`).toBe(attendu)
       }
     }
   )
 
-  it("--page : ajout absent du registre, gray-50 en clair, le fond en sombre", () => {
+  it("--page : ajout absent du registre, zinc-50 en clair, le fond en sombre", () => {
     for (const ajout of ECARTS.ajouts) {
-      expect(Object.keys(REGISTRE_GRAY.clair)).not.toContain(ajout)
+      expect(Object.keys(REGISTRE_ZINC.clair)).not.toContain(ajout)
     }
-    // gray-50 de Tailwind 4.
-    expect(racineCss.brute("page")).toBe("oklch(0.985 0.002 247.839)")
+    // zinc-50 de Tailwind 4.
+    expect(racineCss.brute("page")).toBe("oklch(0.985 0 0)")
     expect(sombreCss.brute("page")).toBe("var(--background)")
     expect(css).toContain("--color-page: var(--page);")
   })
@@ -250,10 +250,10 @@ describe("couleur de base", () => {
   it("--sidebar : blanche en clair, inchangée en sombre ; l'élément actif et le filet s'en distinguent", () => {
     expect(racineCss.brute("sidebar")).toBe("var(--background)")
     expect(racineCss.valeur("sidebar")).toBe(racineCss.valeur("background"))
-    expect(sombreCss.brute("sidebar")).toBe(REGISTRE_GRAY.sombre.sidebar)
+    expect(sombreCss.brute("sidebar")).toBe(REGISTRE_ZINC.sombre.sidebar)
     // Pas un contraste de texte : l'élément survolé ou actif et le filet
-    // doivent seulement rester perceptibles (gray-100 sur blanc, gray-200
-    // entre la barre blanche et la page gray-50).
+    // doivent seulement rester perceptibles (zinc-100 sur blanc, zinc-200
+    // entre la barre blanche et la page zinc-50).
     const blanc = racineCss.valeur("sidebar")
     expect(
       contraste(racineCss.valeur("sidebar-accent"), blanc)
@@ -308,7 +308,7 @@ describe("couleur de base", () => {
 
   // Surfaces de shadcn en bg-background posées sur bg-muted (onglet actif
   // dans TabsList) : elles s'en distinguent comme dans le registre (1,10:1
-  // en clair, blanc sur gray-100 ; gray-50 n'y donnait que 1,05:1).
+  // en clair, blanc sur zinc-100 ; zinc-50 n'y donnerait que 1,05:1).
   it.each(THEMES)(
     "$nom : bg-background se distingue de bg-muted (onglet actif)",
     ({ fond, muted }) => {

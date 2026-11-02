@@ -260,10 +260,10 @@ describe("écarts avec shadcn", () => {
     expect(css).not.toContain("--muted-foreground: oklch(0.556 0 0)")
   })
 
-  // Thème : couleur de base gray de shadcn au lieu de neutral. Écarts avec
+  // Thème : couleur de base zinc de shadcn au lieu de neutral. Écarts avec
   // le registre (--muted-foreground clair plus foncé ; --control-border
   // dérivé de --muted-foreground en sombre aussi) et ajout de --page (fond de
-  // la page, gray-50 en clair) : voir ECARTS de theme.test.ts, qui compare
+  // la page, zinc-50 en clair) : voir ECARTS de theme.test.ts, qui compare
   // chaque jeton au registre et vérifie les contrastes.
   // CenteredScreen sur bg-muted/40 : centered-screen.test.tsx ; contenu
   // d'AppShell sur bg-page : app-shell.test.tsx.

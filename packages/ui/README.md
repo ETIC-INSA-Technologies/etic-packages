@@ -67,12 +67,12 @@ liens survolés) : c'est corrigé dans `src/components/ui/`, et `npm test` écho
 
 Le thème sombre s'active par la classe `dark` sur `<html>`.
 
-Les neutres (fonds, panneaux, bordures, textes) sont ceux de la couleur de base `gray` de
-shadcn (palette `gray` de Tailwind 4, légèrement bleutée), communs à toute la suite : une
+Les neutres (fonds, panneaux, bordures, textes) sont ceux de la couleur de base `zinc` de
+shadcn (palette `zinc` de Tailwind 4, gris froid presque neutre), communs à toute la suite : une
 application ne les redéfinit pas. `--muted-foreground` est un peu plus foncé en clair
 (≥ 4,5:1 sur `--muted`), écart vérifié avec les contrastes par `src/theme.test.ts`.
 
-Le fond de la page elle-même est un jeton ajouté, `--page` (classe `bg-page`) : gray-50 en
+Le fond de la page elle-même est un jeton ajouté, `--page` (classe `bg-page`) : zinc-50 en
 clair, si bien que cartes, menus et tableaux blancs s'en détachent (en sombre, il vaut
 `--background` et les cartes sont déjà plus claires). Le `body` et le contenu d'`AppShell`
 le prennent ; un conteneur pleine page d'une application aussi, plutôt que `bg-background`,
@@ -1048,14 +1048,14 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
 
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 
-  Thème : couleur de base `gray` de shadcn (registre `colors/gray.json`, `cssVarsV4`) au lieu
-  de `neutral` ; jeton ajouté `--page` (`bg-page`, gray-50 en clair, `--background` en
+  Thème : couleur de base `zinc` de shadcn (registre `colors/zinc.json`, `cssVarsV4`) au lieu
+  de `neutral` ; jeton ajouté `--page` (`bg-page`, zinc-50 en clair, `--background` en
   sombre), pris par le `body` au lieu de `bg-background`, `--background` restant celui du
   registre ; `--success` clair un cran plus foncé (≥ 4,5:1 sur sa teinte posée sur la page
-  gray-50) ; `--muted-foreground` clair un
-  peu plus foncé que gray-500 (≥ 4,5:1 sur `--muted`) ; `--control-border`
+  zinc-50) ; `--muted-foreground` clair un
+  peu plus foncé que zinc-500 (≥ 4,5:1 sur `--muted`) ; `--control-border`
   (`--muted-foreground` à 80 %) en sombre aussi, au lieu de `--input` (sous 2:1) ; `--sidebar`
-  clair = `--background` (barre latérale blanche, au lieu du gray-50 du registre) ;
+  clair = `--background` (barre latérale blanche, au lieu du zinc-50 du registre) ;
   `color-scheme` dans `:root` et `.dark`. Les valeurs sont commentées dans `styles.css` ;
   `theme.test.ts` compare chaque jeton au registre, écarts (`ECARTS`) exceptés, et en vérifie
   les contrastes. Hors `ui/` : `CenteredScreen` est posé sur `bg-muted/40` au lieu du
