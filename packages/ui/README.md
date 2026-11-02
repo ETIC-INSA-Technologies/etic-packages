@@ -789,7 +789,8 @@ const colonnes = aide.columns([
     actions: (p) => <DeleteButton libelle={`le poste ${p.nom}`} … />,
     // enableHiding: true pour une colonne d'actions masquable et déplaçable.
     // Commandes sur la ligne survolée seulement (focus dans la ligne, menu
-    // ouvert et écran tactile compris) ; toujoursVisibles: true sur toutes.
+    // ouvert et écran tactile compris), déjà en couleur (corbeille rouge) ;
+    // toujoursVisibles: true sur toutes.
   }),
 ])
 

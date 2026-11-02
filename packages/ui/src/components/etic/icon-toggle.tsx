@@ -115,6 +115,10 @@ export function IconToggle({
                 // Inactif, en gris comme les icônes d'action voisines : seul
                 // l'état actif attire l'œil.
                 "text-muted-foreground aria-pressed:bg-muted",
+                // Dans une ligne de DataTable survolée ou focalisée, inactif,
+                // déjà en couleur de texte (celle de son propre survol).
+                !verrou &&
+                  "not-aria-pressed:group-focus-within/ligne:text-foreground not-aria-pressed:group-hover/ligne:text-foreground",
                 // Couleur du bouton actif, survol compris (le bouton passe
                 // sinon en texte normal).
                 TONS[ton].basculeActive,

@@ -1616,7 +1616,10 @@ export interface DataTableActionsColumnOptions<TData extends RowData> {
  *  chaque ligne charge la liste. Transparentes, pas retirées : elles restent
  *  dans l'ordre de tabulation et lues par les lecteurs d'écran. Visibles
  *  aussi quand le focus est dans la ligne (clavier), quand l'une d'elles a
- *  ouvert un menu, et toujours sur écran tactile, sans survol. */
+ *  ouvert un menu, et toujours sur écran tactile, sans survol. Sur la ligne
+ *  survolée, chacune prend déjà sa couleur (`group/ligne`) : corbeille
+ *  rouge, bascule en couleur de texte ; le survol du bouton n'ajoute que
+ *  son fond. */
 const ACTIONS_AU_SURVOL =
   "opacity-0 transition-opacity group-hover/ligne:opacity-100 group-focus-within/ligne:opacity-100 has-aria-expanded:opacity-100 pointer-coarse:opacity-100"
 

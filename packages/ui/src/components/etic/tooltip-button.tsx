@@ -43,16 +43,20 @@ export interface TooltipButtonProps extends ComponentProps<typeof Button> {
   verrou?: string
   /**
    * Action destructrice discrète : gris au repos, rouge au survol seulement
-   * (une colonne de corbeilles rouges ferait une colonne d'alarmes). Pour un
+   * (une colonne de corbeilles rouges ferait une colonne d'alarmes) ; dans
+   * une ligne de `DataTable`, rouge dès le survol de la ligne. Pour un
    * bouton `ghost` ; verrouillé, il reste gris.
    */
   destructif?: boolean
 }
 
 /** Rouge au survol (`destructif`) : les classes de la corbeille de
- *  `DeleteButton`. Usage interne (non exporté par `index.ts`). */
+ *  `DeleteButton`. L'icône rougit dès le survol de sa ligne de `DataTable`
+ *  (`group/ligne`) ou le focus dans la ligne, le fond au survol du bouton
+ *  seulement. Usage interne
+ *  (non exporté par `index.ts`). */
 export const CLASSES_DESTRUCTIF_AU_SURVOL =
-  "hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/20"
+  "hover:bg-destructive/10 hover:text-destructive group-hover/ligne:text-destructive group-focus-within/ligne:text-destructive dark:hover:bg-destructive/20"
 
 /**
  * Le `Button` de shadcn avec une infobulle, et un état verrouillé qui

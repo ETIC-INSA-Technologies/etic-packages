@@ -239,7 +239,7 @@ describe("TooltipButton", () => {
     expect(screen.getByRole("button", { name: "Modifier" })).toBeVisible()
   })
 
-  it("destructif : gris au repos, rouge au survol seulement", () => {
+  it("destructif : gris au repos, rouge au survol (du bouton ou de sa ligne) seulement", () => {
     render(
       <>
         <TooltipButton
@@ -262,13 +262,22 @@ describe("TooltipButton", () => {
       </>
     )
     const actif = screen.getByRole("button", { name: "Retirer" })
-    expect(actif).toHaveClass("text-muted-foreground", "hover:text-destructive")
+    expect(actif).toHaveClass(
+      "text-muted-foreground",
+      "hover:text-destructive",
+      // Dans une ligne de DataTable : l'icône rougit dès le survol de la
+      // ligne (ou le focus dans la ligne), le fond au survol du bouton
+      // seulement.
+      "group-hover/ligne:text-destructive",
+      "group-focus-within/ligne:text-destructive"
+    )
     expect(actif.className).not.toMatch(/(^|\s)text-destructive/)
+    expect(actif.className).not.toContain("group-hover/ligne:bg-")
     const verrouille = screen.getByRole("button", {
       name: "Retirer verrouillé",
     })
     expect(verrouille).toHaveClass("text-muted-foreground")
-    expect(verrouille.className).not.toContain("hover:text-destructive")
+    expect(verrouille.className).not.toContain("text-destructive")
   })
 
   it("en cours, garde son infobulle, son nom et le focus", async () => {
@@ -403,6 +412,28 @@ describe("IconToggle", () => {
     const neutre = screen.getByRole("button", { name: "Neutre" })
     expect(neutre).toHaveClass("aria-pressed:text-foreground")
     expect(neutre.className).not.toContain("warning")
+  })
+
+  it("inactif, en couleur de texte dès le survol de sa ligne de DataTable, sauf verrouillé", () => {
+    render(
+      <>
+        <Bascule />
+        <IconToggle
+          actif={false}
+          onActifChange={() => {}}
+          icone={LockIcon}
+          libelle="Verrouillé"
+          verrou="Indispensable"
+        />
+      </>
+    )
+    expect(screen.getByRole("button", { name: "Groupe critique" })).toHaveClass(
+      "not-aria-pressed:group-hover/ligne:text-foreground",
+      "not-aria-pressed:group-focus-within/ligne:text-foreground"
+    )
+    expect(
+      screen.getByRole("button", { name: "Verrouillé" }).className
+    ).not.toContain("/ligne")
   })
 
   it("a la géométrie d'un bouton à icône icon-sm, comme la corbeille voisine", () => {
