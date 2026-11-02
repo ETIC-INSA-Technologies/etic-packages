@@ -98,6 +98,18 @@ describe("SaveBar", () => {
     expect(screen.getByRole("status")).toHaveTextContent(/^Enregistré$/)
   })
 
+  it("collante sans modification : à sa place, sans carte ; collée pendant l'envoi", () => {
+    const { container, rerender } = render(<SaveBar collante desactive />)
+    const barre = container.firstElementChild!
+    expect(barre).not.toHaveClass("sticky")
+    expect(barre).not.toHaveClass("bg-card")
+    expect(barre).toHaveClass("border-transparent", "justify-end")
+    // Pendant l'envoi, la barre reste à l'écran, même sans `modifie`.
+    rerender(<SaveBar collante enCours />)
+    expect(barre).toHaveClass("sticky", "bg-card", "border-border")
+    expect(barre).not.toHaveClass("border-transparent")
+  })
+
   it("non collante : boutons d'abord, statut après", () => {
     const { container } = render(<SaveBar modifie onAnnuler={() => {}} />)
     const barre = container.firstElementChild!

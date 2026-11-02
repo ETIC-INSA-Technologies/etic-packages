@@ -17,9 +17,10 @@ export interface SaveBarProps {
    *  enregistrées », la raison pour laquelle « Enregistrer » est actif,
    *  même après un enregistrement réussi. */
   modifie?: boolean
-  /** Barre collée en bas d'un formulaire plus haut que l'écran, opaque,
-   *  boutons à droite. Lui passer aussi `modifie`, pour qu'elle ne flotte
-   *  pas sur le contenu sans dire pourquoi. */
+  /** Pied d'un formulaire plus haut que l'écran, boutons à droite, statut à
+   *  gauche. Tant que `modifie` est vrai, la barre se colle en bas de
+   *  l'écran, sur une carte opaque ; sans modification, elle reste à sa
+   *  place, sans carte : elle ne flotte pas sur le contenu sans raison. */
   collante?: boolean
   /** Sans gestionnaire, « Enregistrer » soumet le formulaire qui l'entoure. */
   onEnregistrer?: () => void
@@ -72,7 +73,10 @@ export function SaveBar({
   // Toujours présent : une zone `status` ajoutée en même temps que son texte
   // n'est pas annoncée.
   const statut = (
-    <p role="status" className="text-sm text-muted-foreground">
+    <p
+      role="status"
+      className={cn("text-sm text-muted-foreground", collante && "me-auto")}
+    >
       {/* Une modification faite après l'enregistrement l'emporte :
           « Enregistré » ne vaut que pour ce qui est à l'écran. */}
       {modifie ? (
@@ -92,10 +96,15 @@ export function SaveBar({
       data-collante={collante || undefined}
       className={cn(
         "flex flex-wrap items-center gap-3",
-        // Toujours opaque : même sans modification, la barre passe sur le
-        // contenu au défilement.
+        // Mêmes marges et bord (transparent) avec ou sans carte : les boutons
+        // ne bougent pas quand la carte apparaît.
         collante &&
-          "sticky bottom-4 z-10 justify-end rounded-xl border border-border bg-card/95 px-4 py-3 shadow-sm backdrop-blur",
+          "justify-end rounded-xl border border-transparent px-4 py-3",
+        // Carte pleinement opaque : un fond translucide laissait deviner,
+        // flou, le texte qu'elle recouvre.
+        collante &&
+          (modifie || enCours) &&
+          "sticky bottom-4 z-10 border-border bg-card shadow-sm",
         className
       )}
     >
