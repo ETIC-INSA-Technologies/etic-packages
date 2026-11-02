@@ -1,5 +1,94 @@
 # @etic-insa/ui
 
+## 0.4.0
+
+### Minor Changes
+
+- ad736dd: Les boutons d'en-tête de page passent à 36 px partout : `PageHeader` comme `DetailHeader`
+  agrandissent leurs actions sans `size` à leur donner (`Button`, `TooltipButton`, `DeleteButton`
+  avec `avecTexte`, `ButtonLink` : `default` prend la hauteur de `lg`, `icon` celle d'`icon-lg` ;
+  une taille plus petite donnée par `size` ou par `className` reste). Les tailles `default` et
+  `icon` de `buttonVariants` lisent leur hauteur dans `--bouton-hauteur` et `--bouton-icone`
+  (32 px sans elles), que la zone des actions pose. `tailleActions` vaut désormais `lg` par
+  défaut, aussi sur `PageHeader` (nouvelle prop) ; `tailleActions="default"` garde 32 px. Côté
+  application, les `size="lg"` et `tailleActions="lg"` des en-têtes deviennent superflus.
+- a1bde3b: `dataTableActionsColumn` : les commandes d'une ligne (supprimer…) ne s'affichent plus que sur la
+  ligne survolée, plutôt que la même icône répétée sur chaque ligne. Elles sont transparentes, pas
+  retirées : toujours dans l'ordre de tabulation et lues par les lecteurs d'écran. Elles
+  apparaissent aussi quand le focus est dans la ligne (clavier), quand l'une d'elles a ouvert un
+  menu, et toujours sur écran tactile (pas de survol). Nouvelle option `toujoursVisibles` pour
+  garder l'ancien affichage sur une liste donnée. Rien à faire côté application.
+- c40d54a: « Sélectionner les N » passe du bandeau de `DataTable` à la barre `DataTableBulkActions` : cocher
+  toute la page n'insère plus de ligne au-dessus du tableau, qui ne se décale plus. La barre propose
+  un bouton compact à côté de son compte (icône et « Sélectionner les 137 », l'icône seule sur
+  téléphone, nom complet « Sélectionner les 137 personnes ») ; une fois accepté, elle compte le
+  total et le focus passe à « Tout désélectionner ». Le bandeau
+  (`[data-slot="data-table-select-all"]`) n'existe plus : un tableau avec `total` mais sans
+  `DataTableBulkActions` ne propose plus de tout sélectionner. Les props `unite` et `feminin` de
+  `DataTable` restent, pour l'annonce « Les 137 éléments sont sélectionnés ».
+- 9c82a92: Les neutres du thème (fonds, panneaux, bordures, textes secondaires, anneau de focus et accent
+  par défaut, barre latérale) passent de la couleur de base `gray` de shadcn, légèrement bleutée, à
+  la couleur de base `zinc` (registre shadcn, palette `zinc` de Tailwind 4 : gris froid presque
+  neutre), avec exactement les valeurs du preset, contraste faible compris : `--muted-foreground`
+  redevient zinc-500 (4,39:1 sur `--muted` en clair). Seuls écarts gardés : `--page` (zinc-50 en
+  clair, `--background` en sombre), barre latérale blanche en clair, `--control-border` (bord des
+  contrôles non cochés, au moins 3:1 : `--muted-foreground` plein en clair, atténué en sombre), couleurs sémantiques (`--destructive` éclairci en sombre),
+  `color-scheme`, et des fonds sombres éclaircis : gris très foncé plutôt que presque noir (fond,
+  cartes, menus, barre latérale et `--muted` remontent d'un cran, écarts entre eux gardés). Rien
+  à faire côté application, sauf si elle surchargeait des neutres : les recalculer sur `zinc`.
+
+  Un tableau se détache de la surface qui le porte : le cadre de `DataTable` passe de `bg-card` au
+  nouveau jeton `bg-tableau`, qui vaut `--card` sur la page et `--tableau-encart` (nouveau jeton,
+  un cran plus sombre que la carte, même écart discret dans les deux thèmes) dans
+  toute surface de la bibliothèque peinte en `bg-card` ou `bg-popover` — `Card` (`SectionCard`
+  comprise), `Alert`, dialogue, `AlertDialog`, tiroir, popover, menu déroulant, liste d'un
+  `Select` ou d'un `Combobox`, `SaveBar`, barre d'actions groupées, barre latérale, `Disclosure`
+  `variante="carte"` (qui porte désormais `data-variante` sur sa racine). Les lignes gardent le
+  survol et la sélection de shadcn. Rien à faire pour `DataTable` ; un cadre de tableau propre à
+  l'application peut prendre `bg-tableau` au lieu de `bg-card` pour suivre la même règle.
+
+### Patch Changes
+
+- f7fbe38: `RemovableBadge` : un marqueur placé après le libellé (cadenas d'un élément critique…) est
+  centré à 4 px du texte, comme une icône de `Badge`, au lieu de reposer sur la ligne de base ;
+  seul le premier élément (le texte) se coupe quand la place manque. `Toggletip` : posé dans un
+  badge, sa bulle part du contour du badge et non du texte.
+- f192331: `DataTableCellLink` : le titre d'une ligne ne se souligne plus au survol, la ligne entière se
+  surligne déjà. Gras et anneau de focus inchangés ; rien à faire côté application.
+- 77ad8c7: `AppShell` : le logo de la marque, en haut de la barre latérale, passe de 28 à 32 px, comme le
+  sélecteur d'équipe de shadcn (toute la hauteur utile du bouton) ; dans la barre repliée, il
+  remplit le bouton et y est centré (il était décalé de 2 px vers la gauche).
+- 4d709c6: `DataTable` : la ligne dépliée et son détail se lisent comme un seul bloc. La ligne perd sa
+  bordure basse et prend le fond du détail (`bg-muted/50`) ; le détail, qui avait un fond plus
+  clair (`bg-muted/30`), suit celui de la ligne, teinte de la sélection comprise. Rien à faire côté
+  application.
+- 810a95b: `DetailList` en `grille` compte quatre colonnes au plus (toujours d'au moins 14rem) : sur un écran
+  large, deux paires occupent la moitié gauche de la carte, au lieu de deux colonnes étroites devant
+  six ou sept vides. Une valeur moyenne (description, URL) ne revient plus à la ligne sans raison, et
+  une liste courte garde de l'air à droite.
+- 1a74507: `AppShell`, pied de la barre latérale : le menu du compte prend le contour du bouton de thème
+  voisin (`--border`, `--input` en sombre, comme la variante `outline` des boutons), tracé en ombre
+  d'1 px pour ne pas rogner l'avatar de la barre repliée. Rien à faire côté application.
+- 1a74507: `AppShell`, pied de la barre latérale : le bouton de thème n'a plus de fond propre en sombre (le
+  `dark:bg-input/30` de la variante `outline` tranchait sur la barre) et prend le survol du menu
+  du compte voisin (`bg-sidebar-accent`). L'avatar du compte passe du rond au carré arrondi
+  (`rounded-lg`, comme le `nav-user` de shadcn), à la forme du survol de son bouton et du bouton de
+  thème, barre repliée comprise ; le survol du menu du compte passe lui aussi à `rounded-lg`. Rien
+  à faire côté application.
+- aac2663: `SaveBar collante` ne se colle en bas de l'écran, sur sa carte, que tant qu'il y a des
+  modifications (`modifie`) ou un envoi en cours (`enCours`). Sans modification, elle reste à sa
+  place sous le formulaire, sans carte : elle ne flotte plus sur le contenu comme un bandeau vide
+  portant un bouton grisé. La carte est désormais pleinement opaque (un fond translucide et flouté
+  laissait deviner le texte recouvert), et le statut se range à gauche, les boutons à droite. Rien
+  à faire côté application, si ce n'est passer `modifie` comme le recommandait déjà la
+  documentation.
+- 1a7f5d0: La liste d'un `Select` prend la largeur de ses options — au moins celle du champ, au plus
+  l'espace disponible — au lieu de la largeur exacte du champ, qui coupait net les options plus
+  longues que lui (un champ étroit dans un tableau, une barre d'actions). Une option qui dépasse
+  encore l'espace disponible passe à la ligne. Dans le champ, une valeur trop longue finit par
+  « … » au lieu d'être coupée net (le `flex` de shadcn sur la valeur annulait son `line-clamp-1`) ;
+  une icône dans la valeur reste en ligne avec le texte. Rien à faire côté application.
+
 ## 0.3.0
 
 ### Minor Changes
