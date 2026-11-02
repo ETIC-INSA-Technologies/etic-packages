@@ -69,25 +69,36 @@ Le thème sombre s'active par la classe `dark` sur `<html>`.
 
 Les neutres (fonds, panneaux, bordures, textes) sont ceux de la couleur de base `zinc` de
 shadcn (palette `zinc` de Tailwind 4, gris froid presque neutre), communs à toute la suite : une
-application ne les redéfinit pas. `--muted-foreground` est un peu plus foncé en clair
-(≥ 4,5:1 sur `--muted`), écart vérifié avec les contrastes par `src/theme.test.ts`.
+application ne les redéfinit pas. `--muted-foreground` est plus foncé en clair (≥ 4,5:1 sur
+`--muted` et sur les fonds de tableau, ligne sélectionnée comprise), écart vérifié avec les
+contrastes par `src/theme.test.ts`.
 
 Le fond de la page elle-même est un jeton ajouté, `--page` (classe `bg-page`) : zinc-50 en
-clair, si bien que cartes, menus et tableaux blancs s'en détachent (en sombre, il vaut
+clair, si bien que cartes et menus blancs s'en détachent (en sombre, il vaut
 `--background` et les cartes sont déjà plus claires). Le `body` et le contenu d'`AppShell`
 le prennent ; un conteneur pleine page d'une application aussi, plutôt que `bg-background`,
 qui reste la surface blanche de shadcn (onglet actif, bouton `outline`, calendrier…).
 `color-scheme` suit le thème (`light`, `dark`) : barres de défilement et contrôles natifs
 compris.
 
-Un tableau se détache toujours de la surface qui le porte : son cadre est en `bg-tableau`
-(jeton ajouté), qui vaut `--card` sur la page et le fond de la page (`--page`) dans une
-surface surélevée — `Card` (donc `SectionCard`), dialogue, `AlertDialog`, tiroir (`Sheet`),
-popover, `Disclosure` `variante="carte"`. La liste de ces surfaces est tenue une fois dans
-`styles.css` (règle qui pose `--tableau-fond`, héritée) ; le cadre de `DataTable` la suit sans
-rien à passer. Un cadre de tableau propre à une application prend `bg-tableau` plutôt que
-`bg-card`. Écart de fond : 1,04:1 en clair (blanc / zinc-50, le filet `--border` le rend
-net), 1,12:1 en sombre (zinc-900 / zinc-950).
+Un tableau se détache toujours nettement de la surface qui le porte (≥ 1,08:1, dans les deux
+thèmes) : son cadre est en `bg-tableau` (jeton ajouté), qui vaut `--tableau` sur la page et
+`--tableau-surface` dans une surface surélevée — toute surface de la bibliothèque peinte en
+`bg-card` ou `bg-popover` : `Card` (donc `SectionCard`), `Alert`, dialogue, `AlertDialog`,
+tiroir (`Sheet`), popover, menu déroulant, liste d'un `Select` ou d'un `Combobox`, `SaveBar`,
+barre d'actions groupées, barre latérale, `Disclosure` `variante="carte"`. En clair, le tableau
+est un cran plus sombre que son support (zinc-50 mêlé de 3,5 % de `--foreground` sur la page,
+`--muted` dans une surface) ; en sombre, `--card` sur la page, `--page` dans une surface. La
+liste des surfaces est tenue une fois dans `styles.css` (règle qui pose `--tableau-fond`,
+héritée) ; le cadre de `DataTable` la suit sans rien à passer. Les lignes de `DataTable` se
+surlignent au survol en `bg-tableau-survol` et, sélectionnées, en `bg-tableau-selection` :
+le fond du tableau mêlé d'une part de `--foreground` (plus sombre en clair, plus claire en
+sombre ; ≥ 1,04:1 entre chaque cran), au lieu de `bg-muted/50` et `bg-muted`. Un cadre de
+tableau propre à une application prend `bg-tableau` plutôt que `bg-card`, et ses lignes
+`hover:bg-tableau-survol data-[state=selected]:bg-tableau-selection`. Les contrastes sont
+vérifiés par `src/theme.test.ts` ; en clair, sur les lignes les plus sombres, un
+`--primary-text` d'application calibré au plus juste sur `--muted` et la teinte
+`bg-destructive/10` peuvent passer un peu sous 4,5:1.
 
 #### Thème clair, sombre ou système
 

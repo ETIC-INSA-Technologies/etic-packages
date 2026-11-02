@@ -279,17 +279,27 @@ describe("écarts avec shadcn", () => {
   })
 
   // Le cadre de DataTable est en bg-tableau (ajout d'ETIC, pas bg-card) :
-  // --card sur la page, fond de la page dans une surface surélevée, pour se
-  // détacher toujours de ce qui le porte. Les surfaces sont listées une fois,
-  // dans styles.css (règle --tableau-fond) ; jsdom ne l'applique pas, la liste
-  // y est donc lue et confrontée au rendu.
+  // --tableau sur la page, --tableau-surface dans une surface surélevée, pour
+  // se détacher toujours de ce qui le porte. Les surfaces sont listées une
+  // fois, dans styles.css (règle --tableau-fond) ; jsdom ne l'applique pas, la
+  // liste y est donc lue et confrontée aux sources et au rendu.
   const surfacesTableau = (() => {
     const regle =
-      /:where\(([^)]*)\)\s*\{\s*--tableau-fond: var\(--page\);/.exec(
+      /:where\(([^)]*)\)\s*\{\s*--tableau-fond: var\(--tableau-surface\);/.exec(
         lire("styles.css")
       )
     return regle ? regle[1].replace(/\s+/g, " ").trim() : ""
   })()
+  const slotsSurfaces = [
+    ...surfacesTableau.matchAll(/data-slot="([^"]+)"/g),
+  ].map(([, slot]) => slot)
+  const composantsEtic = readdirSync(
+    resolve(import.meta.dirname, "components/etic")
+  ).filter((nom) => nom.endsWith(".tsx") && !nom.includes(".test."))
+  const sourcesComposants = [
+    ...composantsUi.map((nom) => [nom, lire(`components/ui/${nom}`)]),
+    ...composantsEtic.map((nom) => [nom, lire(`components/etic/${nom}`)]),
+  ]
 
   function TableauVide() {
     const table = useDataTable({
@@ -308,7 +318,7 @@ describe("écarts avec shadcn", () => {
     const cadre = document.querySelector('[data-slot="data-table"]')
     expect(cadre).toHaveClass("bg-tableau")
     expect(cadre).not.toHaveClass("bg-card")
-    // Sur la page : aucune surface autour, il garde --card.
+    // Sur la page : aucune surface autour, il garde --tableau.
     expect(cadre?.parentElement?.closest(surfacesTableau)).toBeNull()
     // Un seul fond : le Table de shadcn, dedans, n'en pose pas.
     expect(
@@ -316,26 +326,51 @@ describe("écarts avec shadcn", () => {
     ).not.toHaveClass("bg-card")
   })
 
-  it("tableaux : dans une Card ou une Disclosure carte, le fond de la page", () => {
-    expect(surfacesTableau).not.toBe("")
+  it("tableaux : la liste des surfaces couvre chaque bg-card et bg-popover", () => {
+    expect(slotsSurfaces.length).toBeGreaterThan(0)
     // Chaque data-slot de la liste existe bien dans un composant.
-    const sources = [
-      ...composantsUi.map((nom) => lire(`components/ui/${nom}`)),
-      lire("components/etic/disclosure.tsx"),
-    ].join("\n")
-    for (const [, slot] of surfacesTableau.matchAll(/data-slot="([^"]+)"/g)) {
+    const sources = sourcesComposants.map(([, source]) => source).join("\n")
+    for (const slot of slotsSurfaces) {
       expect(sources).toContain(`data-slot="${slot}"`)
+    }
+    // Chaque composant qui peint une surface en bg-card ou bg-popover porte
+    // un data-slot de la liste. Exceptions : pas une surface où poser un
+    // tableau (bulle d'erreur du menu de thème, élément d'une liste dans un
+    // popover, fond animé d'un jour du calendrier, boutons de défilement
+    // d'un Select, dans select-content).
+    const horsListe = [
+      "theme-menu.tsx",
+      "data-table-view-options.tsx",
+      "calendar.tsx",
+    ]
+    for (const [nom, source] of sourcesComposants) {
+      if (!/\bbg-(card|popover)\b/.test(source) || horsListe.includes(nom))
+        continue
+      expect(
+        slotsSurfaces.some((slot) => source.includes(`data-slot="${slot}"`)),
+        `${nom} peint une surface en bg-card ou bg-popover : son data-slot va dans la règle --tableau-fond de styles.css`
+      ).toBe(true)
     }
     for (const surface of [
       "card",
+      "alert",
       "dialog-content",
       "alert-dialog-content",
       "sheet-content",
       "popover-content",
+      "dropdown-menu-content",
+      "dropdown-menu-sub-content",
+      "select-content",
+      "combobox-content",
+      "save-bar",
+      "data-table-bulk-actions",
+      "sidebar",
     ]) {
-      expect(surfacesTableau).toContain(`[data-slot="${surface}"]`)
+      expect(slotsSurfaces).toContain(surface)
     }
+  })
 
+  it("tableaux : dans une Card ou une Disclosure carte, --tableau-surface", () => {
     render(
       createElement(
         "div",
@@ -370,8 +405,52 @@ describe("écarts avec shadcn", () => {
       "data-slot",
       "disclosure"
     )
-    // La variante « lien » n'a pas de fond : le tableau garde --card.
+    // La variante « lien » n'a pas de fond : le tableau garde --tableau.
     expect(dansDisclosureLien.closest(surfacesTableau)).toBeNull()
+  })
+
+  // Survol et sélection d'une ligne de DataTable relatifs au fond du cadre
+  // (bg-tableau-survol, bg-tableau-selection), au lieu de bg-muted/50 et
+  // bg-muted du TableRow de shadcn, presque invisibles sur un fond de
+  // tableau gris (contrastes : theme.test.ts). Le TableRow seul ne change pas.
+  it("tableaux : lignes survolée et sélectionnée relatives au fond du tableau", () => {
+    function TableauPlein() {
+      const table = useDataTable({
+        donnees: [{ id: "a" }, { id: "b" }],
+        colonnes: [{ id: "id", header: "Id", cell: (c) => c.row.original.id }],
+        idLigne: (l) => l.id,
+        selection: { a: true },
+      })
+      return createElement(DataTable<{ id: string }>, {
+        table,
+        libelle: "Lignes",
+      })
+    }
+    render(createElement(TableauPlein))
+    const [selectionnee, autre] = document.querySelectorAll(
+      '[data-slot="table-body"] > [data-slot="table-row"]'
+    )
+    for (const ligne of [selectionnee, autre]) {
+      expect(ligne).toHaveClass(
+        "hover:bg-tableau-survol",
+        "has-aria-expanded:bg-tableau-survol",
+        "data-[state=selected]:bg-tableau-selection"
+      )
+      expect(ligne).not.toHaveClass("hover:bg-muted/50")
+      expect(ligne).not.toHaveClass("data-[state=selected]:bg-muted")
+    }
+    expect(selectionnee).toHaveAttribute("data-state", "selected")
+    const brute = render(
+      createElement(
+        "table",
+        null,
+        createElement("tbody", null, createElement(TableRow, null))
+      )
+    ).container.querySelector("tr")
+    expect(brute).toHaveClass(
+      "hover:bg-muted/50",
+      "data-[state=selected]:bg-muted"
+    )
   })
 
   it("case à cocher partielle : un trait sur fond plein, pas une coche", () => {

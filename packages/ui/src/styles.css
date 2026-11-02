@@ -79,9 +79,24 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   --color-page: var(--page);
-  /* Ajout d'ETIC : fond d'un cadre de tableau (bg-tableau), --card sur la
-     page, --page dans une surface surélevée (règle --tableau-fond plus bas). */
-  --color-tableau: var(--tableau-fond, var(--card));
+  /* Ajouts d'ETIC : fond d'un cadre de tableau (bg-tableau) — --tableau sur
+     la page, --tableau-surface dans une surface surélevée (règle
+     --tableau-fond plus bas) —, et ligne survolée (bg-tableau-survol) ou
+     sélectionnée (bg-tableau-selection), relatives à ce fond : le fond mêlé
+     d'une part de --foreground (plus sombre en clair, plus claire en
+     sombre). En ligne (@theme inline) : résolus sur la ligne elle-même, là
+     où --tableau-fond est hérité. */
+  --color-tableau: var(--tableau-fond, var(--tableau));
+  --color-tableau-survol: color-mix(
+    in oklab,
+    var(--tableau-fond, var(--tableau)),
+    var(--foreground) var(--tableau-survol-part)
+  );
+  --color-tableau-selection: color-mix(
+    in oklab,
+    var(--tableau-fond, var(--tableau)),
+    var(--foreground) var(--tableau-selection-part)
+  );
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -93,9 +108,10 @@
 
 :root {
   color-scheme: light;
-  /* Fond de page (ajout d'ETIC, bg-page) : zinc-50. Cartes, menus et
-     tableaux (bg-card) restent blancs et s'en détachent, comme en sombre où
-     les cartes (zinc-900) sont plus claires que la page (zinc-950).
+  /* Fond de page (ajout d'ETIC, bg-page) : zinc-50. Cartes et menus
+     (bg-card, bg-popover) restent blancs et s'en détachent, comme en sombre
+     où les cartes (zinc-900) sont plus claires que la page (zinc-950). Les
+     tableaux ont leur propre fond (bg-tableau, --tableau plus bas).
      --background garde le blanc du registre : shadcn l'emploie aussi pour des
      surfaces posées sur --muted ou une carte. */
   --page: oklch(0.985 0 0);
@@ -115,9 +131,10 @@
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.967 0.001 286.375);
   /* Plus foncé que le registre (zinc-500, oklch(0.552 0.016 285.938) :
-     4,39:1 sur --muted), même teinte : ≥ 4,5:1 sur --muted (4,64:1 ;
-     initiales d'Avatar, Kbd). */
-  --muted-foreground: oklch(0.54 0.016 285.938);
+     4,39:1 sur --muted), même teinte : ≥ 4,5:1 sur --muted (initiales
+     d'Avatar, Kbd ; 5,74:1) et sur les fonds de tableau, ligne
+     sélectionnée comprise (≥ 5,0:1, --tableau plus bas). */
+  --muted-foreground: oklch(0.49 0.016 285.938);
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.21 0.006 285.885);
   /* Plus foncé que le registre (oklch(0.577 0.245 27.325)) : ≥ 4,5:1 sur sa
@@ -148,6 +165,21 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
+  /* Fond de tableau (ajout d'ETIC, bg-tableau) : toujours nettement
+     distinct de son support (≥ 1,08:1), ce que le blanc ne peut pas sur la
+     page zinc-50 (1,04:1). En clair, le tableau est un cran plus sombre que
+     ce qui le porte : sur la page, zinc-50 mêlé de 3,5 % de --foreground
+     (1,09:1) ; dans une surface blanche, --muted (zinc-100, 1,10:1). Lignes
+     survolée et sélectionnée : 2 % et 4 % de --foreground en plus (≥ 1,04:1
+     entre chaque cran). Limite connue : sur ces fonds plus sombres que
+     --muted, un --primary-text d'application calibré au plus juste sur
+     --muted et la teinte bg-destructive/10 passent un peu sous 4,5:1
+     (4,26 à 4,45:1) ; la page zinc-50 ne laisse pas de marge entre
+     ≥ 1,08:1 et ces contrats. */
+  --tableau: color-mix(in oklab, var(--page), var(--foreground) 3.5%);
+  --tableau-surface: var(--muted);
+  --tableau-survol-part: 2%;
+  --tableau-selection-part: 4%;
   --radius: 0.625rem;
   /* Écart au registre (zinc-50, identique à --page) : en clair la barre
      latérale est blanche, comme une carte, et se détache de la page. */
@@ -200,6 +232,15 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
+  /* Fond de tableau : la page (zinc-950) est déjà le plus sombre, le
+     tableau prend --card (zinc-900) sur elle et revient à la page dans une
+     surface (1,12:1 dans les deux cas) ; ses lignes s'éclaircissent, de 4 %
+     et 8 % de --foreground (≥ 1,04:1 entre chaque cran : près du noir, un
+     même mélange change moins la luminance qu'en clair). */
+  --tableau: var(--card);
+  --tableau-surface: var(--page);
+  --tableau-survol-part: 4%;
+  --tableau-selection-part: 8%;
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: var(--primary);
@@ -222,19 +263,29 @@
     @apply font-sans;
   }
   /* Un tableau se détache toujours de la surface qui le porte (bg-tableau,
-     cadre de DataTable) : sur la page, il prend --card ; dans une surface
-     surélevée (carte, dialogue, tiroir, popover, Disclosure « carte »), déjà
-     en --card ou --popover, il prend le fond de la page. La variable est
-     héritée : posée ici une fois, sans variante sur chaque cadre. */
+     cadre de DataTable) : sur la page, il prend --tableau ; dans une surface
+     surélevée de la bibliothèque, peinte en bg-card ou bg-popover (ou
+     bg-sidebar, de même valeur), il prend --tableau-surface. La variable est
+     héritée : posée ici une fois, sans variante sur chaque cadre. Toute
+     nouvelle surface en bg-card ou bg-popover s'ajoute à cette liste. */
   :where(
     [data-slot="card"],
+    [data-slot="alert"],
     [data-slot="dialog-content"],
     [data-slot="alert-dialog-content"],
     [data-slot="sheet-content"],
     [data-slot="popover-content"],
+    [data-slot="dropdown-menu-content"],
+    [data-slot="dropdown-menu-sub-content"],
+    [data-slot="select-content"],
+    [data-slot="combobox-content"],
+    [data-slot="save-bar"],
+    [data-slot="data-table-bulk-actions"],
+    [data-slot="sidebar"],
+    [data-slot="sidebar-inner"],
     [data-slot="disclosure"][data-variante="carte"]
   ) {
-    --tableau-fond: var(--page);
+    --tableau-fond: var(--tableau-surface);
   }
   /* Coquille sur mobile : la barre du haut (h-12) colle au haut de l'écran ;
      une ancre ou un élément qu'on fait défiler jusqu'à lui s'arrête dessous,

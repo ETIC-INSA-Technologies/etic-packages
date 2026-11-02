@@ -95,8 +95,42 @@ const ECARTS = {
 // oklch(L C H) → sRGB hexadécimal (conversion d'OKLab de Björn Ottosson,
 // valeurs hors gamut ramenées dans [0, 1]).
 function oklchEnHex(l: number, c: number, h: number) {
-  const a = c * Math.cos((h * Math.PI) / 180)
-  const b = c * Math.sin((h * Math.PI) / 180)
+  return oklabEnHex(
+    l,
+    c * Math.cos((h * Math.PI) / 180),
+    c * Math.sin((h * Math.PI) / 180)
+  )
+}
+
+// sRGB hexadécimal → OKLab (inverse de oklabEnHex).
+function hexEnOklab(hex: string): [number, number, number] {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const v = parseInt(hex.slice(i, i + 2), 16) / 255
+    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+  })
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ]
+}
+
+// color-mix(in oklab, a, b part) : `b` à `part` (0 à 1) dans `a`.
+function melanger(a: string, b: string, part: number) {
+  const [x, y] = [hexEnOklab(a), hexEnOklab(b)]
+  return oklabEnHex(
+    ...(x.map((v, i) => v * (1 - part) + y[i] * part) as [
+      number,
+      number,
+      number,
+    ])
+  )
+}
+
+function oklabEnHex(l: number, a: number, b: number) {
   const l_ = (l + 0.3963377774 * a + 0.2158037573 * b) ** 3
   const m_ = (l - 0.1055613458 * a - 0.0638541728 * b) ** 3
   const s_ = (l - 0.0894841775 * a - 1.291485548 * b) ** 3
@@ -148,9 +182,9 @@ function teinte(couleur: string, fond: string, part: number) {
 }
 
 // Variables d'un bloc CSS (`bloc` : son texte brut). `valeur` rend une
-// couleur opaque en hexadécimal : hexadécimal à 6 chiffres, oklch(L C H), ou
-// var(--autre) du même bloc ; une variable demandée qui manque ou s'écrit
-// autrement est une erreur.
+// couleur opaque en hexadécimal : hexadécimal à 6 chiffres, oklch(L C H),
+// var(--autre) du même bloc, ou color-mix(in oklab, var(--a), var(--b) n%) ;
+// une variable demandée qui manque ou s'écrit autrement est une erreur.
 function variables(css: string, selecteur: string) {
   const debut = css.indexOf(`${selecteur} {`)
   if (debut < 0) throw new Error(`bloc ${selecteur} introuvable`)
@@ -171,6 +205,16 @@ function variables(css: string, selecteur: string) {
       )
     const reference = /^var\(--([\w-]+)\)$/.exec(brute ?? "")
     if (reference) return valeur(reference[1])
+    const melange =
+      /^color-mix\( ?in oklab, var\(--([\w-]+)\), var\(--([\w-]+)\) ([\d.]+)% ?\)$/.exec(
+        brute ?? ""
+      )
+    if (melange)
+      return melanger(
+        valeur(melange[1]),
+        valeur(melange[2]),
+        Number(melange[3]) / 100
+      )
     throw new Error(
       `${selecteur} : --${nom} absente ou pas une couleur opaque lisible (${brute})`
     )
@@ -207,6 +251,25 @@ function surfaces(
   const [page, fond, card, muted] = ["page", "background", "card", "muted"].map(
     vars.valeur
   )
+  // Fonds de tableau (bg-tableau) : sur la page et dans une surface, chacun
+  // avec sa ligne survolée et sa ligne sélectionnée (le fond mêlé d'une part
+  // de --foreground, @theme inline de styles.css).
+  const part = (jeton: string) => {
+    const brute = vars.brute(jeton) ?? ""
+    if (!/^[\d.]+%$/.test(brute))
+      throw new Error(`${nom} : --${jeton} n'est pas un pourcentage (${brute})`)
+    return parseFloat(brute) / 100
+  }
+  const avant = vars.valeur("foreground")
+  const tableaux = (["tableau", "tableau-surface"] as const).map((jeton) => {
+    const tableau = vars.valeur(jeton)
+    return {
+      jeton,
+      tableau,
+      survol: melanger(tableau, avant, part("tableau-survol-part")),
+      selection: melanger(tableau, avant, part("tableau-selection-part")),
+    }
+  })
   return {
     nom,
     vars,
@@ -214,6 +277,7 @@ function surfaces(
     fond,
     card,
     muted,
+    tableaux,
     fonds: [page, fond, card, muted],
     surfaces: [page, fond, card],
     teinteDestructive,
@@ -307,25 +371,95 @@ describe("couleur de base", () => {
   )
 
   // Cadre de tableau (bg-tableau, ajout d'ETIC) : --card sur la page, fond de
-  // la page dans une carte, un dialogue ou un tiroir (règle --tableau-fond de
-  // styles.css, vérifiée par ecarts-shadcn.test.ts). Il diffère donc toujours
-  // de son support : 1,04:1 en clair (blanc / zinc-50, le filet --border fait
-  // le reste), 1,12:1 en sombre (zinc-900 / zinc-950).
-  it("tableaux : bg-tableau vaut --card, ou --page dans une surface", () => {
-    expect(css).toContain("--color-tableau: var(--tableau-fond, var(--card));")
-    expect(css).toMatch(/\{\s*--tableau-fond: var\(--page\);\s*\}/)
+  // --tableau sur la page, --tableau-surface dans une surface surélevée
+  // (règle --tableau-fond de styles.css, vérifiée par ecarts-shadcn.test.ts) ;
+  // lignes survolée et sélectionnée relatives à ce fond (@theme inline).
+  it("tableaux : bg-tableau, bg-tableau-survol et bg-tableau-selection", () => {
+    const enLigne = css.replace(/\s+/g, " ")
+    expect(enLigne).toContain(
+      "--color-tableau: var(--tableau-fond, var(--tableau));"
+    )
+    for (const [classe, part] of [
+      ["survol", "survol-part"],
+      ["selection", "selection-part"],
+    ]) {
+      expect(enLigne).toContain(
+        `--color-tableau-${classe}: color-mix( in oklab, var(--tableau-fond, var(--tableau)), var(--foreground) var(--tableau-${part}) );`
+      )
+    }
+    expect(css).toMatch(/\{\s*--tableau-fond: var\(--tableau-surface\);\s*\}/)
   })
 
+  // Exigence : le tableau se distingue nettement de ce qui le porte (≥ 1,08:1),
+  // sur la page comme dans une surface (carte, popover, barre latérale), dans
+  // les deux thèmes ; ligne survolée / fond et ligne sélectionnée / ligne
+  // survolée perceptibles (≥ 1,04:1). Le blanc sur zinc-50 (1,04:1) ne
+  // suffisait pas.
   it.each(THEMES)(
-    "$nom : un tableau se détache de la page comme d'une carte",
-    ({ nom, vars, page, card }) => {
-      for (const support of [card, vars.valeur("popover")]) {
-        expect(contraste(page, support), nom).toBeGreaterThan(1.03)
+    "$nom : un tableau se détache de son support, ses lignes de lui",
+    ({ nom, vars, page, card, tableaux }) => {
+      const [surPage, dansSurface] = tableaux
+      const supports: [string, string, typeof surPage][] = [
+        ["page", page, surPage],
+        ["card", card, dansSurface],
+        ["popover", vars.valeur("popover"), dansSurface],
+        ["sidebar", vars.valeur("sidebar"), dansSurface],
+      ]
+      for (const [
+        support,
+        couleur,
+        { tableau, survol, selection },
+      ] of supports) {
+        const quoi = `${nom}, tableau sur --${support}`
+        expect(contraste(tableau, couleur), quoi).toBeGreaterThanOrEqual(1.08)
+        expect(
+          contraste(survol, tableau),
+          `${quoi}, survol`
+        ).toBeGreaterThanOrEqual(1.04)
+        expect(
+          contraste(selection, survol),
+          `${quoi}, sélection`
+        ).toBeGreaterThanOrEqual(1.04)
+        // Le survol va du fond vers la sélection, sans revenir en arrière.
+        const [l0, l1, l2] = [tableau, survol, selection].map(luminance)
+        expect(Math.sign(l1 - l0), quoi).toBe(Math.sign(l2 - l1))
       }
-      if (nom === "clair") {
-        // Écart de fond presque nul : le filet doit se voir sur les deux.
-        for (const fond of [page, card]) {
-          expect(contraste(vars.valeur("border"), fond)).toBeGreaterThan(1.2)
+    }
+  )
+
+  // Texte posé dans un tableau (jetons de la bibliothèque) : sur son fond, la
+  // ligne survolée et la ligne sélectionnée, dans les deux contextes ; bord
+  // d'une case à cocher de ligne (--muted-foreground à 80 %) ≥ 3:1. Les
+  // contrats d'accent des applications (--primary-text) et la teinte
+  // destructive (bg-destructive/10) n'y sont pas vérifiés : sous 4,5:1 sur
+  // les lignes les plus sombres en clair (écart déclaré).
+  it.each(THEMES)(
+    "$nom : les textes se lisent dans un tableau",
+    ({ nom, vars, tableaux }) => {
+      for (const { jeton, tableau, survol, selection } of tableaux) {
+        for (const fond of [tableau, survol, selection]) {
+          lisible(
+            teinte(vars.valeur("muted-foreground"), fond, 0.8),
+            fond,
+            NON_TEXTE,
+            `${nom}, bord de case sur --${jeton}`
+          )
+          for (const texte of [
+            "foreground",
+            "muted-foreground",
+            "primary-text",
+            "destructive",
+            "success",
+            "warning",
+            "info",
+          ]) {
+            lisible(
+              vars.valeur(texte),
+              fond,
+              TEXTE,
+              `${nom}, --${texte} sur --${jeton}`
+            )
+          }
         }
       }
     }

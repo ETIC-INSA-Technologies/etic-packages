@@ -944,8 +944,9 @@ export function DataTable<TData extends RowData>({
         ref={racine}
         data-slot="data-table"
         className={cn(
-          // bg-tableau : --card sur la page, fond de la page dans une carte,
-          // un dialogue ou un tiroir (styles.css) ; il s'en détache toujours.
+          // bg-tableau : --tableau sur la page, --tableau-surface dans une
+          // carte, un dialogue, un menu… (styles.css) ; il s'en détache
+          // toujours.
           "min-w-0 overflow-hidden rounded-md border bg-tableau",
           className
         )}
@@ -1127,6 +1128,12 @@ function useAnnonce<TData extends RowData>(
   return annonceTri
 }
 
+/** Survol et sélection d'une ligne relatifs au fond du cadre (bg-tableau),
+ *  au lieu de bg-muted/50 et bg-muted (TableRow de shadcn), qui ne se
+ *  voyaient presque plus sur un fond de tableau gris (styles.css). */
+const COULEURS_LIGNE =
+  "hover:bg-tableau-survol has-aria-expanded:bg-tableau-survol data-[state=selected]:bg-tableau-selection"
+
 interface LigneTableauProps<TData extends RowData> {
   row: Row<DataTableFeatures, TData>
   selectionnee: boolean
@@ -1217,7 +1224,7 @@ function LigneTableauBrute<TData extends RowData>({
         onFocus={(event) => noterFocus(event, focus.current)}
         onBlur={() => noterPerte(focus.current)}
         data-state={selectionnee ? "selected" : undefined}
-        className={cn(cliquable && "cursor-pointer")}
+        className={cn(COULEURS_LIGNE, cliquable && "cursor-pointer")}
         onClick={
           cliquable
             ? (event) => {
