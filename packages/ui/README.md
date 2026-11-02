@@ -69,9 +69,10 @@ Le thème sombre s'active par la classe `dark` sur `<html>`.
 
 Les neutres (fonds, panneaux, bordures, textes) sont ceux de la couleur de base `zinc` de
 shadcn (palette `zinc` de Tailwind 4, gris froid presque neutre), communs à toute la suite : une
-application ne les redéfinit pas. `--muted-foreground` est plus foncé en clair (≥ 4,5:1 sur
-`--muted` et sur les fonds de tableau, ligne sélectionnée comprise), écart vérifié avec les
-contrastes par `src/theme.test.ts`.
+application ne les redéfinit pas. Ce sont exactement les valeurs du preset, contraste faible
+compris (texte secondaire zinc-500 : 4,39:1 sur `--muted` en clair), sauf les écarts décidés
+pour ETIC : `--page`, barre latérale blanche en clair, `--control-border`, couleurs
+sémantiques. `src/theme.test.ts` compare chaque jeton au registre et vérifie les contrastes.
 
 Le fond de la page elle-même est un jeton ajouté, `--page` (classe `bg-page`) : zinc-50 en
 clair, si bien que cartes et menus blancs s'en détachent (en sombre, il vaut
@@ -81,24 +82,17 @@ qui reste la surface blanche de shadcn (onglet actif, bouton `outline`, calendri
 `color-scheme` suit le thème (`light`, `dark`) : barres de défilement et contrôles natifs
 compris.
 
-Un tableau se détache toujours nettement de la surface qui le porte (≥ 1,08:1, dans les deux
-thèmes) : son cadre est en `bg-tableau` (jeton ajouté), qui vaut `--tableau` sur la page et
-`--tableau-surface` dans une surface surélevée — toute surface de la bibliothèque peinte en
-`bg-card` ou `bg-popover` : `Card` (donc `SectionCard`), `Alert`, dialogue, `AlertDialog`,
-tiroir (`Sheet`), popover, menu déroulant, liste d'un `Select` ou d'un `Combobox`, `SaveBar`,
-barre d'actions groupées, barre latérale, `Disclosure` `variante="carte"`. En clair, le tableau
-est un cran plus sombre que son support (zinc-50 mêlé de 3,5 % de `--foreground` sur la page,
-`--muted` dans une surface) ; en sombre, `--card` sur la page, `--page` dans une surface. La
-liste des surfaces est tenue une fois dans `styles.css` (règle qui pose `--tableau-fond`,
-héritée) ; le cadre de `DataTable` la suit sans rien à passer. Les lignes de `DataTable` se
-surlignent au survol en `bg-tableau-survol` et, sélectionnées, en `bg-tableau-selection` :
-le fond du tableau mêlé d'une part de `--foreground` (plus sombre en clair, plus claire en
-sombre ; ≥ 1,04:1 entre chaque cran), au lieu de `bg-muted/50` et `bg-muted`. Un cadre de
-tableau propre à une application prend `bg-tableau` plutôt que `bg-card`, et ses lignes
-`hover:bg-tableau-survol data-[state=selected]:bg-tableau-selection`. Les contrastes sont
-vérifiés par `src/theme.test.ts` ; en clair, sur les lignes les plus sombres, un
-`--primary-text` d'application calibré au plus juste sur `--muted` et la teinte
-`bg-destructive/10` peuvent passer un peu sous 4,5:1.
+Un tableau se détache de la surface qui le porte : son cadre est en `bg-tableau` (jeton
+ajouté), qui vaut `--card` sur la page et le fond de la page (`--page`) dans une surface
+surélevée — toute surface de la bibliothèque peinte en `bg-card` ou `bg-popover` : `Card`
+(donc `SectionCard`), `Alert`, dialogue, `AlertDialog`, tiroir (`Sheet`), popover, menu
+déroulant, liste d'un `Select` ou d'un `Combobox`, `SaveBar`, barre d'actions groupées, barre
+latérale, `Disclosure` `variante="carte"`. La liste de ces surfaces est tenue une fois dans
+`styles.css` (règle qui pose `--tableau-fond`, héritée) ; le cadre de `DataTable` la suit sans
+rien à passer. Un cadre de tableau propre à une application prend `bg-tableau` plutôt que
+`bg-card`. Couleurs du preset seulement : écart de fond de 1,04:1 en clair (blanc / zinc-50, le
+filet `--border` le rend net), 1,12:1 en sombre (zinc-900 / zinc-950). Les lignes gardent le
+survol et la sélection de shadcn (`bg-muted/50`, `bg-muted`).
 
 #### Thème clair, sombre ou système
 
@@ -957,8 +951,7 @@ npm run build      # dist/ : un module par composant, types, styles.css
     react-day-picker (mois, jours et libellés d'accessibilité) et `weekStartsOn={1}` ;
   - jours du calendrier de 36 px sous le seuil mobile (cible tactile), 28 px au-delà comme
     dans shadcn : `--cell-size` de `calendar.tsx` ;
-  - thème (`styles.css`) : `--muted-foreground` plus foncé en clair (≥ 4,5:1 sur `--muted` :
-    initiales d'`Avatar`, `Kbd`), `--destructive` plus foncé en clair et plus clair en sombre
+  - thème (`styles.css`) : `--destructive` plus foncé en clair et plus clair en sombre
     (≥ 4,5:1 sur sa teinte : bouton et badge `destructive`, y compris dans un pied de
     dialogue) ; contrastes vérifiés par `src/theme.test.ts` ;
   - l'accent comme texte en `text-primary-text` au lieu de `text-primary` : variante `link` de
@@ -1072,8 +1065,8 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
   de `neutral` ; jeton ajouté `--page` (`bg-page`, zinc-50 en clair, `--background` en
   sombre), pris par le `body` au lieu de `bg-background`, `--background` restant celui du
   registre ; `--success` clair un cran plus foncé (≥ 4,5:1 sur sa teinte posée sur la page
-  zinc-50) ; `--muted-foreground` clair un
-  peu plus foncé que zinc-500 (≥ 4,5:1 sur `--muted`) ; `--control-border`
+  zinc-50) ; `--muted-foreground` celui du preset (zinc-500, 4,39:1 sur `--muted` en clair :
+  contraste faible accepté) ; `--control-border`
   (`--muted-foreground` à 80 %) en sombre aussi, au lieu de `--input` (sous 2:1) ; `--sidebar`
   clair = `--background` (barre latérale blanche, au lieu du zinc-50 du registre) ;
   `color-scheme` dans `:root` et `.dark`. Les valeurs sont commentées dans `styles.css` ;

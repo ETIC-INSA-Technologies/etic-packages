@@ -254,9 +254,10 @@ describe("écarts avec shadcn", () => {
     expect(calendrier).toContain("min-[1025px]:[--cell-size:--spacing(7)]")
   })
 
-  it("thème : destructive et muted-foreground lisibles sur leurs fonds", () => {
+  it("thème : destructive et muted-foreground ne sont pas ceux de Nova", () => {
     // Les contrastes sont vérifiés par theme.test.ts ; ici, que les valeurs
-    // de Nova ne sont pas revenues.
+    // de Nova ne sont pas revenues (--muted-foreground est celui du preset
+    // zinc).
     const css = lire("styles.css")
     expect(css).not.toContain("--destructive: oklch(0.577 0.245 27.325)")
     expect(css).not.toContain("--destructive: oklch(0.704 0.191 22.216)")
@@ -264,8 +265,8 @@ describe("écarts avec shadcn", () => {
   })
 
   // Thème : couleur de base zinc de shadcn au lieu de neutral. Écarts avec
-  // le registre (--muted-foreground clair plus foncé ; --control-border
-  // dérivé de --muted-foreground en sombre aussi) et ajout de --page (fond de
+  // le registre (--control-border dérivé de --muted-foreground en sombre
+  // aussi ; couleurs sémantiques) et ajout de --page (fond de
   // la page, zinc-50 en clair) : voir ECARTS de theme.test.ts, qui compare
   // chaque jeton au registre et vérifie les contrastes.
   // CenteredScreen sur bg-muted/40 : centered-screen.test.tsx ; contenu
@@ -279,13 +280,13 @@ describe("écarts avec shadcn", () => {
   })
 
   // Le cadre de DataTable est en bg-tableau (ajout d'ETIC, pas bg-card) :
-  // --tableau sur la page, --tableau-surface dans une surface surélevée, pour
+  // --card sur la page, le fond de la page dans une surface surélevée, pour
   // se détacher toujours de ce qui le porte. Les surfaces sont listées une
   // fois, dans styles.css (règle --tableau-fond) ; jsdom ne l'applique pas, la
   // liste y est donc lue et confrontée aux sources et au rendu.
   const surfacesTableau = (() => {
     const regle =
-      /:where\(([^)]*)\)\s*\{\s*--tableau-fond: var\(--tableau-surface\);/.exec(
+      /:where\(([^)]*)\)\s*\{\s*--tableau-fond: var\(--page\);/.exec(
         lire("styles.css")
       )
     return regle ? regle[1].replace(/\s+/g, " ").trim() : ""
@@ -318,7 +319,7 @@ describe("écarts avec shadcn", () => {
     const cadre = document.querySelector('[data-slot="data-table"]')
     expect(cadre).toHaveClass("bg-tableau")
     expect(cadre).not.toHaveClass("bg-card")
-    // Sur la page : aucune surface autour, il garde --tableau.
+    // Sur la page : aucune surface autour, il garde --card.
     expect(cadre?.parentElement?.closest(surfacesTableau)).toBeNull()
     // Un seul fond : le Table de shadcn, dedans, n'en pose pas.
     expect(
@@ -370,7 +371,7 @@ describe("écarts avec shadcn", () => {
     }
   })
 
-  it("tableaux : dans une Card ou une Disclosure carte, --tableau-surface", () => {
+  it("tableaux : dans une Card ou une Disclosure carte, le fond de la page", () => {
     render(
       createElement(
         "div",
@@ -405,52 +406,8 @@ describe("écarts avec shadcn", () => {
       "data-slot",
       "disclosure"
     )
-    // La variante « lien » n'a pas de fond : le tableau garde --tableau.
+    // La variante « lien » n'a pas de fond : le tableau garde --card.
     expect(dansDisclosureLien.closest(surfacesTableau)).toBeNull()
-  })
-
-  // Survol et sélection d'une ligne de DataTable relatifs au fond du cadre
-  // (bg-tableau-survol, bg-tableau-selection), au lieu de bg-muted/50 et
-  // bg-muted du TableRow de shadcn, presque invisibles sur un fond de
-  // tableau gris (contrastes : theme.test.ts). Le TableRow seul ne change pas.
-  it("tableaux : lignes survolée et sélectionnée relatives au fond du tableau", () => {
-    function TableauPlein() {
-      const table = useDataTable({
-        donnees: [{ id: "a" }, { id: "b" }],
-        colonnes: [{ id: "id", header: "Id", cell: (c) => c.row.original.id }],
-        idLigne: (l) => l.id,
-        selection: { a: true },
-      })
-      return createElement(DataTable<{ id: string }>, {
-        table,
-        libelle: "Lignes",
-      })
-    }
-    render(createElement(TableauPlein))
-    const [selectionnee, autre] = document.querySelectorAll(
-      '[data-slot="table-body"] > [data-slot="table-row"]'
-    )
-    for (const ligne of [selectionnee, autre]) {
-      expect(ligne).toHaveClass(
-        "hover:bg-tableau-survol",
-        "has-aria-expanded:bg-tableau-survol",
-        "data-[state=selected]:bg-tableau-selection"
-      )
-      expect(ligne).not.toHaveClass("hover:bg-muted/50")
-      expect(ligne).not.toHaveClass("data-[state=selected]:bg-muted")
-    }
-    expect(selectionnee).toHaveAttribute("data-state", "selected")
-    const brute = render(
-      createElement(
-        "table",
-        null,
-        createElement("tbody", null, createElement(TableRow, null))
-      )
-    ).container.querySelector("tr")
-    expect(brute).toHaveClass(
-      "hover:bg-muted/50",
-      "data-[state=selected]:bg-muted"
-    )
   })
 
   it("case à cocher partielle : un trait sur fond plein, pas une coche", () => {
