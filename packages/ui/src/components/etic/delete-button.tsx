@@ -49,8 +49,8 @@ export interface DeleteButtonProps {
   avecTexte?: boolean
   /**
    * Taille du bouton, celle de `Button` : `icon-sm` par défaut pour la
-   * corbeille, `default` avec `avecTexte`. Dans un `DetailHeader`
-   * `tailleActions="lg"`, `icon-lg` (ou `lg` avec `avecTexte`).
+   * corbeille, `default` avec `avecTexte` (`lg` dans un en-tête de page,
+   * qui l'agrandit seul). Corbeille dans un en-tête : `icon-lg`.
    */
   size?: TooltipButtonProps["size"]
   /** Ouverture de la confirmation suivie par l'application (le bouton reste

@@ -4,10 +4,13 @@ import type { ComponentProps } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  Button,
+  ButtonLink,
   DetailHeader,
   PageContainer,
   PageHeader,
   SectionCard,
+  TooltipButton,
   type DetailHeaderProps,
 } from "@etic-ui/index"
 import { trouverInfobulle } from "@etic-ui/test/infobulle"
@@ -91,17 +94,79 @@ describe("DetailHeader", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("donne au bouton « Plus d'actions » la taille des actions", () => {
-    const actionsSecondaires = [{ libelle: "Supprimer", onChoisir: vi.fn() }]
-    const { unmount } = rendre({ actionsSecondaires })
-    expect(screen.getByRole("button", { name: "Plus d'actions" })).toHaveClass(
-      "size-8"
+  // jsdom n'applique pas Tailwind : un bouton est agrandi s'il lit sa
+  // hauteur dans la variable (`HAUTEUR` ou `ICONE`) et que la zone la plus
+  // proche qui la pose est en `lg`.
+  const HAUTEUR = "h-[var(--bouton-hauteur,2rem)]"
+  const ICONE = "size-[var(--bouton-icone,2rem)]"
+  function agrandi(element: HTMLElement, classe = HAUTEUR) {
+    return (
+      element.classList.contains(classe) &&
+      element.closest("[data-echelle]")?.getAttribute("data-echelle") === "lg"
+    )
+  }
+
+  it("agrandit les boutons des en-têtes sans size à leur donner", () => {
+    const actions = (
+      <>
+        <TooltipButton variant="outline" infobulle="Depuis un fichier CSV">
+          Importer
+        </TooltipButton>
+        <Button>Créer</Button>
+        <Button size="icon" aria-label="Filtrer" />
+        <Button size="sm">Petit</Button>
+        <Button className="size-6" aria-label="Effacer" />
+        <ButtonLink href="/aide">Aide</ButtonLink>
+      </>
+    )
+    const { unmount } = render(
+      <>
+        <PageHeader titre="Comptes" actions={actions} />
+        <Button>Hors en-tête</Button>
+      </>
+    )
+    for (const nom of ["Importer", "Créer"]) {
+      expect(agrandi(screen.getByRole("button", { name: nom }))).toBe(true)
+    }
+    expect(agrandi(screen.getByRole("link", { name: "Aide" }))).toBe(true)
+    expect(
+      agrandi(screen.getByRole("button", { name: "Filtrer" }), ICONE)
+    ).toBe(true)
+    // Une taille plus petite, donnée exprès par `size` ou par `className`
+    // (bouton d'un InputGroup), reste ; hors en-tête, rien ne change.
+    expect(agrandi(screen.getByRole("button", { name: "Petit" }))).toBe(false)
+    const effacer = screen.getByRole("button", { name: "Effacer" })
+    expect(effacer).toHaveClass("size-6")
+    expect(effacer).not.toHaveClass(HAUTEUR)
+    expect(agrandi(screen.getByRole("button", { name: "Hors en-tête" }))).toBe(
+      false
     )
     unmount()
-    rendre({ actionsSecondaires, tailleActions: "lg" })
-    expect(screen.getByRole("button", { name: "Plus d'actions" })).toHaveClass(
-      "size-9"
+
+    rendre({
+      actions: <Button>Modifier</Button>,
+      actionsSecondaires: [{ libelle: "Supprimer", onChoisir: vi.fn() }],
+    })
+    expect(agrandi(screen.getByRole("button", { name: "Modifier" }))).toBe(true)
+    expect(
+      agrandi(screen.getByRole("button", { name: "Plus d'actions" }), ICONE)
+    ).toBe(true)
+  })
+
+  it('tailleActions="default" garde les tailles données, même dans une zone lg', () => {
+    render(
+      <PageHeader
+        titre="Comptes"
+        actions={
+          <PageHeader
+            titre="Imbriqué"
+            tailleActions="default"
+            actions={<Button>Créer</Button>}
+          />
+        }
+      />
     )
+    expect(agrandi(screen.getByRole("button", { name: "Créer" }))).toBe(false)
   })
 
   it("range les actions rares dans un menu et n'exécute pas une entrée désactivée", async () => {

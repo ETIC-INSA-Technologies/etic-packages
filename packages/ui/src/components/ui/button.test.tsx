@@ -162,7 +162,7 @@ describe("Button en ligne", () => {
     )
     const bouton = screen.getByRole("button", { name: "Voir le détail" })
     expect(bouton).toHaveClass("h-auto", "min-h-6", "px-0")
-    expect(bouton).not.toHaveClass("h-8")
+    expect(bouton).not.toHaveClass("h-[var(--bouton-hauteur,2rem)]")
   })
 })
 

@@ -521,10 +521,18 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
             titre="Groupes"
             description="Les groupes de droits de l'association."
             actions={
-              <Button>
-                <PlusIcon data-icon="inline-start" />
-                Nouveau groupe
-              </Button>
+              <>
+                <TooltipButton
+                  variant="outline"
+                  infobulle="Créer des groupes depuis un fichier CSV"
+                >
+                  Importer
+                </TooltipButton>
+                <Button>
+                  <PlusIcon data-icon="inline-start" />
+                  Nouveau groupe
+                </Button>
+              </>
             }
           />
           <DetailHeader
@@ -551,11 +559,7 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
             compact
             chemin={[{ libelle: "Comptes", href: "#page-header" }]}
             titre="Ada Lovelace"
-            actions={
-              <Button variant="outline" size="sm">
-                Modifier
-              </Button>
-            }
+            actions={<Button variant="outline">Modifier</Button>}
           />
         </div>
       ),

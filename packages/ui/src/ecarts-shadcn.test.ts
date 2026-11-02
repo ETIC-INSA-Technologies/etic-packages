@@ -113,6 +113,15 @@ describe("écarts avec shadcn", () => {
     )
   })
 
+  // Échelle d'une zone : h-8 et size-8 de shadcn lus dans une variable
+  // (32 px sans elle), que les en-têtes de page posent à 36 px
+  // (page-header.test.tsx teste le rendu).
+  it("Button : default et icon lisent leur hauteur dans --bouton-*", () => {
+    const button = lire("components/ui/button.tsx")
+    expect(button).toMatch(/default:\s*"h-\[var\(--bouton-hauteur,2rem\)\] /)
+    expect(button).toContain('icon: "size-[var(--bouton-icone,2rem)]"')
+  })
+
   it("textes des lecteurs d'écran en français", () => {
     const sidebar = lire("components/ui/sidebar.tsx")
     expect(sidebar).not.toContain("Toggle Sidebar")

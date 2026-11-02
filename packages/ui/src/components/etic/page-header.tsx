@@ -30,8 +30,16 @@ export interface PageHeaderProps {
   description?: ReactNode
   /** Boutons à droite (créer, exporter…) ; passent dessous sur un écran étroit. */
   actions?: ReactNode
+  /**
+   * Taille des boutons de `actions` : `lg` par défaut (36 px), sans `size`
+   * à leur donner — `default` et `icon` y deviennent `lg` et `icon-lg`.
+   * `"default"` garde les tailles données.
+   */
+  tailleActions?: TailleActions
   className?: string
 }
+
+type TailleActions = "default" | "lg"
 
 /** En-tête d'une page : titre (le `<h1>`) et description à gauche, actions
  *  à droite. */
@@ -39,6 +47,7 @@ export function PageHeader({
   titre,
   description,
   actions,
+  tailleActions = "lg",
   className,
 }: PageHeaderProps) {
   return (
@@ -57,13 +66,35 @@ export function PageHeader({
           <p className="text-sm text-muted-foreground">{description}</p>
         ) : null}
       </div>
-      {actions ? <Actions>{actions}</Actions> : null}
+      {actions ? <Actions taille={tailleActions}>{actions}</Actions> : null}
     </div>
   )
 }
 
-function Actions({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-2">{children}</div>
+function Actions({
+  taille,
+  children,
+}: {
+  taille: TailleActions
+  children: ReactNode
+}) {
+  // Hauteur des tailles `default` et `icon` de `Button` (et de tout
+  // `buttonVariants`) dans cette zone : héritée par ses descendants, pas par
+  // un dialogue ouvert d'ici (rendu dans un portail). Posée aussi à
+  // `default`, pour ne pas hériter d'une zone `lg` englobante.
+  return (
+    <div
+      data-echelle={taille}
+      className={cn("flex flex-wrap items-center gap-2", ECHELLES[taille])}
+    >
+      {children}
+    </div>
+  )
+}
+
+const ECHELLES: Record<TailleActions, string> = {
+  default: "[--bouton-hauteur:2rem] [--bouton-icone:2rem]",
+  lg: "[--bouton-hauteur:2.25rem] [--bouton-icone:2.25rem]",
 }
 
 /** Étape du fil d'Ariane, de la plus générale à la plus proche. */
@@ -101,10 +132,10 @@ export interface DetailHeaderProps {
   /** Actions rares ou destructives, derrière « Plus d'actions ». */
   actionsSecondaires?: DetailHeaderActionSecondaire[]
   /**
-   * Taille des boutons de `actions` (leur `size`, à leur donner) : le bouton
-   * « Plus d'actions » la suit (`icon` ou `icon-lg`) pour rester aligné.
+   * Taille des boutons de `actions` et du bouton « Plus d'actions » : `lg`
+   * par défaut, comme `PageHeader` (voir sa `tailleActions`).
    */
-  tailleActions?: "default" | "lg"
+  tailleActions?: TailleActions
   /**
    * Fiche dont la première carte répète déjà le nom : le fil d'Ariane porte
    * seul le titre (le `<h1>`), actions sur la même ligne. Demande `chemin`.
@@ -125,7 +156,7 @@ export function DetailHeader({
   meta,
   actions,
   actionsSecondaires = [],
-  tailleActions = "default",
+  tailleActions = "lg",
   compact = false,
   lien,
   className,
@@ -133,7 +164,7 @@ export function DetailHeader({
   const Lien = useLien(lien)
   const lesActions =
     actions || actionsSecondaires.length > 0 ? (
-      <Actions>
+      <Actions taille={tailleActions}>
         {actions}
         {actionsSecondaires.length > 0 ? (
           <MenuActions actions={actionsSecondaires} taille={tailleActions} />
@@ -219,7 +250,7 @@ function MenuActions({
   taille,
 }: {
   actions: DetailHeaderActionSecondaire[]
-  taille: "default" | "lg"
+  taille: TailleActions
 }) {
   return (
     <DropdownMenu>
@@ -228,9 +259,10 @@ function MenuActions({
           render={
             <DropdownMenuTrigger
               render={
+                // `icon` : l'échelle de la zone (`data-echelle`) l'agrandit.
                 <Button
                   variant="outline"
-                  size={taille === "lg" ? "icon-lg" : "icon"}
+                  size="icon"
                   aria-label="Plus d'actions"
                 />
               }
