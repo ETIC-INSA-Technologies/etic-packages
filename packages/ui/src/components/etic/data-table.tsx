@@ -1217,7 +1217,9 @@ function LigneTableauBrute<TData extends RowData>({
         onFocus={(event) => noterFocus(event, focus.current)}
         onBlur={() => noterPerte(focus.current)}
         data-state={selectionnee ? "selected" : undefined}
-        className={cn(cliquable && "cursor-pointer")}
+        // group/ligne : les commandes de dataTableActionsColumn suivent le
+        // survol de la ligne.
+        className={cn("group/ligne", cliquable && "cursor-pointer")}
         onClick={
           cliquable
             ? (event) => {
@@ -1660,12 +1662,24 @@ export interface DataTableActionsColumnOptions<TData extends RowData> {
   enableHiding?: boolean
   /** Classes ajoutées à l'en-tête et aux cellules, après `w-px`. */
   className?: string
+  /** Commandes visibles sur toutes les lignes, pas seulement sur celle
+   *  survolée. Non par défaut. */
+  toujoursVisibles?: boolean
 }
+
+/** Commandes de la ligne survolée seulement : la même icône répétée sur
+ *  chaque ligne charge la liste. Transparentes, pas retirées : elles restent
+ *  dans l'ordre de tabulation et lues par les lecteurs d'écran. Visibles
+ *  aussi quand le focus est dans la ligne (clavier), quand l'une d'elles a
+ *  ouvert un menu, et toujours sur écran tactile, sans survol. */
+const ACTIONS_AU_SURVOL =
+  "opacity-0 transition-opacity group-hover/ligne:opacity-100 group-focus-within/ligne:opacity-100 has-aria-expanded:opacity-100 pointer-coarse:opacity-100"
 
 /**
  * Colonne des commandes d'une ligne (`id: "actions"`, comme dans shadcn) :
  * en-tête lu mais invisible, colonne aussi étroite que son contenu,
- * commandes alignées à droite. Ni triable ni masquable. Comme toute colonne,
+ * commandes alignées à droite, affichées sur la ligne survolée (voir
+ * `toujoursVisibles`). Ni triable ni masquable. Comme toute colonne,
  * à créer hors du composant ou mémorisée : un état de la page passe par un
  * contexte ou un hook lu dans la cellule, pas par la fermeture de `actions`.
  */
@@ -1675,12 +1689,18 @@ export function dataTableActionsColumn<TData extends RowData>({
   id = "actions",
   enableHiding = false,
   className,
+  toujoursVisibles = false,
 }: DataTableActionsColumnOptions<TData>): DataTableColumnDef<TData> {
   return createDataTableColumnHelper<TData>().display({
     id,
     header: () => <span className="sr-only">{libelle}</span>,
     cell: ({ row }) => (
-      <div className="flex items-center justify-end gap-1">
+      <div
+        className={cn(
+          "flex items-center justify-end gap-1",
+          !toujoursVisibles && ACTIONS_AU_SURVOL
+        )}
+      >
         {actions(row.original)}
       </div>
     ),

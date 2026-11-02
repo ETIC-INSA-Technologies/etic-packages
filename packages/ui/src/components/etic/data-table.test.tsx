@@ -769,9 +769,31 @@ describe("DataTable : requête, largeurs, cases et colonnes prêtes à l'emploi"
     expect(within(entete).getByText("Actions")).toHaveClass("sr-only")
     const bouton = screen.getByRole("button", { name: "Supprimer Grace" })
     expect(bouton.parentElement).toHaveClass("justify-end", "gap-1")
+    // Sur la ligne survolée seulement (ou focalisée, menu ouvert, tactile).
+    expect(bouton.closest("tr")).toHaveClass("group/ligne")
+    expect(bouton.parentElement).toHaveClass(
+      "opacity-0",
+      "group-hover/ligne:opacity-100",
+      "group-focus-within/ligne:opacity-100",
+      "has-aria-expanded:opacity-100",
+      "pointer-coarse:opacity-100"
+    )
 
     await user.click(bouton)
     expect(supprimer).toHaveBeenCalledWith("2")
+  })
+
+  it("colonne « Actions » visible sur toutes les lignes sur demande", () => {
+    const colonnes = [
+      ...COLONNES,
+      dataTableActionsColumn<Personne>({
+        actions: (p) => <Button size="sm">{`Supprimer ${p.nom}`}</Button>,
+        toujoursVisibles: true,
+      }),
+    ]
+    render(<Tableau colonnes={colonnes} />)
+    const bouton = screen.getByRole("button", { name: "Supprimer Grace" })
+    expect(bouton.parentElement).not.toHaveClass("opacity-0")
   })
 
   it("colonne « Actions » masquable et renommable sur demande", () => {

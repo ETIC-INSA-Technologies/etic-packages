@@ -780,6 +780,8 @@ const colonnes = aide.columns([
   dataTableActionsColumn<Poste>({
     actions: (p) => <DeleteButton libelle={`le poste ${p.nom}`} … />,
     // enableHiding: true pour une colonne d'actions masquable et déplaçable.
+    // Commandes sur la ligne survolée seulement (focus dans la ligne, menu
+    // ouvert et écran tactile compris) ; toujoursVisibles: true sur toutes.
   }),
 ])
 
