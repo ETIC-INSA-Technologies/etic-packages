@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import { LockIcon } from "lucide-react"
+import type { ComponentProps } from "react"
 import { describe, expect, it } from "vitest"
 
 import {
@@ -114,5 +115,33 @@ describe("StatTile", () => {
   it("a un ton info", () => {
     render(<StatTile libelle="Mises à jour" valeur={3} ton="info" />)
     expect(screen.getByText("3").parentElement!).toHaveClass("text-info")
+  })
+
+  it("sans href, n'est pas un lien", () => {
+    render(<StatTile libelle="Fichiers" valeur={12} />)
+    expect(screen.queryByRole("link")).toBeNull()
+  })
+
+  it("avec href, toute la tuile mène au détail, par le routeur s'il est donné", () => {
+    function LienRouteur(props: ComponentProps<"a">) {
+      return <a data-routeur="" {...props} />
+    }
+    render(
+      <StatTile
+        libelle="Erreurs ouvertes"
+        valeur={3}
+        indication="dont 1 critique"
+        href="/server?tab=errors"
+        lien={LienRouteur}
+      />
+    )
+    // Son nom : tout ce qu'elle affiche, le chevron décoratif en moins.
+    const lien = screen.getByRole("link", {
+      name: "Erreurs ouvertes 3 dont 1 critique",
+    })
+    expect(lien).toHaveAttribute("href", "/server?tab=errors")
+    expect(lien).toHaveAttribute("data-routeur")
+    expect(lien).toHaveClass("focus-visible:ring-3")
+    expect(lien.querySelector('[data-slot="stat-tile"]')).toHaveClass("flex-1")
   })
 })

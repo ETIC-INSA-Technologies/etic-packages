@@ -725,6 +725,7 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
               valeur="À jour"
               ton="success"
               indication="Dernière il y a 2 h"
+              href="#section-card"
             />
             <StatTile
               libelle="Disque"
