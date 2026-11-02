@@ -239,6 +239,14 @@ describe("écarts avec shadcn", () => {
     }
   })
 
+  it("menu : déclencheur disparu, pas de focus rendu à un autre menu de la page", () => {
+    // Base UI se replierait sur un historique global de focus (comportement
+    // vérifié dans dropdown-menu.test.tsx).
+    const menu = lire("components/ui/dropdown-menu.tsx")
+    expect(menu).toContain("focusFinal(type, finalFocus, suivi)")
+    expect(menu).toContain("DeclencheurContext")
+  })
+
   it("combobox : le bouton qui ouvre la liste a un nom", () => {
     expect(lire("components/ui/combobox.tsx")).toContain(
       'aria-label="Afficher les options"'

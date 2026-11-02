@@ -971,6 +971,13 @@ npm run build      # dist/ : un module par composant, types, styles.css
   - l'accent comme texte en `text-primary-text` au lieu de `text-primary` : variante `link` de
     `button.tsx` et `badge.tsx`, liens survolés de `empty.tsx`, `field.tsx` et `item.tsx` ;
   - import inutilisé de React retiré de `scroll-area.tsx` (sans quoi `tsc` échoue) ;
+  - `dropdown-menu.tsx` : `DropdownMenu` suit son déclencheur, et `DropdownMenuContent` (menu
+    principal, pas les sous-menus) ne rend pas le focus quand ce déclencheur a été retiré du DOM
+    (`finalFocus` par défaut) ; Base UI le renvoyait sinon au dernier menu ou sélecteur ouvert
+    ailleurs dans la page. Le focus tombe sur `<body>`, où les rattrapages des composants le
+    reprennent. Un focus parti ailleurs (dialogue ouvert par une entrée) y reste. Un
+    `finalFocus` donné passe d'abord ; s'il vaut `true`, la garde s'applique. Les autres popups
+    (dialogue, sélecteur, popover, combobox) ont le même repli et ne sont pas encore corrigés ;
   - `button.tsx` : un bouton `aria-disabled` (désactivé mais focalisable, `focusableWhenDisabled`)
     est estompé comme un bouton `disabled`, curseur interdit (d'attente s'il est `enCours`), sans
     enfoncement au clic ; pas de `pointer-events-none`, qui couperait l'infobulle de sa raison ;

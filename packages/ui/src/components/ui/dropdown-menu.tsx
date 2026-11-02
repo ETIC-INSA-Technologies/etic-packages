@@ -3,16 +3,103 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { cn } from "cn"
 import { ChevronRightIcon, CheckIcon } from "lucide-react"
 
+// Écart ETIC : le dernier déclencheur monté, pour le `finalFocus` par défaut
+// de DropdownMenuContent. Gardé une fois démonté : `isConnected` dit alors
+// qu'il a disparu. Un objet créé une fois plutôt qu'un état : noter le
+// déclencheur ne redessine pas le menu (un par ligne d'un tableau). Avec
+// plusieurs déclencheurs sur un même menu (non utilisé), c'est le dernier
+// monté qui compte.
+interface SuiviDeclencheur {
+  noter: (element: HTMLElement | null) => void
+  lire: () => HTMLElement | null
+}
+
+const DeclencheurContext = React.createContext<SuiviDeclencheur | null>(null)
+
+function creerSuivi(): SuiviDeclencheur {
+  let dernier: HTMLElement | null = null
+  return {
+    noter: (element) => {
+      if (element) dernier = element
+    },
+    lire: () => dernier,
+  }
+}
+
+/** Transmet l'élément à la `ref` reçue, fonction ou objet ; rend le
+ *  nettoyage qu'une ref fonction peut renvoyer (React 19). */
+function assignerRef<T>(ref: React.Ref<T> | undefined, valeur: T | null) {
+  if (typeof ref === "function") return ref(valeur)
+  if (ref) ref.current = valeur
+}
+
+// Contenu d'un sous-menu : Base UI y a sa propre logique de retour de focus
+// (vers le menu parent), que la garde de DropdownMenuContent ne remplace pas.
+const SousMenuContext = React.createContext(false)
+
+type FinalFocus = MenuPrimitive.Popup.Props["finalFocus"]
+type FinalFocusFonction = Extract<FinalFocus, (...args: never) => unknown>
+type TypeFermeture = Parameters<FinalFocusFonction>[0]
+
+/**
+ * Écart ETIC : `finalFocus` du menu principal. À la fermeture, Base UI rend
+ * le focus au déclencheur ; retiré du DOM (ligne supprimée, barre retirée),
+ * il se repliait sur un historique global — un autre menu ou sélecteur de la
+ * page. Rien n'est focalisé alors : le focus tombe sur `<body>`, où les
+ * rattrapages (ligne supprimée d'un DataTable, barre d'actions) le
+ * reprennent. Une fonction rendant le retour « explicite » pour Base UI, on
+ * garde nous-mêmes sa règle : un focus parti ailleurs (dialogue ouvert depuis
+ * une entrée) y reste. Le `finalFocus` donné passe d'abord ; s'il vaut
+ * `true` (retour par défaut), la garde s'applique. (Une ref donnée est
+ * passée telle quelle, sans garde.)
+ */
+function focusFinal(
+  type: TypeFermeture,
+  donne: FinalFocusFonction | boolean | undefined,
+  suivi: SuiviDeclencheur | null
+): ReturnType<FinalFocusFonction> {
+  const voulu = typeof donne === "function" ? donne(type) : (donne ?? true)
+  if (voulu !== true) return voulu
+  const actif = document.activeElement
+  if (
+    actif &&
+    actif !== document.body &&
+    !actif.closest('[data-slot^="dropdown-menu-"]')
+  )
+    return false
+  const declencheur = suivi?.lire()
+  return !declencheur || declencheur.isConnected
+}
+
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
-  return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+  const [suivi] = React.useState(creerSuivi)
+  return (
+    <DeclencheurContext.Provider value={suivi}>
+      <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+    </DeclencheurContext.Provider>
+  )
 }
 
 function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {
   return <MenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />
 }
 
-function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
-  return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />
+function DropdownMenuTrigger({ ref, ...props }: MenuPrimitive.Trigger.Props) {
+  const suivi = React.useContext(DeclencheurContext)
+  const lier = React.useCallback(
+    (element: HTMLButtonElement | null) => {
+      suivi?.noter(element)
+      return assignerRef(ref, element)
+    },
+    [suivi, ref]
+  )
+  return (
+    <MenuPrimitive.Trigger
+      data-slot="dropdown-menu-trigger"
+      ref={lier}
+      {...props}
+    />
+  )
 }
 
 function DropdownMenuContent({
@@ -21,12 +108,15 @@ function DropdownMenuContent({
   side = "bottom",
   sideOffset = 4,
   className,
+  finalFocus,
   ...props
 }: MenuPrimitive.Popup.Props &
   Pick<
     MenuPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
+  const suivi = React.useContext(DeclencheurContext)
+  const sousMenu = React.useContext(SousMenuContext)
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
@@ -38,6 +128,11 @@ function DropdownMenuContent({
       >
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
+          finalFocus={
+            sousMenu || (finalFocus && typeof finalFocus === "object")
+              ? finalFocus
+              : (type: TypeFermeture) => focusFinal(type, finalFocus, suivi)
+          }
           className={cn(
             "z-50 max-h-(--available-height) w-(--anchor-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95",
             className
@@ -133,18 +228,20 @@ function DropdownMenuSubContent({
   ...props
 }: React.ComponentProps<typeof DropdownMenuContent>) {
   return (
-    <DropdownMenuContent
-      data-slot="dropdown-menu-sub-content"
-      className={cn(
-        "w-auto min-w-[96px] rounded-lg bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-        className
-      )}
-      align={align}
-      alignOffset={alignOffset}
-      side={side}
-      sideOffset={sideOffset}
-      {...props}
-    />
+    <SousMenuContext.Provider value>
+      <DropdownMenuContent
+        data-slot="dropdown-menu-sub-content"
+        className={cn(
+          "w-auto min-w-[96px] rounded-lg bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          className
+        )}
+        align={align}
+        alignOffset={alignOffset}
+        side={side}
+        sideOffset={sideOffset}
+        {...props}
+      />
+    </SousMenuContext.Provider>
   )
 }
 

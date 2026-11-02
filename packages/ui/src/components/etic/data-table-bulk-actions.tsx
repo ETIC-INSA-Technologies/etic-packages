@@ -64,10 +64,9 @@ interface DataTableBulkActionsCommun {
   children: ReactNode
   /** Actions moins fréquentes, rangées dans le menu « … » de la barre :
    *  des `DropdownMenuItem`. Le menu porte aussi « Sélectionner les 137 »
-   *  quand il est proposé. Limite connue : une entrée qui vide aussitôt la
-   *  sélection démonte la barre et son menu, et Base UI rend alors le focus
-   *  au dernier menu ou sélecteur ouvert ailleurs dans la page (à corriger
-   *  dans `DropdownMenuContent`, pour tous les menus). */
+   *  quand il est proposé. Une entrée qui vide aussitôt la sélection
+   *  démonte la barre et son menu : le focus tombe alors sur la page, pas
+   *  sur un autre menu (`DropdownMenuContent`). */
   actionsSecondaires?: ReactNode
   className?: string
 }

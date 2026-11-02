@@ -355,8 +355,7 @@ describe("sélection de tous les éléments", () => {
       screen.getByText("Les 137 personnes sont sélectionnées.")
     ).toHaveAttribute("aria-live", "polite")
     // « … » n'a plus rien à proposer et disparaît : le focus passe à « Tout
-    // désélectionner », qui reste (au navigateur par le `finalFocus` du menu ;
-    // ici par le rattrapage de la barre, happy-dom ne l'appliquant pas).
+    // désélectionner », qui reste.
     expect(menu()).toBeNull()
     expect(document.activeElement).toBe(boutonDeLaBarre())
 
@@ -555,9 +554,7 @@ describe("sélection de tous les éléments", () => {
       screen.getByRole("checkbox", { name: "Sélectionner la page" })
     )
     await user.click(await proposition(user, "Sélectionner les 137 éléments"))
-    // Refusée : « … » reste, avec sa proposition. (Le focus, rendu par le
-    // menu à « Tout désélectionner », se vérifie au navigateur : happy-dom
-    // n'applique pas le `finalFocus` de Base UI.)
+    // Refusée : « … » reste, avec sa proposition.
     await waitFor(() => expect(menu()).toBeInTheDocument())
     expect(
       await proposition(user, "Sélectionner les 137 éléments")
