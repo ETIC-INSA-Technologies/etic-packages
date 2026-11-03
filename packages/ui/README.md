@@ -84,7 +84,7 @@ compris.
 
 Un tableau se détache de la surface qui le porte : son cadre est en `bg-tableau` (jeton
 ajouté), qui vaut `--card` sur la page et `--tableau-encart` (jeton ajouté, un cran plus
-sombre que la carte) dans une surface surélevée — toute surface de la bibliothèque peinte en `bg-card` ou `bg-popover` : `Card`
+sombre que la carte en clair, plus clair en sombre) dans une surface surélevée — toute surface de la bibliothèque peinte en `bg-card` ou `bg-popover` : `Card`
 (donc `SectionCard`), `Alert`, dialogue, `AlertDialog`, tiroir (`Sheet`), popover, menu
 déroulant, liste d'un `Select` ou d'un `Combobox`, `SaveBar`, barre d'actions groupées, barre
 latérale, `Disclosure` `variante="carte"`. La liste de ces surfaces est tenue une fois dans

@@ -339,6 +339,12 @@ describe("couleur de base", () => {
         expect(ecart, nom).toBeGreaterThan(1.05)
         expect(ecart, nom).toBeLessThan(1.08)
       }
+      // En sombre, un cran au-dessus de la carte : plus sombre, il tirait
+      // vers le noir de la page. En clair, rien n'est plus blanc que la carte.
+      if (nom === "sombre") {
+        expect(luminance(encart)).toBeGreaterThan(luminance(card))
+        expect(contraste(encart, vars.valeur("muted"))).toBeGreaterThan(1.08)
+      }
       if (nom === "clair") {
         // Écart de fond faible : le filet doit se voir sur chacun.
         for (const fond of [page, card, encart]) {

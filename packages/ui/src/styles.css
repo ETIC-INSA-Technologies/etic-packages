@@ -169,9 +169,13 @@
      remonte d'un cran en gardant ses écarts (cartes 1,10:1 sur la page,
      --muted 1,17:1 sur une carte). */
   --background: oklch(0.2 0.006 285.9);
-  /* Entre la page et la carte : 1,05:1 sur une carte, comme en clair. Le
-     fond de la page creusait trop le tableau dans sa carte. */
-  --tableau-encart: oklch(0.22 0.006 285.9);
+  /* Un cran au-dessus de la carte, entre elle et --muted : 1,06:1, comme
+     en clair, mais vers le clair, à la façon des surfaces sombres qui
+     s'éclaircissent en s'empilant (en clair, rien n'est plus blanc que la
+     carte : le tableau s'y creuse). Plus sombre que la carte, il tirait vers
+     le noir de la page. Survol (bg-muted/50) et ligne choisie (bg-muted)
+     restent distincts : 1,05:1 et 1,10:1. */
+  --tableau-encart: oklch(0.26 0.006 285.9);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.24 0.006 285.9);
   --card-foreground: oklch(0.985 0 0);
