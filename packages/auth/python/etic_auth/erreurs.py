@@ -20,6 +20,9 @@ CODE_COMPTE_DESACTIVE: Final = "account_disabled"
 CODE_COMPTE_ALUMNI: Final = "account_alumni"
 CODE_SERVICE_INDISPONIBLE: Final = "external_service_unavailable"
 
+#: `details.raison` de `MembreInconnu`.
+RAISON_MEMBRE_INCONNU: Final = "membre_inconnu"
+
 #: `details.action` d'un `401` après lequel seule une nouvelle connexion peut aboutir.
 ACTION_RECONNEXION: Final = "relancer_authorize"
 
@@ -46,7 +49,29 @@ class ErreurAuth(Exception):
         self.details = details or {}
 
     def __repr__(self) -> str:  # pragma: no cover - confort de débogage
-        return f"ErreurAuth({self.code!r}, http_status={self.http_status})"
+        return f"{type(self).__name__}({self.code!r}, http_status={self.http_status})"
+
+
+class MembreInconnu(ErreurAuth):
+    """ETIC Members ne connaît pas ce membre : `404` sur `GET /authz/permissions`.
+
+    Sans traduction, un `502` comme toute réponse amont inattendue, avec
+    `details.raison = "membre_inconnu"` et `details.statut_amont`. Une application qui tient une
+    liaison vers ce membre l'attrape pour dire que la liaison est périmée et qu'il faut la
+    refaire.
+    """
+
+    def __init__(self, message: str, *, statut_amont: int = 404) -> None:
+        super().__init__(
+            CODE_SERVICE_INDISPONIBLE,
+            message,
+            http_status=502,
+            details={
+                "service": "etic_members",
+                "raison": RAISON_MEMBRE_INCONNU,
+                "statut_amont": statut_amont,
+            },
+        )
 
 
 def non_authentifie(

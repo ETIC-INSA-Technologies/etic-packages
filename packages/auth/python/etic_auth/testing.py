@@ -32,8 +32,9 @@ def principal_de_test(
 
 def simuler_principal(app: FastAPI, auth: AuthEtic, principal: Principal | None) -> None:
     """Toute route de l'application gardée par `auth.principal` ou `auth.exiger(…)` voit
-    `principal` (`None` : retire la simulation). Les routes du paquet qui parlent à ETIC
-    Members au nom du membre (`/me`, `/preferences`) demandent une vraie session."""
+    `principal` (`None` : retire la simulation). Ce qui parle à ETIC Members au nom du membre
+    (`auth.au_nom_du_membre`, donc `/me` et `/preferences`) demande une vraie session : sans
+    elle, `401`."""
     if principal is None:
         app.dependency_overrides.pop(auth.principal, None)
     else:

@@ -1,8 +1,8 @@
 """Réglages d'une application satellite d'ETIC Members.
 
 Tout est passé explicitement à `ConfigSSO` : le paquet ne lit aucune variable d'environnement
-de lui-même. `ConfigSSO.depuis_env` reprend les noms qu'utilise déjà ETIC Docs, pour qui veut
-s'en servir tels quels.
+de lui-même. `ConfigSSO.depuis_env`, pour qui veut un jeu de noms tout fait, lit les variables
+qu'il énumère ; une application qui a déjà les siennes construit `ConfigSSO` directement.
 """
 
 from __future__ import annotations

@@ -31,6 +31,7 @@ from .erreurs import (
     CODE_COMPTE_DESACTIVE,
     MESSAGE_SESSION_EXPIREE,
     ErreurAuth,
+    MembreInconnu,
     non_authentifie,
     service_indisponible,
 )
@@ -150,6 +151,7 @@ MESSAGE_INVALID_GRANT: Final = (
     "La connexion ETIC Members a expiré ou a déjà servi. Relancez la connexion."
 )
 MESSAGE_MEMBRE_DESACTIVE: Final = "Votre compte ETIC Members est désactivé."
+MESSAGE_MEMBRE_INCONNU: Final = "Ce membre est inconnu d'ETIC Members."
 MESSAGE_SERVICE_INDISPONIBLE: Final = (
     "Le service d'authentification ETIC Members est indisponible. Réessayez dans un instant."
 )
@@ -169,7 +171,8 @@ def traduire_erreur(erreur: ErreurAmont, *, contexte: Contexte, nom_application:
     | autre `401` (identifiants d'application refusés) | 502 + journal `critical` |
     | `403 member_disabled` à l'échange ou sur `/me` | 403 `account_disabled` |
     | autre `403` (application révoquée, scope absent) | 502 + journal `critical` |
-    | timeout, réseau, `429`, `5xx`, `404` | 502 |
+    | `404` sur `/authz/permissions` (membre inconnu) | `MembreInconnu`, 502 |
+    | timeout, réseau, `429`, `5xx`, autre `404` | 502 |
 
     Un défaut de configuration ne renvoie pas l'utilisateur vers la connexion : il y bouclerait
     pour un problème qui n'est pas le sien.
@@ -216,6 +219,8 @@ def traduire_erreur(erreur: ErreurAmont, *, contexte: Contexte, nom_application:
                 details={"raison": code},
             )
         return configuration(code if code == "application_revoked" else "application_refusee")
+    if statut == 404 and contexte == "authz":
+        return MembreInconnu(MESSAGE_MEMBRE_INCONNU, statut_amont=statut)
     return service_indisponible(
         MESSAGE_SERVICE_INDISPONIBLE, raison="service_indisponible", statut_amont=statut
     )
@@ -444,8 +449,8 @@ class ClientMembers:
         (carte CRM, webhook, tâche de fond) qui ne porte ni cookie ni jeton.
 
         Cette route n'authentifie personne. Un membre `disabled` est un `200` avec
-        `permissions: []` ; un `404` (membre inconnu) sort en 502 `service_indisponible` —
-        l'appelant qui tient une liaison vers ce membre le traduit à sa façon.
+        `permissions: []` ; un membre inconnu (`404`) lève `MembreInconnu` (502 par défaut),
+        que l'appelant qui tient une liaison vers ce membre traduit à sa façon.
         """
 
         async def appel() -> DroitsMembre:

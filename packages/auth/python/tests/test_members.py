@@ -7,12 +7,13 @@ import asyncio
 import httpx
 import pytest
 
-from etic_auth import ErreurAuth
+from etic_auth import ErreurAuth, MembreInconnu
 from etic_auth.members import ClientMembers
 from etic_auth.transport import Transport
 
 from .conftest import FauxMembers, config_test
 
+AUTHZ = "/api/ext/v1/authz/permissions"
 INTROSPECT = "/api/ext/v1/sso/introspect"
 TOKEN = "/api/ext/v1/sso/token"
 
@@ -131,6 +132,29 @@ async def test_droits_membre_en_cache(faux: FauxMembers) -> None:
 
     assert droits.permissions == frozenset({"app.read"})
     assert faux.compter("/api/ext/v1/authz/permissions") == 1
+
+
+async def test_droits_membre_inconnu(faux: FauxMembers) -> None:
+    faux.pannes[AUTHZ] = (404, {"error": {"code": "not_found", "message": "x"}})
+
+    with pytest.raises(MembreInconnu) as erreur:
+        await _client(faux).droits_membre("m1")
+    assert isinstance(erreur.value, ErreurAuth)
+    assert (erreur.value.code, erreur.value.http_status) == ("external_service_unavailable", 502)
+    assert erreur.value.details == {
+        "service": "etic_members",
+        "raison": "membre_inconnu",
+        "statut_amont": 404,
+    }
+
+
+async def test_404_hors_authz_reste_generique(faux: FauxMembers) -> None:
+    faux.pannes[INTROSPECT] = (404, {"error": {"code": "not_found", "message": "x"}})
+
+    with pytest.raises(ErreurAuth) as erreur:
+        await _client(faux).introspecter("jeton")
+    assert not isinstance(erreur.value, MembreInconnu)
+    assert erreur.value.details["raison"] == "service_indisponible"
 
 
 def test_aucun_secret_dans_les_repr() -> None:

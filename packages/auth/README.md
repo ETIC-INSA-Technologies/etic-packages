@@ -108,6 +108,35 @@ Sessions : `StockageSQLAlchemy` (une table, voir ci-dessus) ou `StockageMemoire`
 seul processus qui accepte de déconnecter tout le monde au redémarrage). Le verrou de
 rafraîchissement est en mémoire : l'application tourne avec un seul processus serveur.
 
+### Appels au nom du membre
+
+`await auth.au_nom_du_membre(request, appel)` appelle ETIC Members avec le jeton d'accès de la
+session : `appel(jeton)` le pose en `Authorization: Bearer`, et son résultat est rendu tel quel.
+C'est ainsi que `/me` et `/preferences` lisent et écrivent le profil.
+
+```python
+from fastapi import Request
+from etic_auth import Preferences
+
+
+@app.post("/api/v1/theme-sombre")
+async def theme_sombre(
+    request: Request, _p: Annotated[Principal, Depends(auth.principal)]
+) -> Preferences:
+    return await auth.au_nom_du_membre(
+        request, lambda jeton: auth.client.modifier_preferences(jeton, theme="dark")
+    )
+```
+
+- Dans une route gardée par `auth.principal` ou `auth.exiger(…)`, qui a déjà validé la
+  session ; sans elle, la session est résolue de la même façon (sans session : `401`).
+- Si ETIC Members refuse le jeton (`401 unauthenticated` : membre déconnecté d'ETIC Members
+  dans les 30 s du cache d'introspection), la session est fermée et la route répond `401` avec
+  `details.action = "relancer_authorize"`. Toute autre erreur passe telle quelle.
+- Pour un appel que `auth.client` n'offre pas, `appel` pose lui-même les en-têtes
+  d'application et le Bearer, et lève `non_authentifie(raison=…)` (`etic_auth.erreurs`) sur un
+  `401` : c'est ce code qui ferme la session. Le jeton n'est ni journalisé ni renvoyé.
+
 ### Tests de l'application
 
 ```python
@@ -124,6 +153,10 @@ production.
 Pour une requête relayée par un tiers (carte CRM, webhook) dont le membre est déjà connu :
 `await auth.client.droits_membre(membre_id)` puis `auth.verifier_statut(droits.status)` (scope
 `eticmembers.authz.read` requis côté ETIC Members).
+
+Un membre qu'ETIC Members ne connaît pas lève `MembreInconnu` (sous-classe d'`ErreurAuth`,
+`502 external_service_unavailable` par défaut, `details.raison = "membre_inconnu"`) : une
+application qui garde une liaison vers ce membre l'attrape pour la déclarer périmée.
 
 ## Côté navigateur (React)
 

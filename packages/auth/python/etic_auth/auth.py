@@ -331,13 +331,29 @@ class AuthEtic:
             await self._revoquer(jeton.refresh_token)
             raise
 
-    async def _au_nom_du_membre[T](
+    async def au_nom_du_membre[T](
         self, request: Request, appel: Callable[[str], Awaitable[T]]
     ) -> T:
-        """Appel à ETIC Members avec le jeton de la session (après `principal`). Un jeton
-        refusé là alors que l'introspection en cache le dit actif (déconnexion d'ETIC Members
-        dans les 30 s) ferme la session : les autres routes ne l'accepteront plus non plus."""
-        session: SessionOuverte = request.state.etic_session
+        """Appelle ETIC Members au nom du membre de la session et rend le résultat de `appel`.
+
+        `appel` reçoit le jeton d'accès de la session, à poser en `Authorization: Bearer` :
+        une méthode de `self.client` qui prend `access_token`, ou un appel propre à
+        l'application. Il ne le journalise ni ne le renvoie : le jeton ne quitte pas le serveur.
+
+        À utiliser dans une route gardée par `principal` ou `exiger`, qui a déjà validé et au
+        besoin rafraîchi la session. Sans eux, la session est d'abord résolue comme par
+        `principal` : sans session, `401`.
+
+        `appel` traduit un refus d'ETIC Members en `ErreurAuth` (les méthodes de `self.client`
+        le font déjà). Un `unauthenticated` — jeton refusé alors que l'introspection en cache le
+        dit actif : membre déconnecté d'ETIC Members dans les 30 s — ferme la session et lève le
+        `401` qui renvoie à la connexion ; les autres routes ne l'accepteraient plus non plus.
+        Toute autre erreur passe telle quelle.
+        """
+        session: SessionOuverte | None = getattr(request.state, "etic_session", None)
+        if session is None:
+            await self.principal(request)
+            session = request.state.etic_session
         try:
             return await appel(session.jeton_acces)
         except ErreurAuth as erreur:
@@ -435,7 +451,7 @@ class AuthEtic:
             prochain chargement."""
             preferences: Preferences | None = None
             try:
-                profil = await self._au_nom_du_membre(request, self.client.profil)
+                profil = await self.au_nom_du_membre(request, self.client.profil)
                 preferences = profil.preferences
             except ErreurAuth as erreur:
                 if erreur.http_status != 502:
@@ -457,7 +473,7 @@ class AuthEtic:
             _principal: Annotated[Principal, Depends(self.principal)],
         ) -> Preferences:
             """Enregistre le thème chez ETIC Members : il vaut pour toute la suite."""
-            return await self._au_nom_du_membre(
+            return await self.au_nom_du_membre(
                 request, lambda jeton: self.client.modifier_preferences(jeton, theme=corps.theme)
             )
 

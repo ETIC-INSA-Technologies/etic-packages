@@ -7,9 +7,10 @@ from dataclasses import replace
 from datetime import timedelta
 from urllib.parse import parse_qs, urlsplit
 
+from fastapi import Depends, FastAPI, Request
 from fastapi.testclient import TestClient
 
-from etic_auth import AuthEtic
+from etic_auth import AuthEtic, Preferences, Principal
 from etic_auth.members import code_challenge_s256
 from etic_auth.testing import principal_de_test, simuler_principal
 
@@ -345,3 +346,85 @@ def test_cookie_host_en_https(faux: FauxMembers) -> None:
         client.cookies.clear()
         client.cookies.set("etic_session", valeur)
         assert client.get("/api/v1/lecture").status_code == 401
+
+
+# -- Appels au nom du membre ----------------------------------------------------------------
+
+
+def _app_au_nom_du_membre(auth: AuthEtic, jetons_vus: list[str]) -> FastAPI:
+    """Une route gardée et une sans garde, qui écrivent le thème au nom du membre."""
+    app = creer_app(auth)
+
+    async def ecrire_theme(jeton: str) -> Preferences:
+        jetons_vus.append(jeton)
+        return await auth.client.modifier_preferences(jeton, theme="light")
+
+    @app.post("/api/v1/theme-clair")
+    async def theme_clair(request: Request, _p: Principal = Depends(auth.principal)) -> Preferences:
+        return await auth.au_nom_du_membre(request, ecrire_theme)
+
+    @app.post("/api/v1/theme-clair-sans-garde")
+    async def theme_clair_sans_garde(request: Request) -> Preferences:
+        return await auth.au_nom_du_membre(request, ecrire_theme)
+
+    return app
+
+
+def test_au_nom_du_membre_avec_le_jeton_de_la_session(auth: AuthEtic, faux: FauxMembers) -> None:
+    jetons_vus: list[str] = []
+    with TestClient(_app_au_nom_du_membre(auth, jetons_vus), follow_redirects=False) as client:
+        se_connecter(client, faux)
+        reponse = client.post("/api/v1/theme-clair")
+        sans_garde = client.post("/api/v1/theme-clair-sans-garde")
+
+    assert reponse.status_code == 200
+    assert reponse.json() == {"theme": "light"}
+    assert faux.theme == "light"
+    assert sans_garde.status_code == 200
+    assert jetons_vus == [_session(auth).jeton_acces] * 2
+    assert "acces-" not in reponse.text
+
+
+def test_au_nom_du_membre_jeton_refuse_ferme_la_session(auth: AuthEtic, faux: FauxMembers) -> None:
+    with TestClient(_app_au_nom_du_membre(auth, []), follow_redirects=False) as client:
+        se_connecter(client, faux)
+        assert client.get("/api/v1/lecture").status_code == 200  # introspection en cache
+        faux.acces_actifs.clear()  # déconnecté d'ETIC Members dans les 30 s du cache
+
+        reponse = client.post("/api/v1/theme-clair")
+        assert reponse.status_code == 401
+        erreur = reponse.json()["error"]
+        assert erreur["code"] == "unauthenticated"
+        assert erreur["details"] == {"raison": "jeton_refuse", "action": "relancer_authorize"}
+        assert lignes(auth) == {}
+        assert client.get("/api/v1/lecture").status_code == 401
+
+
+def test_au_nom_du_membre_autre_erreur_garde_la_session(auth: AuthEtic, faux: FauxMembers) -> None:
+    with TestClient(_app_au_nom_du_membre(auth, []), follow_redirects=False) as client:
+        se_connecter(client, faux)
+        faux.pannes["/api/ext/v1/me/preferences"] = (503, {})
+
+        reponse = client.post("/api/v1/theme-clair")
+        assert reponse.status_code == 502
+        assert reponse.json()["error"]["code"] == "external_service_unavailable"
+        assert len(lignes(auth)) == 1
+
+
+def test_au_nom_du_membre_sans_session_401(auth: AuthEtic, faux: FauxMembers) -> None:
+    jetons_vus: list[str] = []
+    with TestClient(_app_au_nom_du_membre(auth, jetons_vus), follow_redirects=False) as client:
+        reponse = client.post("/api/v1/theme-clair-sans-garde")
+
+    assert reponse.status_code == 401
+    assert reponse.json()["error"]["details"]["raison"] == "session_absente"
+    assert jetons_vus == []
+    assert faux.compter("/api/ext/v1/me/preferences") == 0
+
+
+def test_au_nom_du_membre_principal_simule_401(auth: AuthEtic) -> None:
+    app = _app_au_nom_du_membre(auth, [])
+    simuler_principal(app, auth, principal_de_test(permissions=("app.read",)))
+    with TestClient(app) as client:
+        assert client.post("/api/v1/theme-clair").status_code == 401
+        assert client.get("/api/v1/auth/me").status_code == 401
