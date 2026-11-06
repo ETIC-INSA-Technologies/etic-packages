@@ -1,25 +1,58 @@
 /// <reference types="node" />
-import { readdirSync, readFileSync } from "node:fs"
-import { join, relative, resolve } from "node:path"
+import { existsSync, readFileSync, statSync } from "node:fs"
+import { dirname, join, resolve } from "node:path"
 import { render } from "@testing-library/react"
 import { Bar, BarChart } from "recharts"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 
 import { ChartContainer, type ChartConfig } from "@etic-ui/charts"
-import * as index from "@etic-ui/index"
 
 const SRC = resolve(import.meta.dirname, "..")
 
-/** Fichiers source de la bibliothèque (tests exclus), relatifs à src/. */
-function sources(dossier = SRC): string[] {
-  return readdirSync(dossier, { withFileTypes: true }).flatMap((entree) => {
-    const chemin = join(dossier, entree.name)
-    if (entree.isDirectory()) return sources(chemin)
-    return /\.tsx?$/.test(entree.name) && !entree.name.includes(".test.")
-      ? [relative(SRC, chemin)]
-      : []
-  })
+// `from "x"`, `import "x"`, `import("x")` ; les imports de types aussi
+// (ils passent dans les .d.ts publiés).
+const IMPORT = /\b(?:from|import)\s*\(?\s*["']([^"']+)["']/g
+
+/** Le fichier source d'un import local (`@etic-ui/…` ou relatif), `null`
+ *  pour un paquet. */
+function resoudre(depuis: string, specificateur: string): string | null {
+  let base: string
+  if (specificateur.startsWith("@etic-ui/"))
+    base = join(SRC, specificateur.slice("@etic-ui/".length))
+  else if (specificateur.startsWith("."))
+    base = resolve(dirname(depuis), specificateur)
+  else return null
+  for (const chemin of [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    join(base, "index.ts"),
+  ])
+    if (existsSync(chemin) && statSync(chemin).isFile()) return chemin
+  throw new Error(`Import introuvable : « ${specificateur} » dans ${depuis}`)
 }
+
+/** Les paquets qu'atteint une entrée, imports indirects compris. */
+function paquetsAtteints(entree: string): Set<string> {
+  const paquets = new Set<string>()
+  const vus = new Set<string>()
+  const aVoir = [join(SRC, entree)]
+  for (let fichier = aVoir.pop(); fichier; fichier = aVoir.pop()) {
+    if (vus.has(fichier)) continue
+    vus.add(fichier)
+    for (const [, specificateur] of readFileSync(fichier, "utf8").matchAll(
+      IMPORT
+    )) {
+      const local = resoudre(fichier, specificateur)
+      if (local) aVoir.push(local)
+      else paquets.add(specificateur)
+    }
+  }
+  return paquets
+}
+
+const estRecharts = (paquet: string) =>
+  paquet === "recharts" || paquet.startsWith("recharts/")
 
 describe("@etic-insa/ui/charts", () => {
   beforeAll(() => {
@@ -34,14 +67,17 @@ describe("@etic-insa/ui/charts", () => {
     )
   })
 
-  it("seul chart.tsx importe recharts, et l'index principal ne l'exporte pas", () => {
+  it("seule l'entrée charts atteint recharts, même par un import indirect", () => {
     // recharts est une dépendance pair facultative : une application sans
     // graphique ne l'a pas, et l'index ne doit jamais le charger.
-    const importateurs = sources().filter((fichier) =>
-      /from "recharts"/.test(readFileSync(join(SRC, fichier), "utf8"))
+    expect([...paquetsAtteints("index.ts")].filter(estRecharts)).toEqual([])
+    expect(
+      [...paquetsAtteints("testing/index.ts")].filter(estRecharts)
+    ).toEqual([])
+    // Le parcours voit bien recharts là où il est.
+    expect([...paquetsAtteints("charts/index.ts")].filter(estRecharts)).toEqual(
+      ["recharts"]
     )
-    expect(importateurs).toEqual(["components/ui/chart.tsx"])
-    expect(Object.keys(index)).not.toContain("ChartContainer")
   })
 
   it("ChartContainer : couleurs de la config en variables CSS, en clair et en sombre", () => {

@@ -878,7 +878,7 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
                 key={libelle}
                 valeur={valeur}
                 ton={ton}
-                libelle={`${libelle} : ${valeur ?? "—"} %`}
+                libelle={`${libelle} : ${valeur === null ? "non mesuré" : `${valeur} %`}`}
               >
                 {valeur === null ? "—" : `${valeur} %`}
               </ProgressRing>
