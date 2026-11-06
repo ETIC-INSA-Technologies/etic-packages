@@ -955,31 +955,30 @@ beforeEach(() => setMobileViewport(false))
 ### Développer contre les sources locales
 
 Pour voir une modification de la bibliothèque instantanément dans une application, sans publier,
-avec le dépôt `etic-packages` cloné sur le même poste :
+avec le dépôt `etic-packages` cloné sur le même poste, le plugin Vite `@etic-insa/ui/vite`
+sert ses sources à la place des paquets installés, en développement seulement (`vite`, jamais
+le build ni vitest) :
 
 ```ts
-// vite.config.ts de l'application : en développement seulement
-// (chemin vers packages/ui/src, ici pour une application à côté d'etic-packages)
-const UI_SRC = path.resolve(__dirname, "../etic-packages/packages/ui/src")
+// vite.config.ts de l'application
+import { eticPackagesSources } from "@etic-insa/ui/vite"
 
-export default defineConfig(({ command }) => ({
-  resolve:
-    command === "serve"
-      ? {
-          alias: {
-            "@etic-insa/ui": UI_SRC,
-            // les composants s'importent entre eux par « @etic-ui/… »
-            "@etic-ui": UI_SRC,
-          },
-          // une seule copie de React, même si etic-packages a ses propres node_modules
-          dedupe: ["react", "react-dom"],
-        }
-      : {},
-}))
+export default defineConfig({
+  // Avant tailwindcss() : la feuille qui importe @etic-insa/ui/styles.css reçoit le @source
+  // des sources.
+  plugins: [eticPackagesSources({ auth: true }), tailwindcss(), react()],
+})
 ```
 
-Côté CSS, ajouter un `@source` vers ce même dossier `src` et importer son `styles.css` au lieu
-de celui du paquet.
+Les sources sont celles de `ETIC_UI_SOURCES` (chemin de `packages/ui/src`), sinon d'un
+`etic-packages` à côté du dépôt de l'application (depuis un worktree aussi), et seulement si ce
+checkout a ses `node_modules` (`npm ci` à sa racine) ; `ETIC_UI_SOURCES=npm` force les paquets
+installés. Le plugin pose les alias (`@etic-insa/ui`, ses `/styles.css` et `/test`,
+`@etic-ui/…` ; `@etic-insa/auth` avec `auth: true`), une seule copie de React (`dedupe` en
+ajoute : `["@tanstack/react-query"]` pour que l'`AuthProvider` des sources voie le
+`QueryClient` de l'application), l'accès du serveur au checkout, le `@source` de Tailwind, et
+annonce au démarrage ce qu'il sert (branche, commit, modifications). Il n'emploie que Node et
+Vite (`vite`, dépendance pair facultative).
 
 ## Développer la bibliothèque
 

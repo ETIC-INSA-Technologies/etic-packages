@@ -21,13 +21,19 @@
       "types": "./dist/testing/index.d.ts",
       "default": "./dist/testing/index.js"
     },
+    "./vite": {
+      "types": "./vite-plugin.d.ts",
+      "default": "./vite-plugin.js"
+    },
     "./styles.css": "./dist/styles.css",
     "./theme-boot.js": "./src/theme-boot.js",
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "src/theme-boot.js"
+    "src/theme-boot.js",
+    "vite-plugin.js",
+    "vite-plugin.d.ts"
   ],
   "publishConfig": {
     "access": "public",
@@ -44,7 +50,13 @@
     "lucide-react": "^1.64.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "vite": ">=7"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
