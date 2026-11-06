@@ -28,6 +28,7 @@ import {
   DetailList,
   EmptyState,
   ErrorBanner,
+  ErrorBannerProvider,
   ErrorBoundary,
   ExplainedBadge,
   Field,
@@ -45,6 +46,12 @@ import {
   RemovableBadge,
   SaveBar,
   SectionCard,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
   SkeletonCard,
   SkeletonPage,
   SkeletonTable,
@@ -179,11 +186,15 @@ function DemoListe() {
 }
 
 function DemoFormulaire() {
+  const [nom, setNom] = useState("")
   return (
     <FormDialog
       titre="Nouveau groupe"
       description="Le groupe sera créé vide."
       libelleEnvoyer="Créer"
+      // Une saisie commencée n'est pas perdue sur un Échap.
+      modifie={nom !== ""}
+      onOuvertChange={(ouvert) => !ouvert && setNom("")}
       onEnvoyer={(event) => {
         const nom = new FormData(event.currentTarget).get("nom")
         return attendre(nom === "erreur")
@@ -199,7 +210,13 @@ function DemoFormulaire() {
         <FieldLabel htmlFor="atelier-groupe">
           Nom (« erreur » pour voir l'échec)
         </FieldLabel>
-        <Input id="atelier-groupe" name="nom" required />
+        <Input
+          id="atelier-groupe"
+          name="nom"
+          required
+          value={nom}
+          onChange={(e) => setNom(e.target.value)}
+        />
       </Field>
     </FormDialog>
   )
@@ -368,6 +385,20 @@ function DemoSaveBar() {
         desactive={!modifie || !nom.trim()}
         enregistre={enregistre}
         onEnregistrer={() => void envoyer()}
+        onAnnuler={modifie ? () => setNom(enregistreSous) : undefined}
+      />
+      <p className="text-sm text-muted-foreground">
+        Masquée au repos : apparaît à la première modification.
+      </p>
+      <SaveBar
+        collante
+        masqueeAuRepos
+        modifie={modifie}
+        enCours={enCours}
+        desactive={!modifie || !nom.trim()}
+        enregistre={enregistre}
+        onEnregistrer={() => void envoyer()}
+        onAnnuler={modifie ? () => setNom(enregistreSous) : undefined}
       />
     </form>
   )
@@ -649,6 +680,18 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
             }}
             onReessayer={() => {}}
           />
+          {/* Code masqué par le fournisseur ; une adresse sans espace se
+              coupe au lieu de passer sous « Réessayer ». */}
+          <ErrorBannerProvider masquerCode>
+            <ErrorBanner
+              erreur={{
+                message:
+                  "Fichier introuvable : https://example.org/depot/fichiers/2026/rapport-final-version-definitive-relue.pdf",
+                code: "NOT_FOUND",
+              }}
+              onReessayer={() => {}}
+            />
+          </ErrorBannerProvider>
           <DemoErrorBoundary />
         </div>
       ),
@@ -790,6 +833,28 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
       id: "save-bar",
       titre: "SaveBar",
       rendu: () => <DemoSaveBar />,
+    },
+    {
+      id: "sheet",
+      titre: "Sheet : titre long",
+      rendu: () => (
+        <Sheet>
+          <SheetTrigger render={<Button variant="outline" />}>
+            Ouvrir le tiroir
+          </SheetTrigger>
+          <SheetContent>
+            {/* Le titre passe à la ligne avant la croix. */}
+            <SheetHeader>
+              <SheetTitle>
+                Rapport trimestriel de l'activité des pôles, version relue
+              </SheetTitle>
+              <SheetDescription>
+                L'en-tête réserve la place de la croix.
+              </SheetDescription>
+            </SheetHeader>
+          </SheetContent>
+        </Sheet>
+      ),
     },
     {
       id: "boutons",

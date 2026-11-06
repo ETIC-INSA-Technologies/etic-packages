@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { createContext, useContext, useMemo, type ReactNode } from "react"
 import { cn } from "cn"
 import { CircleAlertIcon, RotateCwIcon } from "lucide-react"
 
@@ -37,12 +37,18 @@ export interface ErrorBannerProps {
   className?: string
 }
 
-/** Message, code et détail d'une erreur de forme inconnue. */
-export function decrireErreur(erreur: unknown): {
+/** Ce qu'un bandeau affiche d'une erreur : son message, son code, son détail
+ *  technique (replié). */
+export interface ErreurDecrite {
   message: string
   code?: string
   detail?: unknown
-} {
+}
+
+/** Message, code et détail d'une erreur de forme inconnue : son `message`
+ *  (un repli qui dit quoi faire s'il manque), son `code` s'il est textuel,
+ *  son `details`. */
+export function decrireErreur(erreur: unknown): ErreurDecrite {
   if (typeof erreur === "string") return { message: erreur }
   if (typeof erreur === "object" && erreur !== null) {
     const { message, code, details } = erreur as Record<string, unknown>
@@ -56,6 +62,54 @@ export function decrireErreur(erreur: unknown): {
     }
   }
   return { message: String(erreur) }
+}
+
+interface AffichageErreurs {
+  masquerCode: boolean
+  decrire: (erreur: unknown) => ErreurDecrite
+}
+
+const ContexteAffichageErreurs = createContext<AffichageErreurs>({
+  masquerCode: false,
+  decrire: decrireErreur,
+})
+
+export interface ErrorBannerProviderProps {
+  /** N'affiche jamais le code de l'erreur devant son message : le code
+   *  machine (`not_found`…) ne parle qu'aux développeurs. Faux par défaut. */
+  masquerCode?: boolean
+  /**
+   * Lecture d'une erreur, à la place de `decrireErreur` : règle propre à
+   * l'application (un détail à taire pour certaines erreurs…). Repartir de
+   * `decrireErreur(erreur)` et n'en changer que ce qu'il faut. Une
+   * référence stable, définie au niveau du module. `masquerCode`
+   * s'applique au résultat.
+   */
+  decrire?: (erreur: unknown) => ErreurDecrite
+  children: ReactNode
+}
+
+/**
+ * Règle l'affichage des erreurs, une fois, autour de l'application : tous
+ * les bandeaux de la bibliothèque la suivent (`ErrorBanner`,
+ * `QueryErrorBanner`, `QueryBoundary`, le bandeau de `DataTable`, l'erreur
+ * de `ConfirmDialog`, de `FormDialog` et de `DraftResumeDialog`). Sans lui,
+ * le code s'affiche devant le message.
+ */
+export function ErrorBannerProvider({
+  masquerCode = false,
+  decrire = decrireErreur,
+  children,
+}: ErrorBannerProviderProps) {
+  const valeur = useMemo(
+    () => ({ masquerCode, decrire }),
+    [masquerCode, decrire]
+  )
+  return (
+    <ContexteAffichageErreurs.Provider value={valeur}>
+      {children}
+    </ContexteAffichageErreurs.Provider>
+  )
 }
 
 function estVide(detail: unknown) {
@@ -111,17 +165,25 @@ export function DetailTechnique({
   )
 }
 
-/** « Réessayer » d'un bandeau ou d'un repli d'erreur : même taille partout,
- *  occupé mais focalisable pendant la nouvelle tentative. */
+export interface BoutonReessayerProps {
+  onClick: () => void
+  /** Nouvelle tentative en cours : occupé, mais focalisable. */
+  enCours?: boolean
+  /** `sm` par défaut, comme dans un bandeau ; `default` dans l'en-tête
+   *  d'une section, à côté de boutons ordinaires. */
+  size?: "sm" | "default"
+}
+
+/** « Réessayer » d'un bandeau ou d'un repli d'erreur, et hors bandeau (une
+ *  ligne d'état, une phrase) : même allure partout, occupé mais focalisable
+ *  pendant la nouvelle tentative. */
 export function BoutonReessayer({
   onClick,
   enCours = false,
-}: {
-  onClick: () => void
-  enCours?: boolean
-}) {
+  size = "sm",
+}: BoutonReessayerProps) {
   return (
-    <Button variant="outline" size="sm" enCours={enCours} onClick={onClick}>
+    <Button variant="outline" size={size} enCours={enCours} onClick={onClick}>
       <RotateCwIcon data-icon="inline-start" />
       Réessayer
     </Button>
@@ -129,9 +191,10 @@ export function BoutonReessayer({
 }
 
 /**
- * Bandeau d'erreur : le message en évidence, le code s'il y en a un, le
- * détail technique replié sous « Détails », et « Réessayer » si l'action peut
- * être relancée. Sur le modèle de l'`Alert` destructive de shadcn.
+ * Bandeau d'erreur : le message en évidence, le code s'il y en a un (sauf
+ * sous un `ErrorBannerProvider` qui le masque), le détail technique replié
+ * sous « Détails », et « Réessayer » si l'action peut être relancée. Sur le
+ * modèle de l'`Alert` destructive de shadcn.
  */
 export function ErrorBanner({
   erreur,
@@ -142,14 +205,21 @@ export function ErrorBanner({
   enCours = false,
   className,
 }: ErrorBannerProps) {
+  const { masquerCode, decrire } = useContext(ContexteAffichageErreurs)
   if (erreur === null || erreur === undefined || erreur === false) return null
-  const lu = decrireErreur(erreur)
+  const lu = decrire(erreur)
+  const code = masquerCode ? undefined : lu.code
   const detailAffiche = detail === undefined ? lu.detail : detail
 
   return (
     <Alert
       variant="destructive"
       className={cn(
+        // Colonne du texte bornée (`minmax(0,1fr)` et non `1fr`, dont le
+        // minimum est le mot le plus long) : une chaîne sans espace (adresse,
+        // identifiant) se coupe au lieu d'élargir la colonne et de passer
+        // sous « Réessayer ».
+        "has-[>svg]:grid-cols-[auto_minmax(0,1fr)] *:data-[slot=alert-description]:wrap-break-word *:data-[slot=alert-title]:wrap-break-word",
         onReessayer && "has-data-[slot=alert-action]:pr-32",
         className
       )}
@@ -158,9 +228,7 @@ export function ErrorBanner({
       <AlertTitle>
         {titre ?? (
           <>
-            {lu.code ? (
-              <span className="font-mono">{lu.code}&nbsp;: </span>
-            ) : null}
+            {code ? <span className="font-mono">{code}&nbsp;: </span> : null}
             {lu.message}
           </>
         )}

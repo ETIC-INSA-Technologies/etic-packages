@@ -17,11 +17,17 @@ export interface SaveBarProps {
    *  enregistrées », la raison pour laquelle « Enregistrer » est actif,
    *  même après un enregistrement réussi. */
   modifie?: boolean
-  /** Pied d'un formulaire plus haut que l'écran, boutons à droite, statut à
-   *  gauche. Tant que `modifie` est vrai, la barre se colle en bas de
-   *  l'écran, sur une carte opaque ; sans modification, elle reste à sa
-   *  place, sans carte : elle ne flotte pas sur le contenu sans raison. */
+  /** Pied d'un formulaire plus haut que l'écran, sur une carte opaque,
+   *  boutons à droite, statut à gauche. Tant que `modifie` est vrai (ou
+   *  pendant l'envoi), la barre se colle en bas de l'écran ; sinon, elle
+   *  reste à sa place : elle ne flotte pas sur le contenu sans raison. Les
+   *  bords de la carte s'alignent sur ceux des cartes de la page. */
   collante?: boolean
+  /** Avec `collante` : la barre n'apparaît que lorsqu'elle a quelque chose
+   *  à dire (modifications, envoi en cours, « Enregistré »). Au repos, il ne
+   *  reste que sa zone de statut, invisible et sans place, pour que le
+   *  premier message soit annoncé. */
+  masqueeAuRepos?: boolean
   /** Sans gestionnaire, « Enregistrer » soumet le formulaire qui l'entoure. */
   onEnregistrer?: () => void
   /** Revenir à ce qui est enregistré : affiche « Annuler ». À ne passer que
@@ -41,10 +47,13 @@ export function SaveBar({
   enregistre = false,
   modifie = false,
   collante = false,
+  masqueeAuRepos = false,
   onEnregistrer,
   onAnnuler,
   className,
 }: SaveBarProps) {
+  const auRepos =
+    collante && masqueeAuRepos && !modifie && !enCours && !enregistre
   const enregistrer = (
     <Button
       type={onEnregistrer ? "button" : "submit"}
@@ -75,7 +84,13 @@ export function SaveBar({
   const statut = (
     <p
       role="status"
-      className={cn("text-sm text-muted-foreground", collante && "me-auto")}
+      className={cn(
+        "text-sm text-muted-foreground",
+        // Le statut se replie sur deux lignes plutôt que de séparer les
+        // boutons de la barre.
+        collante && "me-auto min-w-0 flex-1",
+        auRepos && "sr-only"
+      )}
     >
       {/* Une modification faite après l'enregistrement l'emporte :
           « Enregistré » ne vaut que pour ce qui est à l'écran. */}
@@ -90,29 +105,45 @@ export function SaveBar({
     </p>
   )
 
+  // Les deux boutons ne se séparent jamais : au téléphone, c'est le statut
+  // qui passe à la ligne (barre simple) ou se replie (barre collante).
+  const boutons = auRepos ? null : (
+    <div
+      data-slot="save-bar-actions"
+      className="flex shrink-0 items-center gap-3"
+    >
+      {/* Ordre du DOM = ordre visuel : « Enregistrer » d'abord, ou à droite
+          quand la barre est collante. */}
+      {collante ? annuler : enregistrer}
+      {collante ? enregistrer : annuler}
+    </div>
+  )
+
   return (
     <div
       data-slot="save-bar"
       data-collante={collante || undefined}
+      data-repos={auRepos || undefined}
       className={cn(
-        "flex flex-wrap items-center gap-3",
-        // Mêmes marges et bord (transparent) avec ou sans carte : les boutons
-        // ne bougent pas quand la carte apparaît.
+        "flex items-center gap-3",
+        !collante && "flex-wrap",
+        // Au repos, la barre ne prend aucune place : seule reste la zone de
+        // statut (une zone `status` ajoutée en même temps que son texte
+        // n'est pas annoncée).
+        auRepos && "contents",
+        // Toujours sur sa carte : sans elle, les marges intérieures
+        // décalaient les boutons par rapport aux cartes de la page. Carte
+        // pleinement opaque : un fond translucide laissait deviner, flou, le
+        // texte qu'elle recouvre.
         collante &&
-          "justify-end rounded-xl border border-transparent px-4 py-3",
-        // Carte pleinement opaque : un fond translucide laissait deviner,
-        // flou, le texte qu'elle recouvre.
-        collante &&
-          (modifie || enCours) &&
-          "sticky bottom-4 z-10 border-border bg-card shadow-sm",
+          !auRepos &&
+          "justify-end rounded-xl border border-border bg-card px-4 py-3",
+        collante && (modifie || enCours) && "sticky bottom-4 z-10 shadow-sm",
         className
       )}
     >
-      {/* Ordre du DOM = ordre visuel : boutons d'abord, ou à droite quand
-          la barre est collante. */}
-      {collante ? statut : enregistrer}
-      {annuler}
-      {collante ? enregistrer : statut}
+      {collante ? statut : boutons}
+      {collante ? boutons : statut}
     </div>
   )
 }

@@ -2,11 +2,13 @@
 // introuvable, bandeau d'une requête, avatar de diamètre libre, onglets.
 import { useState, type ReactNode } from "react"
 import {
+  ArrowLeftIcon,
   ChevronRightIcon,
   CircleUserIcon,
   FileSearchIcon,
   LayoutTemplateIcon,
   PanelTopIcon,
+  SearchXIcon,
   type LucideIcon,
 } from "lucide-react"
 
@@ -21,6 +23,7 @@ import {
   CardTitle,
   CenteredScreen,
   Disclosure,
+  MessageScreen,
   QueryBoundary,
   QueryErrorBanner,
   Tabs,
@@ -105,6 +108,25 @@ function DemoEcranCentre() {
         </CardContent>
       </Card>
     </CenteredScreen>
+  )
+}
+
+function DemoEcranMessage() {
+  return (
+    <MessageScreen
+      role="region"
+      aria-label="Aperçu de MessageScreen"
+      className="min-h-72 rounded-lg border"
+      icone={SearchXIcon}
+      titre="Page introuvable"
+      description="Le lien est peut-être incomplet, ou la page a été déplacée."
+      actions={
+        <Button variant="outline">
+          <ArrowLeftIcon data-icon="inline-start" />
+          Retour à l'accueil
+        </Button>
+      }
+    />
   )
 }
 
@@ -268,6 +290,12 @@ export const COQUILLE: {
     titre: "CenteredScreen",
     icone: LayoutTemplateIcon,
     rendu: () => <DemoEcranCentre />,
+  },
+  {
+    id: "message-screen",
+    titre: "MessageScreen",
+    icone: SearchXIcon,
+    rendu: () => <DemoEcranMessage />,
   },
   {
     id: "fiche-introuvable",

@@ -337,6 +337,8 @@ export { ButtonLink, type ButtonLinkProps } from "./components/etic/button-link"
 export {
   CenteredScreen,
   type CenteredScreenProps,
+  MessageScreen,
+  type MessageScreenProps,
 } from "./components/etic/centered-screen"
 export {
   ConfirmDialog,
@@ -366,13 +368,24 @@ export {
   type DisclosureVariante,
 } from "./components/etic/disclosure"
 export {
+  DropdownMenuAction,
+  type DropdownMenuActionProps,
+} from "./components/etic/dropdown-menu-action"
+export {
   DraftResumeDialog,
   type DraftResumeDialogProps,
 } from "./components/etic/draft-resume-dialog"
 export { EmptyState, type EmptyStateProps } from "./components/etic/empty-state"
 export {
+  BoutonReessayer,
+  type BoutonReessayerProps,
+  decrireErreur,
+  DetailTechnique,
+  type ErreurDecrite,
   ErrorBanner,
   type ErrorBannerProps,
+  ErrorBannerProvider,
+  type ErrorBannerProviderProps,
 } from "./components/etic/error-banner"
 export {
   ErrorBoundary,

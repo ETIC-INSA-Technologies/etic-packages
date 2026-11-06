@@ -40,7 +40,12 @@ export default defineConfig(({ command }) => ({
   },
   build: {
     lib: {
-      entry: resolve(import.meta.dirname, "src/index.ts"),
+      // `testing` : outils de test des applications (`@etic-insa/ui/test`),
+      // une entrée à part que l'index n'importe pas.
+      entry: {
+        index: resolve(import.meta.dirname, "src/index.ts"),
+        "testing/index": resolve(import.meta.dirname, "src/testing/index.ts"),
+      },
       formats: ["es"],
     },
     rolldownOptions: {
