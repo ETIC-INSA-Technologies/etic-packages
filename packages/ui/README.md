@@ -673,7 +673,8 @@ autres) : une cellule qui affiche un autre état le lit elle-même (hook, contex
 
 Accessibilité : le tri choisi, le chargement et « tous sélectionnés » sont annoncés par le
 tableau ; `DataTableCount` est une zone de statut (le nouveau compte après une recherche ou un
-filtre est annoncé) ; `DataTablePagination` annonce la page atteinte. Quand un contrôle disparaît
+filtre est annoncé), qui n'ajoute la tranche affichée (« · 26–50 affichées », `feminin`) que si
+la liste tient sur plusieurs pages ; `DataTablePagination` annonce la page atteinte. Quand un contrôle disparaît
 sous le focus (« Réinitialiser », la croix de la recherche, le bandeau ou la barre de sélection),
 le focus passe à un élément stable (champ de recherche, premier filtre, case d'en-tête). Le clic
 de ligne (`onActiverLigne`) est un raccourci à la souris : une cellule doit aussi offrir un lien

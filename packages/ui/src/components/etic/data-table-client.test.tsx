@@ -132,7 +132,7 @@ describe("useDataTable côté client", () => {
     )
     expect(nomsAffiches()).toHaveLength(10)
     expect(nomsAffiches()[0]).toBe("Poste 3")
-    expect(compteur()).toBe("10 postes · 1–10 affichés")
+    expect(compteur()).toBe("10 postes")
     expect(screen.queryByRole("button", { name: "Page 2" })).toBeNull()
   })
 

@@ -195,17 +195,30 @@ describe("DataTableCount", () => {
 
     rerender(
       <DataTableCount
-        total={1}
+        total={26}
+        decalage={25}
         nombre={1}
         unite={{ singulier: "personne", pluriel: "personnes" }}
         feminin
       />
     )
-    expect(screen.getByText(/personne/).textContent).toBe(
-      "1 personne · 1 affichée"
+    expect(screen.getByText(/personnes/).textContent).toBe(
+      "26 personnes · 26 affichée"
     )
 
     rerender(<DataTableCount total={0} nombre={0} />)
     expect(screen.getByText(/élément/).textContent).toBe("0 élément")
+  })
+
+  it("sans plage quand toute la liste tient sur la page", () => {
+    const unite = { singulier: "personne", pluriel: "personnes" }
+    const { rerender } = render(
+      <DataTableCount total={7} nombre={7} unite={unite} feminin />
+    )
+    expect(screen.getByRole("status").textContent).toBe("7 personnes")
+    rerender(<DataTableCount total={60} nombre={25} unite={unite} feminin />)
+    expect(screen.getByRole("status").textContent).toBe(
+      "60 personnes · 1–25 affichées"
+    )
   })
 })

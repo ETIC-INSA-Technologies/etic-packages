@@ -44,7 +44,7 @@ import { NO_AUTOFILL } from "@etic-ui/lib/autofill"
 interface DataTableCountCommun {
   /** Nom des éléments. « élément », « éléments » par défaut. */
   unite?: DataTableUnite
-  /** Accorde « affichées » au féminin. */
+  /** Accorde « affichées » au féminin (« 26–50 affichées »). */
   feminin?: boolean
   className?: string
 }
@@ -72,9 +72,11 @@ export type DataTableCountProps<TData extends RowData = RowData> =
   DataTableCountNombresProps | DataTableCountTableProps<TData>
 
 /**
- * Compteur d'une liste : « 128 éléments · 26–50 affichés ». C'est une zone
- * de statut : après une recherche, un filtre ou un changement de page, le
- * nouveau compte est annoncé sans déplacer le focus. Avec `table`, il lit
+ * Compteur d'une liste : « 128 éléments · 26–50 affichés ». La tranche
+ * affichée n'apparaît que si la liste tient sur plusieurs pages : quand
+ * tout est affiché, elle redirait le total (« 7 éléments » seul). C'est une
+ * zone de statut : après une recherche, un filtre ou un changement de page,
+ * le nouveau compte est annoncé sans déplacer le focus. Avec `table`, il lit
  * les nombres de la pagination côté client.
  */
 export function DataTableCount<TData extends RowData>(
@@ -88,6 +90,7 @@ export function DataTableCount<TData extends RowData>(
   } = props.table ? paginationDuTableau(props.table) : props
   const debut = decalage + 1
   const fin = decalage + nombre
+  const toutAffiche = decalage === 0 && nombre >= total
   return (
     <p
       data-slot="data-table-count"
@@ -102,7 +105,7 @@ export function DataTableCount<TData extends RowData>(
         {nombreFr(total)}
       </strong>{" "}
       {uniteAccordee(total, unite)}
-      {nombre > 0 ? (
+      {nombre > 0 && !toutAffiche ? (
         <span className="tabular-nums">
           {" "}
           ·{" "}
