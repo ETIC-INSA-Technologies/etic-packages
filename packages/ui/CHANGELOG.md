@@ -1,5 +1,57 @@
 # @etic-insa/ui
 
+## 0.5.0
+
+### Minor Changes
+
+- 435bb71: `ErrorBannerProvider` règle une fois, à la racine, l'affichage des erreurs de tous les bandeaux
+  de la bibliothèque (`ErrorBanner`, `QueryErrorBanner`, `QueryBoundary`, le bandeau de
+  `DataTable`, l'erreur de `ConfirmDialog`, de `FormDialog` et de `DraftResumeDialog`) :
+  `masquerCode` n'affiche plus le code devant le message, `decrire` remplace la lecture de
+  l'erreur. Sans lui, rien ne change. `decrireErreur`, `BoutonReessayer` (nouvelle option `size`)
+  et `DetailTechnique` sont exportés.
+
+  Correction : la colonne du texte d'un bandeau d'erreur est bornée ; une chaîne sans espace se
+  coupe au lieu d'élargir la colonne et de passer sous « Réessayer ».
+
+- 4c39a7c: `SaveBar` : « Enregistrer » et « Annuler » ne se séparent plus au téléphone, c'est le statut qui
+  passe à la ligne (barre simple) ou se replie (barre `collante`). La barre `collante` est
+  toujours posée sur sa carte, même sans modification : ses boutons ne sont plus décalés par
+  rapport aux cartes de la page. Nouvelle option `masqueeAuRepos` (avec `collante`) : la barre
+  n'apparaît qu'avec des modifications, un envoi en cours ou « Enregistré », et sa zone de
+  statut, restée en place, annonce le premier message.
+- 05aede9: `MessageScreen` : écran entier qui ne dit qu'une chose (page introuvable, lien incomplet ou
+  expiré, accès refusé), centré sur un `CenteredScreen` : `icone` en pastille, `titre` (le `<h1>`
+  de la page), `description` et `actions`.
+- b3de233: `DropdownMenuAction` : l'entrée de « Plus d'actions » de `DetailHeader`, exportée pour tous les
+  menus d'actions (`DataTableRowActions`, « … » de `DataTableBulkActions`, tout
+  `DropdownMenuContent`). `libelle`, `onChoisir`, `icone`, `destructif`, `description` (aide sous
+  le libellé) et `verrou` : l'action reste visible mais grisée et sans effet, sa raison lisible
+  sous le libellé. Un lien passe par `render`, comme pour `DropdownMenuItem`.
+- b8f81ea: `FormDialog` : nouvelle option `modifie`. Sur une saisie modifiée, une fermeture (Échap, clic
+  sur le voile, croix, « Annuler ») pose d'abord, en tête du formulaire, « Abandonner la
+  saisie ? » (« Continuer la saisie » ou « Abandonner »), sans second dialogue ; un envoi réussi
+  ferme sans rien demander. Sans `modifie`, rien ne change.
+- 80ec8a8: `@etic-insa/ui/test` : outils pour les tests des applications, dans une entrée à part qui
+  n'entre pas dans leur bundle. `installMatchMedia()` pose une doublure pilotable de
+  `window.matchMedia` (affichage de bureau au départ), `setMobileViewport(true)` passe les
+  composants abonnés à `useIsMobile` en affichage mobile.
+- 715b131: `@etic-insa/ui/vite` : plugin Vite `eticPackagesSources()` qui sert, en développement seulement,
+  les sources locales d'etic-packages à la place des paquets installés (`ETIC_UI_SOURCES`, sinon
+  un checkout voisin du dépôt de l'application, worktrees compris ; `ETIC_UI_SOURCES=npm` force
+  les paquets). Alias, `dedupe`, accès du serveur au checkout, `@source` de Tailwind et annonce de
+  ce qui est servi, au lieu d'une configuration recopiée dans chaque application. `auth: true`
+  sert aussi `@etic-insa/auth`. N'emploie que Node et Vite, déclaré dépendance pair facultative.
+
+### Patch Changes
+
+- 8c32173: `DataTableCount` n'affiche la tranche (« · 26–50 affichés ») que si la liste tient sur plusieurs
+  pages : quand tout est affiché, il dit « 7 éléments » au lieu de « 7 éléments · 1–7 affichés »,
+  qui redisait le total.
+- 057a636: `SheetHeader` réserve à droite la place de la croix de fermeture quand le tiroir l'affiche : un
+  long titre passe à la ligne avant elle au lieu de passer dessous. Sans croix
+  (`showCloseButton={false}`), rien ne change.
+
 ## 0.4.2
 
 ### Patch Changes
