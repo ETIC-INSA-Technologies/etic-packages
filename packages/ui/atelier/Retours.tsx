@@ -186,11 +186,15 @@ function DemoListe() {
 }
 
 function DemoFormulaire() {
+  const [nom, setNom] = useState("")
   return (
     <FormDialog
       titre="Nouveau groupe"
       description="Le groupe sera créé vide."
       libelleEnvoyer="Créer"
+      // Une saisie commencée n'est pas perdue sur un Échap.
+      modifie={nom !== ""}
+      onOuvertChange={(ouvert) => !ouvert && setNom("")}
       onEnvoyer={(event) => {
         const nom = new FormData(event.currentTarget).get("nom")
         return attendre(nom === "erreur")
@@ -206,7 +210,13 @@ function DemoFormulaire() {
         <FieldLabel htmlFor="atelier-groupe">
           Nom (« erreur » pour voir l'échec)
         </FieldLabel>
-        <Input id="atelier-groupe" name="nom" required />
+        <Input
+          id="atelier-groupe"
+          name="nom"
+          required
+          value={nom}
+          onChange={(e) => setNom(e.target.value)}
+        />
       </Field>
     </FormDialog>
   )

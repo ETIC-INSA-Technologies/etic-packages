@@ -490,3 +490,63 @@ describe("FormDialog", () => {
     expect(sortie).not.toHaveAttribute("aria-busy")
   })
 })
+
+describe("FormDialog modifie (garde de saisie)", () => {
+  const dialogue = () =>
+    screen.queryByRole("dialog", { name: "Nouveau groupe" })
+  const question = () => screen.queryByText("Abandonner la saisie ?")
+
+  it("Échap, croix ou Annuler sur une saisie modifiée : la question, sans fermer", async () => {
+    await rendre({ modifie: true })
+    await screen.findByRole("dialog", { name: "Nouveau groupe" })
+
+    await userEvent.keyboard("{Escape}")
+    expect(dialogue()).toBeInTheDocument()
+    expect(question()).toBeInTheDocument()
+    // Le focus suit la question.
+    const continuer = screen.getByRole("button", {
+      name: "Continuer la saisie",
+    })
+    await waitFor(() => expect(continuer).toHaveFocus())
+    await userEvent.click(continuer)
+    expect(question()).toBeNull()
+
+    for (const nom of ["Fermer", "Annuler"]) {
+      await userEvent.click(screen.getByRole("button", { name: nom }))
+      expect(dialogue()).toBeInTheDocument()
+      expect(question()).toBeInTheDocument()
+      await userEvent.click(
+        screen.getByRole("button", { name: "Continuer la saisie" })
+      )
+    }
+  })
+
+  it("Abandonner ferme ; la réouverture repart sans la question", async () => {
+    const onOuvertChange = vi.fn()
+    await rendre({ modifie: true, onOuvertChange })
+    await screen.findByRole("dialog", { name: "Nouveau groupe" })
+    await userEvent.click(screen.getByRole("button", { name: "Annuler" }))
+    await userEvent.click(screen.getByRole("button", { name: "Abandonner" }))
+    await waitFor(() => expect(dialogue()).toBeNull())
+    expect(onOuvertChange).toHaveBeenLastCalledWith(false)
+
+    await userEvent.click(screen.getByRole("button", { name: "Créer" }))
+    await screen.findByRole("dialog", { name: "Nouveau groupe" })
+    expect(question()).toBeNull()
+  })
+
+  it("un envoi réussi ferme sans rien demander", async () => {
+    await rendre({ modifie: true, onEnvoyer: () => Promise.resolve() })
+    await screen.findByRole("dialog", { name: "Nouveau groupe" })
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }))
+    await waitFor(() => expect(dialogue()).toBeNull())
+  })
+
+  it("sans modification, la fermeture est immédiate", async () => {
+    await rendre({ modifie: false })
+    await screen.findByRole("dialog", { name: "Nouveau groupe" })
+    await userEvent.keyboard("{Escape}")
+    await waitFor(() => expect(dialogue()).toBeNull())
+    expect(question()).toBeNull()
+  })
+})

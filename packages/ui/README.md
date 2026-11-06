@@ -306,7 +306,11 @@ dialogue : pas de `key` à forcer. `FormDialog` prend `libelleAnnuler` (« Plus 
 tête du pied (« Se déconnecter »), indisponible pendant l'envoi, qui ne ferme pas le dialogue
 d'elle-même ; si `onChoisir` renvoie une promesse, le dialogue l'attend comme un envoi (ce
 bouton en cours, le reste figé, erreur en tête), et `destructif` la rend grise, rouge au
-survol (comme `TooltipButton`). Les boutons occupés de ces dialogues, de « Réessayer »
+survol (comme `TooltipButton`). `modifie` (la saisie diffère de l'état initial) garde
+`FormDialog` d'une perte : Échap, clic sur le voile, croix ou « Annuler » posent d'abord, en
+tête du formulaire, « Abandonner la saisie ? » (« Continuer la saisie », qui reçoit le focus, ou
+« Abandonner ») au lieu d'ouvrir un second dialogue ; un envoi réussi ferme sans rien demander.
+Les boutons occupés de ces dialogues, de « Réessayer »
 (`ErrorBanner`), de `FileUploadButton` et d'`IconToggle` sont tous le `Button` en cours. Sans champ où l'on tape, il s'ouvre sur le premier contrôle actif et affiché (case,
 liste, choix segmenté… ; un panneau replié est ignoré). Tous les dialogues plafonnent leur
 hauteur à l'écran et gardent le focus : Tab et Maj+Tab en font le tour sans en sortir. Dans

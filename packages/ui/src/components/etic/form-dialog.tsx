@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   useState,
   type FormEvent,
@@ -6,8 +7,13 @@ import {
   type ReactNode,
 } from "react"
 import { cn } from "cn"
-import { XIcon } from "lucide-react"
+import { TriangleAlertIcon, XIcon } from "lucide-react"
 
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@etic-ui/components/ui/alert"
 import { Button } from "@etic-ui/components/ui/button"
 import {
   Dialog,
@@ -214,6 +220,13 @@ export interface FormDialogProps {
   declencheur?: ReactElement
   /** Où mettre le focus à la fermeture (voir `ConfirmDialog`). */
   finalFocus?: DialogFinalFocus
+  /**
+   * La saisie diffère de l'état initial : une fermeture (Échap, clic sur le
+   * voile, croix, « Annuler ») demande d'abord, en tête du formulaire,
+   * « Abandonner la saisie ? » ; un second dialogue ne s'ouvre pas par-dessus.
+   * Un envoi réussi ferme sans rien demander.
+   */
+  modifie?: boolean
   className?: string
 }
 
@@ -237,12 +250,28 @@ export function FormDialog({
   onOuvertChange,
   declencheur,
   finalFocus,
+  modifie = false,
   className,
 }: FormDialogProps) {
   const action = useAction()
   // Ce qui a lancé l'action en cours : l'envoi, ou l'action secondaire.
   const [lanceur, setLanceur] = useState<"envoi" | "secondaire">("envoi")
   const ouverture = useOuvertureDialogue(ouvert, onOuvertChange, action.enCours)
+  // Fermeture demandée sur une saisie modifiée : la question est posée.
+  const [abandon, setAbandon] = useState(false)
+  const continuer = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (abandon) continuer.current?.focus()
+  }, [abandon])
+  /** Fermeture par la personne (Échap, voile, croix, « Annuler »), retenue
+   *  tant que la saisie modifiée n'est pas abandonnée. */
+  const changer = (suivant: boolean) => {
+    if (!suivant && modifie && !action.enCours) {
+      setAbandon(true)
+      return
+    }
+    ouverture.changer(suivant)
+  }
   const [invalides, setInvalides] = useState<{ nom: string; raison: string }[]>(
     []
   )
@@ -311,11 +340,12 @@ export function FormDialog({
   return (
     <Dialog
       open={ouverture.ouvert}
-      onOpenChange={ouverture.changer}
+      onOpenChange={changer}
       onOpenChangeComplete={(suivant) => {
         if (suivant) return
         action.reinitialiser()
         setInvalides([])
+        setAbandon(false)
         demarquer(true)
       }}
     >
@@ -349,6 +379,37 @@ export function FormDialog({
           className="flex min-h-0 flex-col gap-4"
         >
           <DialogBody>
+            {abandon ? (
+              <Alert variant="warning" data-slot="form-dialog-abandon">
+                <TriangleAlertIcon />
+                <AlertTitle>Abandonner la saisie&nbsp;?</AlertTitle>
+                <AlertDescription>
+                  <p>Ce qui a été saisi sera perdu.</p>
+                  {/* Un seul bouton principal par dialogue : celui de
+                      l'envoi. Le focus suit la question posée. */}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button
+                      ref={continuer}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setAbandon(false)}
+                    >
+                      Continuer la saisie
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setAbandon(false)
+                        ouverture.changer(false)
+                      }}
+                    >
+                      Abandonner
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            ) : null}
             <ErrorBanner erreur={action.erreur} />
             <ErrorBanner
               erreur={invalides.length > 0}
@@ -397,7 +458,7 @@ export function FormDialog({
               variant="outline"
               disabled={action.enCours}
               focusableWhenDisabled
-              onClick={() => ouverture.changer(false)}
+              onClick={() => changer(false)}
             >
               {libelleAnnuler}
             </Button>
@@ -421,7 +482,7 @@ export function FormDialog({
           className="absolute top-2 right-2"
           disabled={action.enCours}
           focusableWhenDisabled
-          onClick={() => ouverture.changer(false)}
+          onClick={() => changer(false)}
         >
           <XIcon />
           <span className="sr-only">Fermer</span>
