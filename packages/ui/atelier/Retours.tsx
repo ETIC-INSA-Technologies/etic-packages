@@ -369,6 +369,20 @@ function DemoSaveBar() {
         desactive={!modifie || !nom.trim()}
         enregistre={enregistre}
         onEnregistrer={() => void envoyer()}
+        onAnnuler={modifie ? () => setNom(enregistreSous) : undefined}
+      />
+      <p className="text-sm text-muted-foreground">
+        Masquée au repos : apparaît à la première modification.
+      </p>
+      <SaveBar
+        collante
+        masqueeAuRepos
+        modifie={modifie}
+        enCours={enCours}
+        desactive={!modifie || !nom.trim()}
+        enregistre={enregistre}
+        onEnregistrer={() => void envoyer()}
+        onAnnuler={modifie ? () => setNom(enregistreSous) : undefined}
       />
     </form>
   )

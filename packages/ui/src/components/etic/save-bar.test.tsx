@@ -89,25 +89,65 @@ describe("SaveBar", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Modifications non enregistrées"
     )
-    expect([...barre.children].map((e) => e.textContent)).toEqual([
-      "Modifications non enregistrées",
+    expect(screen.getAllByRole("button").map((e) => e.textContent)).toEqual([
       "Annuler",
       "Enregistrer",
     ])
+    expect(barre.firstElementChild).toBe(screen.getByRole("status"))
     rerender(<SaveBar collante enregistre />)
     expect(screen.getByRole("status")).toHaveTextContent(/^Enregistré$/)
   })
 
-  it("collante sans modification : à sa place, sans carte ; collée pendant l'envoi", () => {
+  it("les deux boutons restent ensemble : seul le statut passe à la ligne", () => {
+    const { container, rerender } = render(
+      <SaveBar collante modifie onAnnuler={() => {}} />
+    )
+    const groupe = container.querySelector('[data-slot="save-bar-actions"]')
+    expect(groupe).toHaveClass("shrink-0")
+    expect(groupe?.children).toHaveLength(2)
+    expect(container.firstElementChild).not.toHaveClass("flex-wrap")
+    expect(screen.getByRole("status")).toHaveClass("min-w-0", "flex-1")
+    rerender(<SaveBar modifie onAnnuler={() => {}} />)
+    expect(
+      container.querySelector('[data-slot="save-bar-actions"]')?.children
+    ).toHaveLength(2)
+  })
+
+  it("collante sans modification : à sa place, sur sa carte ; collée pendant l'envoi", () => {
     const { container, rerender } = render(<SaveBar collante desactive />)
     const barre = container.firstElementChild!
     expect(barre).not.toHaveClass("sticky")
-    expect(barre).not.toHaveClass("bg-card")
-    expect(barre).toHaveClass("border-transparent", "justify-end")
+    // Sur sa carte même au repos : ses boutons restent alignés sur les
+    // cartes de la page.
+    expect(barre).toHaveClass("bg-card", "border-border", "justify-end")
     // Pendant l'envoi, la barre reste à l'écran, même sans `modifie`.
     rerender(<SaveBar collante enCours />)
     expect(barre).toHaveClass("sticky", "bg-card", "border-border")
-    expect(barre).not.toHaveClass("border-transparent")
+  })
+
+  it("masquée au repos : rien d'affiché, mais le premier message est annoncé", () => {
+    const { container, rerender } = render(
+      <SaveBar collante masqueeAuRepos desactive />
+    )
+    const barre = container.firstElementChild!
+    const statut = screen.getByRole("status")
+    expect(barre).toHaveClass("contents")
+    expect(statut).toHaveClass("sr-only")
+    expect(statut).toBeEmptyDOMElement()
+    expect(screen.queryByRole("button")).toBeNull()
+
+    rerender(<SaveBar collante masqueeAuRepos modifie />)
+    // Même zone de statut, déjà présente : le message est lu.
+    expect(screen.getByRole("status")).toBe(statut)
+    expect(statut).toHaveTextContent("Modifications non enregistrées")
+    expect(statut).not.toHaveClass("sr-only")
+    expect(barre).toHaveClass("sticky", "bg-card")
+    expect(screen.getByRole("button", { name: "Enregistrer" })).toBeVisible()
+
+    rerender(<SaveBar collante masqueeAuRepos enregistre />)
+    expect(barre).toHaveClass("bg-card")
+    expect(barre).not.toHaveClass("sticky")
+    expect(statut).toHaveTextContent(/^Enregistré$/)
   })
 
   it("non collante : boutons d'abord, statut après", () => {
@@ -116,8 +156,7 @@ describe("SaveBar", () => {
     expect(barre).not.toHaveClass("sticky")
     expect(barre).not.toHaveAttribute("data-collante")
     expect([...barre.children].map((e) => e.textContent)).toEqual([
-      "Enregistrer",
-      "Annuler",
+      "EnregistrerAnnuler",
       "Modifications non enregistrées",
     ])
   })
