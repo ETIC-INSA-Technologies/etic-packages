@@ -467,11 +467,12 @@ Règle commune aux formulaires de page (profil, paramètres) :
   **« Annuler »**, qui remet chaque champ à sa valeur enregistrée (`onAnnuler`, passé tant
   qu'il y a des modifications).
 - **Un champ qui a une valeur par défaut** porte un `ResetButton` (son `action`), visible dès
-  que la valeur s'en écarte, enregistrée ou non ; l'infobulle dit la valeur rétablie. La page
-  ajoute le bouton général, `retablirDefauts` de la `SaveBar`, visible dès qu'un champ s'en
-  écarte.
-- **Rétablir ne fait que remplir le formulaire** : rien n'est écrit avant « Enregistrer », et
-  « Annuler » revient encore à l'enregistré. Pas de confirmation.
+  que la valeur s'en écarte, enregistrée ou non (en un fondu bref) ; l'infobulle dit la valeur
+  rétablie. La page ajoute le bouton général, `retablirDefauts` de la `SaveBar`, visible
+  seulement quand une valeur **enregistrée** s'écarte de son défaut (et que la saisie ne les
+  vaut pas déjà toutes) : quand seule la saisie s'en écarte, « Annuler » fait la même chose.
+- **Rétablir ne fait que remplir le formulaire** : rien n'est écrit avant « Enregistrer », qui
+  confirme ; « Annuler » revient encore à l'enregistré. Pas d'autre confirmation.
 - **Aucun texte « Rétablir 8 Mo » ni « Défaut : 8 Mo »** sous les champs : la valeur par
   défaut n'est dite que par l'infobulle du bouton.
 

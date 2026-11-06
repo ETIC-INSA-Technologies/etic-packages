@@ -133,12 +133,16 @@ export function ResetButton({
         nommeParLeChamp ? `${idBouton} ${libelleCite}` : ariaLabelledby
       }
       // `invisible` : ni survol, ni focus, ni lecteur d'écran, mais la
-      // place reste.
+      // place reste. Il apparaît (et s'efface) en un fondu bref : surgi à la
+      // première frappe, il attirait l'œil plus que le champ. `visibility`
+      // suit l'opacité (transition discrète), sans fondu si l'utilisateur
+      // réduit les animations.
       aria-hidden={masque || undefined}
       tabIndex={masque ? -1 : undefined}
       className={cn(
         variant === "ghost" && "text-muted-foreground",
-        masque && "invisible",
+        "transition-[opacity,visibility,color,background-color] duration-150 ease-out motion-reduce:transition-none",
+        masque && "invisible opacity-0",
         className
       )}
       onClick={surClic}
