@@ -462,6 +462,10 @@ export {
 export { Toggletip, type ToggletipProps } from "./components/etic/toggletip"
 export { SaveBar, type SaveBarProps } from "./components/etic/save-bar"
 export {
+  ResetButton,
+  type ResetButtonProps,
+} from "./components/etic/reset-button"
+export {
   TooltipButton,
   type TooltipButtonProps,
 } from "./components/etic/tooltip-button"

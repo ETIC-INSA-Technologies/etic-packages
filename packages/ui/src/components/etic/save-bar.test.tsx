@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { SaveBar } from "@etic-ui/index"
@@ -159,5 +160,70 @@ describe("SaveBar", () => {
       "EnregistrerAnnuler",
       "Modifications non enregistrées",
     ])
+  })
+
+  it("Annuler rend le focus à Enregistrer : il disparaît avec les modifications", async () => {
+    const user = userEvent.setup()
+    function Formulaire() {
+      const [modifie, setModifie] = useState(true)
+      return (
+        <SaveBar
+          collante
+          modifie={modifie}
+          desactive={!modifie}
+          onAnnuler={modifie ? () => setModifie(false) : undefined}
+        />
+      )
+    }
+    render(<Formulaire />)
+    await user.click(screen.getByRole("button", { name: "Annuler" }))
+    expect(screen.queryByRole("button", { name: "Annuler" })).toBeNull()
+    expect(screen.getByRole("button", { name: "Enregistrer" })).toHaveFocus()
+  })
+
+  it("retour général aux défauts : icône à l'autre bout, masquée sans écart, focus à Enregistrer", async () => {
+    const user = userEvent.setup()
+    function Formulaire() {
+      const [auDefaut, setAuDefaut] = useState(false)
+      return (
+        <SaveBar
+          collante
+          modifie={auDefaut}
+          onAnnuler={auDefaut ? () => setAuDefaut(false) : undefined}
+          retablirDefauts={{
+            onRetablir: () => setAuDefaut(true),
+            masque: auDefaut,
+          }}
+        />
+      )
+    }
+    const { unmount } = render(<Formulaire />)
+    const retablir = screen.getByRole("button", {
+      name: "Rétablir toutes les valeurs par défaut",
+    })
+    expect(screen.getAllByRole("button")[0]).toBe(retablir)
+    await user.click(retablir)
+    expect(screen.getByRole("button", { name: "Enregistrer" })).toHaveFocus()
+    // Masqué mais en place : rien ne bouge autour.
+    expect(retablir).toHaveClass("invisible")
+    expect(retablir).toBeInTheDocument()
+    expect(screen.getAllByRole("button").map((e) => e.textContent)).toEqual([
+      "Annuler",
+      "Enregistrer",
+    ])
+    unmount()
+
+    // Non collante : à droite d'« Annuler ».
+    const { container } = render(
+      <SaveBar
+        modifie
+        onAnnuler={() => {}}
+        retablirDefauts={{ onRetablir() {} }}
+      />
+    )
+    expect(
+      container.querySelector('[data-slot="save-bar-actions"]')
+        ?.lastElementChild
+    ).toHaveAccessibleName("Rétablir toutes les valeurs par défaut")
   })
 })

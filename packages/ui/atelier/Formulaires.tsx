@@ -17,6 +17,8 @@ import {
   InputGroupInput,
   InputGroupText,
   PhoneInput,
+  ResetButton,
+  SaveBar,
   SearchSelect,
   SegmentedControl,
   Select,
@@ -405,6 +407,72 @@ function DemoBrouillon() {
   )
 }
 
+/** Valeurs par défaut d'un formulaire de réglages : « Annuler » revient à
+ *  l'enregistré, ↶ au défaut, champ par champ ou d'un coup. */
+const DEFAUTS = { copies: "6", taille: "5" }
+
+function DemoValeursParDefaut() {
+  const [enregistre, setEnregistre] = useState({ copies: "10", taille: "5" })
+  const [saisie, setSaisie] = useState(enregistre)
+  const modifie = JSON.stringify(saisie) !== JSON.stringify(enregistre)
+  const auDefaut = JSON.stringify(saisie) === JSON.stringify(DEFAUTS)
+  return (
+    <form
+      className="flex max-w-md flex-col gap-4"
+      onSubmit={(event) => {
+        event.preventDefault()
+        setEnregistre(saisie)
+      }}
+    >
+      <FormField
+        libelle="Copies conservées"
+        action={
+          <ResetButton
+            valeur={DEFAUTS.copies}
+            masque={saisie.copies === DEFAUTS.copies}
+            onRetablir={() => setSaisie({ ...saisie, copies: DEFAUTS.copies })}
+          />
+        }
+      >
+        <Input
+          className="max-w-24"
+          value={saisie.copies}
+          onChange={(e) => setSaisie({ ...saisie, copies: e.target.value })}
+        />
+      </FormField>
+      <FormField
+        libelle="Photo de profil"
+        action={
+          <ResetButton
+            valeur={`${DEFAUTS.taille} Mo`}
+            masque={saisie.taille === DEFAUTS.taille}
+            onRetablir={() => setSaisie({ ...saisie, taille: DEFAUTS.taille })}
+          />
+        }
+      >
+        <InputGroup className="max-w-36">
+          <InputGroupInput
+            value={saisie.taille}
+            onChange={(e) => setSaisie({ ...saisie, taille: e.target.value })}
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupText>Mo</InputGroupText>
+          </InputGroupAddon>
+        </InputGroup>
+      </FormField>
+      <SaveBar
+        modifie={modifie}
+        desactive={!modifie}
+        onAnnuler={modifie ? () => setSaisie(enregistre) : undefined}
+        retablirDefauts={{
+          onRetablir: () => setSaisie(DEFAUTS),
+          masque: auDefaut,
+        }}
+      />
+    </form>
+  )
+}
+
 export const FORMULAIRES: {
   id: string
   titre: string
@@ -434,5 +502,10 @@ export const FORMULAIRES: {
     id: "brouillon",
     titre: "useDraftAutosave",
     rendu: () => <DemoBrouillon />,
+  },
+  {
+    id: "valeurs-par-defaut",
+    titre: "ResetButton, SaveBar : Annuler et valeurs par défaut",
+    rendu: () => <DemoValeursParDefaut />,
   },
 ]
