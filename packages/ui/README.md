@@ -934,6 +934,24 @@ const visibles = postes.filter((p) => correspond(p.nom, p.pole?.nom))
 <Input type="search" {...NO_AUTOFILL} />
 ```
 
+### Tests des applications
+
+`@etic-insa/ui/test` réunit des outils pour les tests (vitest) des applications ; une entrée à
+part, qui n'entre pas dans leur bundle. `installMatchMedia()` remplace `window.matchMedia` par
+une doublure pilotable (celui de jsdom n'existe pas, celui de happy-dom suit une fenêtre fixe de
+1 024 px, donc mobile pour la bibliothèque) ; `setMobileViewport(true)` passe en affichage
+mobile, dans un `act()` sur un composant déjà monté. Seule la requête de `useIsMobile` est
+connue ; toute autre ne correspond pas.
+
+```ts
+// src/test/setup.ts de l'application
+import { beforeEach } from "vitest"
+import { installMatchMedia, setMobileViewport } from "@etic-insa/ui/test"
+
+installMatchMedia()
+beforeEach(() => setMobileViewport(false))
+```
+
 ### Développer contre les sources locales
 
 Pour voir une modification de la bibliothèque instantanément dans une application, sans publier,

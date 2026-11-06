@@ -17,6 +17,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./test": {
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    },
     "./styles.css": "./dist/styles.css",
     "./theme-boot.js": "./src/theme-boot.js",
     "./package.json": "./package.json"
