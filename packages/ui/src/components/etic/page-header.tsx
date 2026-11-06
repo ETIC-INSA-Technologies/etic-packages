@@ -14,9 +14,9 @@ import { Button } from "@etic-ui/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@etic-ui/components/ui/dropdown-menu"
+import { DropdownMenuAction } from "@etic-ui/components/etic/dropdown-menu-action"
 import {
   Tooltip,
   TooltipContent,
@@ -111,7 +111,8 @@ export interface DetailHeaderActionSecondaire {
   /** En rouge. */
   destructif?: boolean
   /** Action impossible : l'entrée est grisée, ne fait rien, et cette raison
-   *  s'affiche sous son libellé (comme `verrou` de `TooltipButton`). */
+   *  s'affiche sous son libellé (comme `verrou` de `TooltipButton`). Rendue
+   *  par `DropdownMenuAction`. */
   verrou?: string
 }
 
@@ -280,41 +281,14 @@ function MenuActions({
         sideOffset={taille === "lg" ? 6 : 4}
         className="min-w-48"
       >
-        {actions.map(
-          ({ libelle, onChoisir, icone: Icone, destructif, verrou }, index) => (
-            <DropdownMenuItem
-              key={index}
-              variant={destructif ? "destructive" : "default"}
-              disabled={!!verrou}
-              onClick={onChoisir}
-              // La raison doit rester lisible (4,5:1) : seuls l'icône et le
-              // libellé sont estompés, pas toute l'entrée.
-              className={verrou ? "data-disabled:opacity-100" : undefined}
-            >
-              {verrou ? (
-                <>
-                  {Icone ? <Icone className="opacity-50" /> : null}
-                  {/* Une entrée désactivée ne reçoit pas le survol : la
-                      raison s'affiche sous le libellé. */}
-                  <span className="flex flex-col">
-                    <span className="opacity-50">{libelle}</span>
-                    <span
-                      data-slot="detail-header-raison"
-                      className="text-xs text-muted-foreground"
-                    >
-                      {verrou}
-                    </span>
-                  </span>
-                </>
-              ) : (
-                <>
-                  {Icone ? <Icone /> : null}
-                  {libelle}
-                </>
-              )}
-            </DropdownMenuItem>
-          )
-        )}
+        {actions.map((action, index) => (
+          // Une chaîne vide ne verrouille pas : seule une raison le fait.
+          <DropdownMenuAction
+            key={index}
+            {...action}
+            verrou={action.verrou || undefined}
+          />
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   )

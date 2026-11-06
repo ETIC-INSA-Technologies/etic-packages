@@ -1557,7 +1557,9 @@ function BoutonDeplier({
 }
 
 export interface DataTableRowActionsProps {
-  /** Entrées du menu : `DropdownMenuItem`, `DropdownMenuSeparator`… */
+  /** Entrées du menu : `DropdownMenuAction` (avec `verrou` pour une action
+   *  impossible, sa raison affichée), `DropdownMenuItem`,
+   *  `DropdownMenuSeparator`… */
   children: ReactNode
   /** Nom du bouton, lu et affiché en infobulle, propre à la ligne pour que
    *  les boutons se distinguent : « Actions pour Ada Lovelace ». */

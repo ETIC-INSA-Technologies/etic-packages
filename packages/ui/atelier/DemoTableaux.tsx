@@ -23,6 +23,7 @@ import {
   DataTableSelectFilter,
   DataTableToolbar,
   DataTableViewOptions,
+  DropdownMenuAction,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -153,10 +154,17 @@ const COLONNES = aide.columns([
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive">
-          <TrashIcon />
-          Supprimer
-        </DropdownMenuItem>
+        {/* Action impossible pour un ancien : visible, sa raison dessous. */}
+        <DropdownMenuAction
+          libelle="Supprimer"
+          icone={TrashIcon}
+          destructif
+          verrou={
+            row.original.statut === "ancien"
+              ? "Un ancien membre s'archive, il ne se supprime pas."
+              : undefined
+          }
+        />
       </DataTableRowActions>
     ),
   }),

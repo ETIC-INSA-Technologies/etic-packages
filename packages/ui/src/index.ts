@@ -366,6 +366,10 @@ export {
   type DisclosureVariante,
 } from "./components/etic/disclosure"
 export {
+  DropdownMenuAction,
+  type DropdownMenuActionProps,
+} from "./components/etic/dropdown-menu-action"
+export {
   DraftResumeDialog,
   type DraftResumeDialogProps,
 } from "./components/etic/draft-resume-dialog"
