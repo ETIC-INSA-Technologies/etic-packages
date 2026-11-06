@@ -46,8 +46,6 @@ export interface SaveBarProps {
   retablirDefauts?: {
     onRetablir: () => void
     masque?: boolean
-    /** Infobulle ; « Rétablir toutes les valeurs par défaut » sinon. */
-    libelle?: string
   }
   className?: string
 }
@@ -106,7 +104,6 @@ export function SaveBar({
   ) : null
   const retablir = retablirDefauts ? (
     <ResetButton
-      libelle={retablirDefauts.libelle}
       masque={retablirDefauts.masque}
       disabled={enCours}
       cible={() => refEnregistrer.current}

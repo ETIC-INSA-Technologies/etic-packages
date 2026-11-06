@@ -1,4 +1,4 @@
-import { useId } from "react"
+import { useEffectEvent, useId, useLayoutEffect, useState } from "react"
 import { cn } from "cn"
 import { Undo2Icon } from "lucide-react"
 
@@ -16,20 +16,39 @@ export interface ResetButtonProps extends Omit<
    *  « Hebdomadaire ») : l'infobulle dit « Rétablir la valeur par défaut :
    *  6 ». Sans elle, le bouton rétablit tout un formulaire. */
   valeur?: string
-  /** Remplace l'infobulle et le nom accessible. */
-  libelle?: string
   onRetablir: () => void
   /** La valeur est déjà celle par défaut : le bouton est invisible mais
    *  garde sa place (rien ne bouge autour quand il apparaît) et sort de
    *  l'ordre de tabulation. */
   masque?: boolean
+  /** Identifiant du libellé que le nom accessible cite (« … du champ
+   *  Cadence ») : par défaut, celui du `FormField` qui entoure le bouton.
+   *  Pour un champ hors `FormField` (`FieldSet` et sa `FieldLegend`). */
+  libelleId?: string
   /**
-   * Élément qui reçoit le focus au clic : l'identifiant d'un élément, ou
-   * une fonction qui le renvoie. Par défaut, le contrôle du `FormField`
-   * qui entoure le bouton. Le bouton se masque d'ordinaire dès que la
-   * valeur est rétablie : sans cible, le focus tomberait sur la page.
+   * Élément qui reçoit le focus une fois la valeur rétablie : son
+   * identifiant, ou une fonction qui le renvoie. Par défaut, le contrôle du
+   * `FormField` qui entoure le bouton. Un groupe (boutons joints, cases)
+   * donne le focus à son option choisie. Le bouton se masque d'ordinaire
+   * avec l'écart : sans cible, le focus tomberait sur la page.
    */
   cible?: string | (() => HTMLElement | null | undefined)
+}
+
+const FOCALISABLE =
+  "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])"
+
+/** Ce qui prend le focus dans `cible` : elle-même si elle le peut ; dans un
+ *  groupe, l'option choisie, sinon le premier élément focalisable. */
+function focalisableDans(cible: HTMLElement): HTMLElement {
+  if (cible.matches(FOCALISABLE)) return cible
+  return (
+    cible.querySelector<HTMLElement>(
+      '[aria-pressed="true"], [aria-checked="true"]'
+    ) ??
+    cible.querySelector<HTMLElement>(FOCALISABLE) ??
+    cible
+  )
 }
 
 /**
@@ -37,82 +56,92 @@ export interface ResetButtonProps extends Omit<
  * dans l'infobulle. Dans un `FormField`, à passer à son `action` : il se
  * pose à droite du contrôle, et son nom accessible cite le libellé du champ
  * (« Rétablir la valeur par défaut (6) du champ Copies conservées »), pour
- * distinguer les boutons d'une même page. Toujours rendu, `masque` tant que
- * la valeur est celle par défaut. Au clic, le focus passe à la `cible`, puis
- * `onRetablir` est appelé.
+ * distinguer les boutons d'une même page ; ailleurs, `libelleId` et
+ * `cible` disent quel libellé citer et qui reçoit le focus. Toujours rendu,
+ * `masque` tant que la valeur est celle par défaut.
  *
  * Sans `valeur`, c'est le bouton général d'un formulaire (« Rétablir toutes
  * les valeurs par défaut ») : voir `retablirDefauts` de `SaveBar`.
  */
 export function ResetButton({
   valeur,
-  libelle,
   onRetablir,
   masque = false,
+  libelleId,
   cible,
   variant = "ghost",
   size = "icon-sm",
   className,
+  id,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledby,
   ...props
 }: ResetButtonProps) {
   const champ = useFormField()
-  const idTexte = useId()
+  const genere = useId()
+  const idBouton = id ?? genere
   const infobulle =
-    libelle ??
-    (valeur === undefined
+    valeur === undefined
       ? "Rétablir toutes les valeurs par défaut"
-      : `Rétablir la valeur par défaut : ${valeur}`)
-  // Dans un champ, le nom cite son libellé : deux « Copies conservées » sur
-  // la même page ne donnent pas deux boutons indiscernables.
+      : `Rétablir la valeur par défaut : ${valeur}`
+  // Le nom cite le libellé du champ : deux « Copies conservées » sur la même
+  // page ne donnent pas deux boutons indiscernables. Le bouton se cite
+  // lui-même (son `aria-label`), puis le libellé : aucun texte caché.
+  const libelleCite = libelleId ?? champ?.libelleId
   const nommeParLeChamp =
-    champ !== null &&
     valeur !== undefined &&
-    libelle === undefined &&
+    libelleCite !== undefined &&
     ariaLabel === undefined &&
     ariaLabelledby === undefined
 
-  const surClic = () => {
+  // Le focus part une fois la valeur rétablie à l'écran (l'option choisie
+  // d'un groupe est alors celle du défaut), avant que le navigateur ne
+  // peigne le bouton masqué. Le bouton reste monté : l'effet suit chaque clic.
+  const [clics, setClics] = useState(0)
+  const focaliser = useEffectEvent(() => {
     const element =
       typeof cible === "function"
         ? cible()
         : document.getElementById(cible ?? champ?.id ?? "")
-    element?.focus()
+    if (element) focalisableDans(element).focus()
+  })
+  useLayoutEffect(() => {
+    if (clics > 0) focaliser()
+  }, [clics])
+
+  const surClic = () => {
+    setClics((n) => n + 1)
     onRetablir()
   }
 
   return (
-    <>
-      <TooltipButton
-        type="button"
-        variant={variant}
-        size={size}
-        infobulle={masque ? undefined : infobulle}
-        aria-label={nommeParLeChamp ? undefined : (ariaLabel ?? infobulle)}
-        aria-labelledby={
-          nommeParLeChamp ? `${idTexte} ${champ.libelleId}` : ariaLabelledby
-        }
-        // `invisible` : ni survol, ni focus, ni lecteur d'écran, mais la
-        // place reste.
-        aria-hidden={masque || undefined}
-        tabIndex={masque ? -1 : undefined}
-        data-masque={masque || undefined}
-        className={cn(
-          variant === "ghost" && "text-muted-foreground",
-          masque && "invisible",
-          className
-        )}
-        onClick={surClic}
-        {...props}
-      >
-        <Undo2Icon />
-      </TooltipButton>
-      {nommeParLeChamp ? (
-        <span id={idTexte} hidden>
-          {`Rétablir la valeur par défaut (${valeur}) du champ`}
-        </span>
-      ) : null}
-    </>
+    <TooltipButton
+      type="button"
+      id={idBouton}
+      variant={variant}
+      size={size}
+      infobulle={masque ? undefined : infobulle}
+      aria-label={
+        nommeParLeChamp
+          ? `Rétablir la valeur par défaut (${valeur}) du champ`
+          : (ariaLabel ?? infobulle)
+      }
+      aria-labelledby={
+        nommeParLeChamp ? `${idBouton} ${libelleCite}` : ariaLabelledby
+      }
+      // `invisible` : ni survol, ni focus, ni lecteur d'écran, mais la
+      // place reste.
+      aria-hidden={masque || undefined}
+      tabIndex={masque ? -1 : undefined}
+      className={cn(
+        variant === "ghost" && "text-muted-foreground",
+        masque && "invisible",
+        className
+      )}
+      onClick={surClic}
+      {...props}
+    >
+      <Undo2Icon />
+    </TooltipButton>
   )
 }

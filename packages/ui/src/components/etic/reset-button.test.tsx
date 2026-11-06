@@ -3,8 +3,43 @@ import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { FormField, Input, ResetButton } from "@etic-ui/index"
+import {
+  FieldLegend,
+  FieldSet,
+  FormField,
+  Input,
+  ResetButton,
+  SegmentedControl,
+} from "@etic-ui/index"
 import { trouverInfobulle } from "@etic-ui/test/infobulle"
+
+const CADENCES = [
+  { valeur: "jour", libelle: "Quotidien" },
+  { valeur: "semaine", libelle: "Hebdomadaire" },
+]
+
+/** Un groupe de boutons joints, dans un champ, défaut « semaine ». */
+function GroupeAvecDefaut() {
+  const [valeur, setValeur] = useState("jour")
+  return (
+    <FormField
+      libelle="Cadence"
+      action={
+        <ResetButton
+          valeur="Hebdomadaire"
+          masque={valeur === "semaine"}
+          onRetablir={() => setValeur("semaine")}
+        />
+      }
+    >
+      <SegmentedControl
+        valeur={valeur}
+        options={CADENCES}
+        onValeurChange={setValeur}
+      />
+    </FormField>
+  )
+}
 
 /** Un champ avec une valeur par défaut, et son bouton ↶. */
 function ChampAvecDefaut({
@@ -103,5 +138,37 @@ describe("ResetButton", () => {
       })
     )
     expect(screen.getByRole("button", { name: "Suivant" })).toHaveFocus()
+  })
+
+  it("aucun texte caché dans la page pour composer le nom", () => {
+    render(<ChampAvecDefaut initiale="7" />)
+    expect(screen.queryByText(/Rétablir/, { ignore: false })).toBeNull()
+  })
+
+  it("hors d'un FormField, libelleId cite la légende du champ", () => {
+    render(
+      <FieldSet>
+        <FieldLegend id="legende-date">Date de changement</FieldLegend>
+        <ResetButton
+          valeur="1 avril"
+          libelleId="legende-date"
+          onRetablir={() => {}}
+        />
+      </FieldSet>
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "Rétablir la valeur par défaut (1 avril) du champ Date de changement",
+      })
+    ).toBeInTheDocument()
+  })
+
+  it("dans un groupe, rend le focus à l'option rétablie", async () => {
+    const user = userEvent.setup()
+    render(<GroupeAvecDefaut />)
+    await user.click(screen.getByRole("button", { name: /Rétablir/ }))
+    const semaine = screen.getByRole("button", { name: "Hebdomadaire" })
+    expect(semaine).toHaveAttribute("aria-pressed", "true")
+    expect(semaine).toHaveFocus()
   })
 })
