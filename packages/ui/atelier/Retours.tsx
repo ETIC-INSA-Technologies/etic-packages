@@ -46,6 +46,12 @@ import {
   RemovableBadge,
   SaveBar,
   SectionCard,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
   SkeletonCard,
   SkeletonPage,
   SkeletonTable,
@@ -817,6 +823,28 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
       id: "save-bar",
       titre: "SaveBar",
       rendu: () => <DemoSaveBar />,
+    },
+    {
+      id: "sheet",
+      titre: "Sheet : titre long",
+      rendu: () => (
+        <Sheet>
+          <SheetTrigger render={<Button variant="outline" />}>
+            Ouvrir le tiroir
+          </SheetTrigger>
+          <SheetContent>
+            {/* Le titre passe à la ligne avant la croix. */}
+            <SheetHeader>
+              <SheetTitle>
+                Rapport trimestriel de l'activité des pôles, version relue
+              </SheetTitle>
+              <SheetDescription>
+                L'en-tête réserve la place de la croix.
+              </SheetDescription>
+            </SheetHeader>
+          </SheetContent>
+        </Sheet>
+      ),
     },
     {
       id: "boutons",

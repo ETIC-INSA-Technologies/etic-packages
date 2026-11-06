@@ -35,6 +35,10 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
   SidebarProvider,
   SidebarTrigger,
   Slider,
@@ -775,5 +779,26 @@ describe("écarts avec shadcn", () => {
 
   it("popover : PopoverContent accepte anchor (popover sans déclencheur)", () => {
     expect(lire("components/ui/popover.tsx")).toContain("anchor={anchor}")
+  })
+
+  it("tiroir : l'en-tête réserve la place de la croix, et seulement avec elle", () => {
+    const tiroir = (croix: boolean) =>
+      createElement(
+        Sheet,
+        { open: true },
+        createElement(
+          SheetContent,
+          { showCloseButton: croix },
+          createElement(
+            SheetHeader,
+            { id: `entete-${croix}` },
+            createElement(SheetTitle, null, "Titre")
+          )
+        )
+      )
+    render(tiroir(true))
+    expect(document.getElementById("entete-true")).toHaveClass("pr-12")
+    render(tiroir(false))
+    expect(document.getElementById("entete-false")).not.toHaveClass("pr-12")
   })
 })

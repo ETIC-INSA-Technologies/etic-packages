@@ -1123,7 +1123,11 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
     `CLASSES_BULLE` et `CLASSES_FLECHE` (internes) portent l'allure de la bulle, partagée
     avec `Toggletip` ;
   - `popover.tsx` : `PopoverContent` accepte `anchor` (celui du `Positioner` de Base UI),
-    pour un popover sans `PopoverTrigger` (`Toggletip`, ancré sur l'élément qu'il explique).
+    pour un popover sans `PopoverTrigger` (`Toggletip`, ancré sur l'élément qu'il explique) ;
+  - `sheet.tsx` : `SheetHeader` réserve à droite la place de la croix (`pr-12`) quand
+    `SheetContent` l'affiche (`showCloseButton`, vrai par défaut), au lieu de laisser un long
+    titre passer dessous ; `SheetContent` le lui dit par un contexte. Un `className` de
+    l'application l'emporte.
 
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 

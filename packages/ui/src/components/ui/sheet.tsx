@@ -19,6 +19,10 @@ function SheetClose({ ...props }: SheetPrimitive.Close.Props) {
   return <SheetPrimitive.Close data-slot="sheet-close" {...props} />
 }
 
+// ETIC : le tiroir dit à son en-tête s'il porte la croix, pour que le titre
+// ne passe pas dessous (voir le README, écarts).
+const ContexteCroixSheet = React.createContext(false)
+
 function SheetPortal({ ...props }: SheetPrimitive.Portal.Props) {
   return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
 }
@@ -58,7 +62,9 @@ function SheetContent({
         )}
         {...props}
       >
-        {children}
+        <ContexteCroixSheet.Provider value={showCloseButton}>
+          {children}
+        </ContexteCroixSheet.Provider>
         {showCloseButton && (
           <SheetPrimitive.Close
             data-slot="sheet-close"
@@ -80,10 +86,12 @@ function SheetContent({
 }
 
 function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
+  const croix = React.useContext(ContexteCroixSheet)
   return (
     <div
       data-slot="sheet-header"
-      className={cn("flex flex-col gap-0.5 p-4", className)}
+      // ETIC : place de la croix réservée (28 px à 12 px du bord).
+      className={cn("flex flex-col gap-0.5 p-4", croix && "pr-12", className)}
       {...props}
     />
   )
