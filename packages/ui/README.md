@@ -253,7 +253,7 @@ chargement d'une image) et, au besoin, son composant de lien (`lien`, comme pour
 | `PageContainer`                                                          | Conteneur de page dans `AppShell` : marges, `largeur` maximale, espacement entre les blocs.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `PageHeader`, `DetailHeader`                                             | En-tête de page (`<h1>`, description, actions) ; en-tête de fiche avec fil d'Ariane (`chemin`), badges, méta, actions et menu « Plus d'actions » (`actionsSecondaires` : `onChoisir`, `destructif`, `verrou` affiché sous le libellé), `compact` quand la fiche répète déjà son nom.                                                                                                                                                                                                                                                             |
 | `SectionCard`, `DetailList`, `DetailItem`                                | Carte de section titrée (`<h2>`) ; liste `<dl>` de paires libellé / valeur, « — » pour une valeur absente (`null`, `undefined`, `false`, chaîne vide). `disposition` : `grille` (défaut, autant de colonnes de 14rem que la largeur en permet, quatre au plus : une liste courte laisse de l'air à droite sans tenir dans un coin), `pile` (une seule colonne, libellé au-dessus de la valeur : carte étroite, dialogue, valeurs longues), `ligne` (métadonnées secondaires : « libellé : valeur » en petit et en discret, l'une après l'autre). |
-| `ErrorBanner`                                                            | `Alert` destructive : message, code, détail technique replié (même circulaire), « Réessayer » (`onReessayer`, occupé pendant `enCours`). Lit toute erreur ayant un `message` (et `code`, `details`).                                                                                                                                                                                                                                                                                                                                             |
+| `ErrorBanner`                                                            | `Alert` destructive : message, code, détail technique replié (même circulaire), « Réessayer » (`onReessayer`, occupé pendant `enCours`). Lit toute erreur ayant un `message` (et `code`, `details`) ; voir `ErrorBannerProvider` pour masquer le code.                                                                                                                                                                                                                                                                                           |
 | `ErrorBoundary`                                                          | Filet sous le rendu : message, détail technique, « Réessayer », « Retour à l'accueil » ; `cleReinitialisation` (la route) l'efface. Le focus perdu avec la partie cassée passe sur le message.                                                                                                                                                                                                                                                                                                                                                   |
 | `EmptyState`, `Loading`, `SkeletonTable`, `SkeletonCard`, `SkeletonPage` | État vide (`Empty` dans un cadre pointillé, `icone` lucide : `icone={InboxIcon}`) ; attente annoncée (`Spinner`) ; squelettes de tableau, de carte et de fiche, un seul statut « Chargement… » chacun.                                                                                                                                                                                                                                                                                                                                           |
 | `QueryBoundary`                                                          | Chargement, erreur (avec « Réessayer »), vide et données d'une requête ; accepte tel quel le résultat de `useQuery`. L'échec d'une actualisation garde les données, montées, sous le bandeau d'erreur ; pendant une nouvelle tentative, le bandeau reste, son bouton occupé. Sans enveloppe : rendu dans le parent, qui règle l'espacement.                                                                                                                                                                                                      |
@@ -361,6 +361,37 @@ const [conflit, setConflit] = useState(false)
   {(groupes) => <TableGroupes groupes={groupes} />}
 </QueryBoundary>
 ```
+
+#### Affichage des erreurs
+
+Une application dont les codes d'erreur ne parlent qu'aux développeurs (`not_found`…) les
+masque une fois, à la racine : tous les bandeaux de la bibliothèque suivent
+`ErrorBannerProvider` (`ErrorBanner`, `QueryErrorBanner`, `QueryBoundary`, le bandeau de
+`DataTable`, l'erreur de `ConfirmDialog`, de `FormDialog` et de `DraftResumeDialog`).
+L'erreur elle-même n'est pas réécrite : un 404 reste « introuvable » pour `QueryBoundary`.
+`decrire` remplace la lecture de l'erreur (`decrireErreur`, exportée : message, code,
+détail) pour une règle propre à l'application ; une fonction définie au niveau du module.
+
+```tsx
+// Un détail à taire pour une famille d'erreurs.
+const decrire = (erreur: unknown) => {
+  const lu = decrireErreur(erreur)
+  return estPanneExterne(erreur) ? { ...lu, detail: undefined } : lu
+}
+
+export function Racine() {
+  return (
+    <ErrorBannerProvider masquerCode decrire={decrire}>
+      <App />
+    </ErrorBannerProvider>
+  )
+}
+```
+
+`BoutonReessayer` (« Réessayer » des bandeaux, `size` `sm` ou `default`) et `DetailTechnique`
+(détail replié sous « Détails », `libelle` au besoin) servent aussi hors d'un bandeau. La
+colonne du texte d'un bandeau est bornée : une chaîne sans espace (adresse, identifiant) se
+coupe au lieu de passer sous « Réessayer ».
 
 Primitives shadcn ajoutées pour ces usages : `Alert` a, en plus de `destructive`, les variantes
 `warning`, `info` et `success` (couleur `--info` dans le thème, contrastes vérifiés) ; `info` et

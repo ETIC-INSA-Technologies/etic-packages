@@ -3,7 +3,16 @@ import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { ErrorBanner, ErrorBoundary } from "@etic-ui/index"
+import {
+  BoutonReessayer,
+  ConfirmDialog,
+  decrireErreur,
+  ErrorBanner,
+  ErrorBannerProvider,
+  ErrorBoundary,
+  QueryBoundary,
+  QueryErrorBanner,
+} from "@etic-ui/index"
 
 describe("ErrorBanner", () => {
   it("ne rend rien sans erreur", () => {
@@ -74,6 +83,115 @@ describe("ErrorBanner", () => {
   it("sans message, dit quoi faire", () => {
     render(<ErrorBanner erreur={{ code: "INCONNU" }} />)
     expect(screen.getByRole("alert")).toHaveTextContent(/Réessayez/)
+  })
+
+  it("borne la colonne du texte : une chaîne sans espace se coupe", () => {
+    render(<ErrorBanner erreur={"x".repeat(300)} onReessayer={() => {}} />)
+    const alerte = screen.getByRole("alert")
+    expect(alerte).toHaveClass("has-[>svg]:grid-cols-[auto_minmax(0,1fr)]")
+    expect(alerte).not.toHaveClass("has-[>svg]:grid-cols-[auto_1fr]")
+  })
+})
+
+describe("ErrorBannerProvider", () => {
+  const ERREUR = {
+    message: "Élément introuvable",
+    code: "not_found",
+    details: { id: 7 },
+    status: 404,
+  }
+
+  it("masque le code dans tous les bandeaux de la bibliothèque", async () => {
+    const requete = {
+      data: undefined,
+      error: ERREUR,
+      isError: true,
+      isLoading: false,
+      refetch: () => {},
+    }
+    render(
+      <ErrorBannerProvider masquerCode>
+        <ErrorBanner erreur={ERREUR} />
+        <QueryErrorBanner requete={requete} />
+        <QueryBoundary requete={requete}>{() => null}</QueryBoundary>
+      </ErrorBannerProvider>
+    )
+    const alertes = screen.getAllByRole("alert")
+    expect(alertes).toHaveLength(3)
+    for (const alerte of alertes) {
+      expect(alerte).toHaveTextContent("Élément introuvable")
+      expect(alerte).not.toHaveTextContent("not_found")
+    }
+  })
+
+  it("masque le code de l'erreur d'un dialogue", async () => {
+    render(
+      <ErrorBannerProvider masquerCode>
+        <ConfirmDialog
+          ouvert
+          titre="Supprimer"
+          description="L'élément sera supprimé."
+          onConfirmer={() => Promise.reject(ERREUR)}
+        />
+      </ErrorBannerProvider>
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Confirmer" }))
+    const alerte = await screen.findByRole("alert")
+    expect(alerte).toHaveTextContent("Élément introuvable")
+    expect(alerte).not.toHaveTextContent("not_found")
+  })
+
+  it("garde le 404 « introuvable » de QueryBoundary : l'erreur n'est pas réécrite", () => {
+    render(
+      <ErrorBannerProvider masquerCode>
+        <QueryBoundary
+          requete={{
+            data: undefined,
+            error: ERREUR,
+            isError: true,
+            isLoading: false,
+          }}
+          introuvable="Fiche introuvable"
+        >
+          {() => null}
+        </QueryBoundary>
+      </ErrorBannerProvider>
+    )
+    expect(screen.getByText("Fiche introuvable")).toBeInTheDocument()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
+  it("lit l'erreur par la règle de l'application, code masqué ensuite", () => {
+    const decrire = (erreur: unknown) => ({
+      ...decrireErreur(erreur),
+      detail: undefined,
+    })
+    render(
+      <ErrorBannerProvider decrire={decrire} masquerCode>
+        <ErrorBanner erreur={ERREUR} />
+      </ErrorBannerProvider>
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent("Élément introuvable")
+    expect(screen.getByRole("alert")).not.toHaveTextContent("not_found")
+    expect(
+      screen.queryByRole("button", { name: "Détails" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("sans fournisseur, le code reste affiché", () => {
+    render(<ErrorBanner erreur={ERREUR} />)
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /not_found\s:\sÉlément introuvable/
+    )
+  })
+})
+
+describe("BoutonReessayer", () => {
+  it("prend la taille d'un bouton ordinaire avec size", () => {
+    render(<BoutonReessayer onClick={() => {}} size="default" />)
+    const bouton = screen.getByRole("button", { name: "Réessayer" })
+    expect(bouton).toHaveClass("h-[var(--bouton-hauteur,2rem)]")
+    expect(bouton).not.toHaveClass("h-7")
   })
 })
 

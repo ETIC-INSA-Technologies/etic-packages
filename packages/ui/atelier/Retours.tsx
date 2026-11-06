@@ -28,6 +28,7 @@ import {
   DetailList,
   EmptyState,
   ErrorBanner,
+  ErrorBannerProvider,
   ErrorBoundary,
   ExplainedBadge,
   Field,
@@ -649,6 +650,18 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
             }}
             onReessayer={() => {}}
           />
+          {/* Code masqué par le fournisseur ; une adresse sans espace se
+              coupe au lieu de passer sous « Réessayer ». */}
+          <ErrorBannerProvider masquerCode>
+            <ErrorBanner
+              erreur={{
+                message:
+                  "Fichier introuvable : https://example.org/depot/fichiers/2026/rapport-final-version-definitive-relue.pdf",
+                code: "NOT_FOUND",
+              }}
+              onReessayer={() => {}}
+            />
+          </ErrorBannerProvider>
           <DemoErrorBoundary />
         </div>
       ),

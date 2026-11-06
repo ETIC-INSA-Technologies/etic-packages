@@ -371,8 +371,15 @@ export {
 } from "./components/etic/draft-resume-dialog"
 export { EmptyState, type EmptyStateProps } from "./components/etic/empty-state"
 export {
+  BoutonReessayer,
+  type BoutonReessayerProps,
+  decrireErreur,
+  DetailTechnique,
+  type ErreurDecrite,
   ErrorBanner,
   type ErrorBannerProps,
+  ErrorBannerProvider,
+  type ErrorBannerProviderProps,
 } from "./components/etic/error-banner"
 export {
   ErrorBoundary,
