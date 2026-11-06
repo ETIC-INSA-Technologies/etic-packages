@@ -1,7 +1,9 @@
+import { useRef } from "react"
 import { cn } from "cn"
 import { CheckIcon } from "lucide-react"
 
 import { Button } from "@etic-ui/components/ui/button"
+import { ResetButton } from "@etic-ui/components/etic/reset-button"
 
 export interface SaveBarProps {
   /** Enregistrement en cours : « Enregistrer » devient « Enregistrement… »,
@@ -31,15 +33,30 @@ export interface SaveBarProps {
   /** Sans gestionnaire, « Enregistrer » soumet le formulaire qui l'entoure. */
   onEnregistrer?: () => void
   /** Revenir à ce qui est enregistré : affiche « Annuler ». À ne passer que
-   *  s'il y a des modifications (`onAnnuler={modifie ? annuler : undefined}`). */
+   *  s'il y a des modifications (`onAnnuler={modifie ? annuler : undefined}`).
+   *  Au clic, le focus passe à « Enregistrer » : « Annuler » disparaît. */
   onAnnuler?: () => void
+  /**
+   * Formulaire dont les champs ont une valeur par défaut : le bouton
+   * général ↶ (`ResetButton`), devant « Annuler », qui remet tous les
+   * champs à leur défaut sans rien enregistrer. `masque` quand aucun champ
+   * ne s'en écarte (il garde sa place). Au clic, le focus passe à
+   * « Enregistrer », l'étape suivante.
+   */
+  retablirDefauts?: {
+    onRetablir: () => void
+    masque?: boolean
+    /** Infobulle ; « Rétablir toutes les valeurs par défaut » sinon. */
+    libelle?: string
+  }
   className?: string
 }
 
 /**
  * Pied d'un formulaire de page (profil, paramètres) : « Enregistrer »,
- * « Annuler » au besoin, et le statut, annoncé (« Enregistré »,
- * « Modifications non enregistrées »).
+ * « Annuler » au besoin, le retour général aux valeurs par défaut au
+ * besoin, et le statut, annoncé (« Enregistré », « Modifications non
+ * enregistrées »).
  */
 export function SaveBar({
   enCours = false,
@@ -50,12 +67,15 @@ export function SaveBar({
   masqueeAuRepos = false,
   onEnregistrer,
   onAnnuler,
+  retablirDefauts,
   className,
 }: SaveBarProps) {
+  const refEnregistrer = useRef<HTMLButtonElement>(null)
   const auRepos =
     collante && masqueeAuRepos && !modifie && !enCours && !enregistre
   const enregistrer = (
     <Button
+      ref={refEnregistrer}
       type={onEnregistrer ? "button" : "submit"}
       onClick={onEnregistrer}
       enCours={enCours}
@@ -72,12 +92,26 @@ export function SaveBar({
   const annuler = onAnnuler ? (
     <Button
       variant="outline"
-      onClick={onAnnuler}
+      onClick={() => {
+        // « Annuler » disparaît avec les modifications : sans cela, le
+        // focus tomberait sur la page.
+        refEnregistrer.current?.focus()
+        onAnnuler()
+      }}
       disabled={enCours}
       focusableWhenDisabled
     >
       Annuler
     </Button>
+  ) : null
+  const retablir = retablirDefauts ? (
+    <ResetButton
+      libelle={retablirDefauts.libelle}
+      masque={retablirDefauts.masque}
+      disabled={enCours}
+      cible={() => refEnregistrer.current}
+      onRetablir={retablirDefauts.onRetablir}
+    />
   ) : null
   // Toujours présent : une zone `status` ajoutée en même temps que son texte
   // n'est pas annoncée.
@@ -113,9 +147,11 @@ export function SaveBar({
       className="flex shrink-0 items-center gap-3"
     >
       {/* Ordre du DOM = ordre visuel : « Enregistrer » d'abord, ou à droite
-          quand la barre est collante. */}
-      {collante ? annuler : enregistrer}
-      {collante ? enregistrer : annuler}
+          quand la barre est collante ; le retour aux défauts, l'action la
+          plus rare, à l'autre bout. */}
+      {collante ? retablir : enregistrer}
+      {annuler}
+      {collante ? enregistrer : retablir}
     </div>
   )
 

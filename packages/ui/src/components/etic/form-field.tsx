@@ -123,6 +123,16 @@ export interface FormFieldProps extends Omit<
   erreur?: ReactNode | string[]
   /** Identifiant du contrôle ; généré s'il manque. */
   id?: string
+  /**
+   * Bouton à droite du contrôle, sur sa ligne : d'ordinaire un
+   * `ResetButton`, qui lit le champ (nom accessible, focus au clic). Le
+   * contrôle n'est alors plus étiré par le champ : `Input` et `InputGroup`
+   * restent pleine largeur, un `SelectTrigger` prend `className="w-full"`.
+   * À passer toujours, même quand il n'y a rien à rétablir (`masque`) : la
+   * ligne qui l'accueille, ajoutée ou retirée pendant la frappe, ferait
+   * perdre le focus au contrôle.
+   */
+  action?: ReactNode
   /** Le contrôle (Input, Select…, ou tout composant qui transmet `id` et les
    *  attributs `aria-*` à son élément de saisie). */
   children: ReactElement<FormFieldControleProps>
@@ -148,6 +158,7 @@ export function FormField({
   description,
   erreur,
   id,
+  action,
   children,
   ...props
 }: FormFieldProps) {
@@ -184,6 +195,17 @@ export function FormField({
     invalide,
   }
 
+  const controle = relier(children, Boolean(champGroupe), {
+    id: idControle,
+    "aria-describedby": decrit,
+    "aria-invalid": invalide || cible.props["aria-invalid"] || undefined,
+    ...(obligatoire
+      ? CHAMPS_NATIFS.has(cible.type)
+        ? { required: true }
+        : { "aria-required": true }
+      : {}),
+  })
+
   return (
     <Field data-invalid={invalide || undefined} {...props}>
       <FieldLabel id={idLibelle} htmlFor={idControle}>
@@ -191,16 +213,17 @@ export function FormField({
         {obligatoire ? <RequiredMark /> : null}
       </FieldLabel>
       <FormFieldContext.Provider value={contexte}>
-        {relier(children, Boolean(champGroupe), {
-          id: idControle,
-          "aria-describedby": decrit,
-          "aria-invalid": invalide || cible.props["aria-invalid"] || undefined,
-          ...(obligatoire
-            ? CHAMPS_NATIFS.has(cible.type)
-              ? { required: true }
-              : { "aria-required": true }
-            : {}),
-        })}
+        {action === undefined ? (
+          controle
+        ) : (
+          <div
+            data-slot="form-field-ligne"
+            className="flex min-w-0 items-center gap-1"
+          >
+            {controle}
+            {action}
+          </div>
+        )}
       </FormFieldContext.Provider>
       {description ? (
         <FieldDescription id={idDescription}>{description}</FieldDescription>
