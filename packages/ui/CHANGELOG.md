@@ -1,5 +1,27 @@
 # @etic-insa/ui
 
+## 0.6.0
+
+### Minor Changes
+
+- dba75be: Tableaux de bord : `VerdictPanel` (verdict d'une page de supervision, au `ton` d'état : signe,
+  phrase, détail, action) et `ProgressRing` (jauge circulaire en SVG, le pendant rond de
+  `Progress`). Nouvelle entrée `@etic-insa/ui/charts` : le Chart de shadcn (`ChartContainer`,
+  `ChartTooltip`, `ChartLegend`…) sur recharts, dépendance pair facultative que seule une
+  application à graphiques installe. Le plugin Vite des sources locales sert aussi cette entrée et
+  n'emploie qu'une copie de recharts.
+- 8039a96: `ResetButton` : retour à la valeur par défaut d'un champ, icône ↶ seule, la valeur rétablie en
+  infobulle, qui apparaît en un fondu bref ; dans un `FormField`, nommé avec son libellé et focus
+  rendu au contrôle (hors `FormField` : `libelleId`, `cible`). `FormField`
+  gagne `action`, un bouton à droite du contrôle. `SaveBar` gagne `retablirDefauts`, le ↶ général
+  d'un formulaire, et rend le focus à « Enregistrer » après « Annuler ». Règle « Valeurs
+  enregistrées et valeurs par défaut » documentée.
+
+### Patch Changes
+
+- ff168b7: `ErrorBanner` : « Réessayer » centré sur la première ligne du message, au lieu de toucher le bas
+  du bandeau quand le message tient sur une ligne.
+
 ## 0.5.0
 
 ### Minor Changes
