@@ -45,6 +45,9 @@ export default defineConfig(({ command }) => ({
       entry: {
         index: resolve(import.meta.dirname, "src/index.ts"),
         "testing/index": resolve(import.meta.dirname, "src/testing/index.ts"),
+        // `charts` : graphiques (`@etic-insa/ui/charts`), seuls à importer
+        // recharts, dépendance pair facultative.
+        "charts/index": resolve(import.meta.dirname, "src/charts/index.ts"),
       },
       formats: ["es"],
     },

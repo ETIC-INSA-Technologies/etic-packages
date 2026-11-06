@@ -434,6 +434,14 @@ export {
 } from "./components/etic/section-card"
 export { StatTile, type StatTileProps } from "./components/etic/stat-tile"
 export {
+  ProgressRing,
+  type ProgressRingProps,
+} from "./components/etic/progress-ring"
+export {
+  VerdictPanel,
+  type VerdictPanelProps,
+} from "./components/etic/verdict-panel"
+export {
   type LongueurCss,
   StatGrid,
   type StatGridProps,

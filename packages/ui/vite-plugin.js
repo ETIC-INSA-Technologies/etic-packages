@@ -102,6 +102,10 @@ export function eticPackagesSources(options = {}) {
               replacement: resolve(ui, "testing/index.ts"),
             },
             {
+              find: exact("@etic-insa/ui/charts"),
+              replacement: resolve(ui, "charts/index.ts"),
+            },
+            {
               find: exact("@etic-insa/ui"),
               replacement: resolve(ui, "index.ts"),
             },
@@ -118,8 +122,10 @@ export function eticPackagesSources(options = {}) {
               : []),
           ],
           // Une seule copie de React (et de ce que l'application ajoute),
-          // même si etic-packages a ses propres node_modules.
-          dedupe: ["react", "react-dom", ...dedupe],
+          // même si etic-packages a ses propres node_modules. recharts
+          // aussi : le `ChartContainer` des sources et les graphiques de
+          // l'application partagent ses contextes (taille du conteneur).
+          dedupe: ["react", "react-dom", "recharts", ...dedupe],
         },
         server: {
           fs: {

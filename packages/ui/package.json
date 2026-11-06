@@ -21,6 +21,10 @@
       "types": "./dist/testing/index.d.ts",
       "default": "./dist/testing/index.js"
     },
+    "./charts": {
+      "types": "./dist/charts/index.d.ts",
+      "default": "./dist/charts/index.js"
+    },
     "./vite": {
       "types": "./vite-plugin.d.ts",
       "default": "./vite-plugin.js"
@@ -50,10 +54,14 @@
     "lucide-react": "^1.64.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "recharts": "^3.8.0",
     "tailwindcss": "^4",
     "vite": ">=7"
   },
   "peerDependenciesMeta": {
+    "recharts": {
+      "optional": true
+    },
     "vite": {
       "optional": true
     }
@@ -93,6 +101,7 @@
     "lucide-react": "^1.64.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "recharts": "^3.8.0",
     "shadcn": "^4.23.0",
     "tailwindcss": "^4",
     "typescript": "~6.0.2",

@@ -1,7 +1,8 @@
 /**
  * Les tons d'état de la suite et leurs classes, à un seul endroit : un ton
  * s'ajoute ici, et tous les composants qui en ont un (`StatusBadge`,
- * `StatTile`, `Progress`, `IconToggle`, `SegmentedControl`) le reçoivent.
+ * `StatTile`, `Progress`, `ProgressRing`, `VerdictPanel`, `IconToggle`,
+ * `SegmentedControl`) le reçoivent.
  *
  * Les classes sont écrites en entier (pas de `bg-${ton}`) : Tailwind ne
  * détecte que les classes littérales.
@@ -27,6 +28,13 @@ export interface ClassesTon {
   piste: string
   /** Remplissage d'une jauge `Progress`. */
   remplissage: string
+  /** Arc d'une jauge circulaire `ProgressRing` (trait SVG). */
+  trait: string
+  /** Liseré d'un `VerdictPanel` : l'anneau de la carte, teinté. */
+  cadre: string
+  /** Pastille du signe d'un `VerdictPanel` : fond à 10 %, signe en
+   *  couleur. */
+  medaillon: string
   /** `IconToggle` actif, survol et thème sombre compris. */
   basculeActive: string
   /** Segment choisi d'un `SegmentedControl` : fond, texte et liseré ; fond
@@ -42,6 +50,9 @@ export const TONS: Record<StatusTon, ClassesTon> = {
     pastille: "bg-muted-foreground",
     piste: "",
     remplissage: "",
+    trait: "stroke-primary",
+    cadre: "",
+    medaillon: "bg-muted text-muted-foreground",
     basculeActive: "aria-pressed:text-foreground",
     segmentChoisi: "",
   },
@@ -51,6 +62,9 @@ export const TONS: Record<StatusTon, ClassesTon> = {
     pastille: "bg-info",
     piste: "bg-info/15",
     remplissage: "bg-info",
+    trait: "stroke-info",
+    cadre: "ring-info/40",
+    medaillon: "bg-info/10 text-info",
     basculeActive:
       "aria-pressed:bg-info/10 aria-pressed:text-info aria-pressed:hover:bg-info/15 aria-pressed:hover:text-info dark:aria-pressed:bg-info/20 dark:aria-pressed:hover:bg-info/25",
     segmentChoisi:
@@ -62,6 +76,9 @@ export const TONS: Record<StatusTon, ClassesTon> = {
     pastille: "bg-success",
     piste: "bg-success/15",
     remplissage: "bg-success",
+    trait: "stroke-success",
+    cadre: "ring-success/35",
+    medaillon: "bg-success/10 text-success",
     basculeActive:
       "aria-pressed:bg-success/10 aria-pressed:text-success aria-pressed:hover:bg-success/15 aria-pressed:hover:text-success dark:aria-pressed:bg-success/20 dark:aria-pressed:hover:bg-success/25",
     segmentChoisi:
@@ -73,6 +90,9 @@ export const TONS: Record<StatusTon, ClassesTon> = {
     pastille: "bg-warning",
     piste: "bg-warning/15",
     remplissage: "bg-warning",
+    trait: "stroke-warning",
+    cadre: "ring-warning/40",
+    medaillon: "bg-warning/10 text-warning",
     basculeActive:
       "aria-pressed:bg-warning/10 aria-pressed:text-warning aria-pressed:hover:bg-warning/15 aria-pressed:hover:text-warning dark:aria-pressed:bg-warning/20 dark:aria-pressed:hover:bg-warning/25",
     segmentChoisi:
@@ -84,6 +104,9 @@ export const TONS: Record<StatusTon, ClassesTon> = {
     pastille: "bg-destructive",
     piste: "bg-destructive/15",
     remplissage: "bg-destructive",
+    trait: "stroke-destructive",
+    cadre: "ring-destructive/40",
+    medaillon: "bg-destructive/10 text-destructive",
     basculeActive:
       "aria-pressed:bg-destructive/10 aria-pressed:text-destructive aria-pressed:hover:bg-destructive/15 aria-pressed:hover:text-destructive dark:aria-pressed:bg-destructive/20 dark:aria-pressed:hover:bg-destructive/25",
     segmentChoisi:
