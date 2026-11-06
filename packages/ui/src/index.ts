@@ -337,6 +337,8 @@ export { ButtonLink, type ButtonLinkProps } from "./components/etic/button-link"
 export {
   CenteredScreen,
   type CenteredScreenProps,
+  MessageScreen,
+  type MessageScreenProps,
 } from "./components/etic/centered-screen"
 export {
   ConfirmDialog,
