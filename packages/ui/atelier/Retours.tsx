@@ -10,6 +10,14 @@ import {
   PlusIcon,
   TriangleAlertIcon,
 } from "lucide-react"
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
+
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@etic-ui/charts"
 
 import {
   Alert,
@@ -41,6 +49,7 @@ import {
   PageHeader,
   Progress,
   ProgressLabel,
+  ProgressRing,
   ProgressValue,
   QueryBoundary,
   RemovableBadge,
@@ -61,8 +70,18 @@ import {
   StatusBadge,
   TooltipButton,
   Toggletip,
+  VerdictPanel,
   type QueryBoundaryRequete,
 } from "@etic-ui/index"
+
+// Une journée de charge processeur, un point par heure.
+const CHARGE = Array.from({ length: 24 }, (_, heure) => ({
+  heure: `${heure} h`,
+  charge: Math.round(30 + 25 * Math.sin(heure / 3) + (heure % 5) * 4),
+}))
+const CONFIG_CHARGE = {
+  charge: { label: "Charge", color: "var(--primary)" },
+} satisfies ChartConfig
 
 /** Attend un peu, puis réussit ou échoue : de quoi voir l'état en cours. */
 const attendre = (echec: boolean) =>
@@ -822,6 +841,76 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
             <ProgressLabel>Fine, par défaut</ProgressLabel>
           </Progress>
         </div>
+      ),
+    },
+    {
+      id: "verdict",
+      titre: "VerdictPanel, ProgressRing",
+      rendu: () => (
+        <div className="flex flex-col gap-4">
+          <VerdictPanel
+            ton="success"
+            titre="Tout fonctionne"
+            detail="Dernière vérification il y a 2 minutes."
+          />
+          <VerdictPanel
+            ton="warning"
+            titre="1 point d'attention"
+            detail="Le disque est occupé à 84 %."
+            action={<Button variant="outline">Voir le stockage</Button>}
+          />
+          <VerdictPanel
+            ton="destructive"
+            titre="Base de données injoignable"
+            detail="Depuis 3 minutes."
+          />
+          <div className="flex flex-wrap gap-6">
+            {(
+              [
+                ["Mémoire", 42, "success"],
+                ["Disque", 84, "warning"],
+                ["Fichiers", 97, "destructive"],
+                ["Quota", 60, "neutral"],
+                ["Inconnu", null, "neutral"],
+              ] as const
+            ).map(([libelle, valeur, ton]) => (
+              <ProgressRing
+                key={libelle}
+                valeur={valeur}
+                ton={ton}
+                libelle={`${libelle} : ${valeur ?? "—"} %`}
+              >
+                {valeur === null ? "—" : `${valeur} %`}
+              </ProgressRing>
+            ))}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "graphiques",
+      titre: "ChartContainer (@etic-insa/ui/charts)",
+      rendu: () => (
+        <ChartContainer config={CONFIG_CHARGE} className="h-52 w-full">
+          <AreaChart data={CHARGE} margin={{ left: 0, right: 8 }}>
+            <CartesianGrid vertical={false} />
+            <XAxis dataKey="heure" tickLine={false} axisLine={false} />
+            <YAxis
+              width={32}
+              domain={[0, 100]}
+              tickLine={false}
+              axisLine={false}
+            />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Area
+              dataKey="charge"
+              type="monotone"
+              stroke="var(--color-charge)"
+              fill="var(--color-charge)"
+              fillOpacity={0.15}
+            />
+          </AreaChart>
+        </ChartContainer>
       ),
     },
     {

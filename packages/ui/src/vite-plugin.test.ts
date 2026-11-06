@@ -46,6 +46,7 @@ describe("eticPackagesSources (@etic-insa/ui/vite)", () => {
     expect(cible("@etic-insa/ui")).toBe(resolve(UI, "index.ts"))
     expect(cible("@etic-insa/ui/styles.css")).toBe(resolve(UI, "styles.css"))
     expect(cible("@etic-insa/ui/test")).toBe(resolve(UI, "testing/index.ts"))
+    expect(cible("@etic-insa/ui/charts")).toBe(resolve(UI, "charts/index.ts"))
     expect(cible("@etic-insa/auth")).toBe(
       resolve(RACINE, "packages/auth/src/index.ts")
     )
@@ -60,6 +61,7 @@ describe("eticPackagesSources (@etic-insa/ui/vite)", () => {
     expect(config.resolve!.dedupe).toEqual([
       "react",
       "react-dom",
+      "recharts",
       "@tanstack/react-query",
     ])
     expect(config.server!.fs!.allow).toContain(RACINE)

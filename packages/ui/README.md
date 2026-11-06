@@ -12,7 +12,8 @@ npm i @etic-insa/ui
 
 Prérequis (dépendances pairs) : React 19.2 ou plus récent (`useEffectEvent`), Tailwind CSS 4
 (`tailwindcss` et `@tailwindcss/vite`) et `lucide-react` (les icônes passées aux composants,
-`icone={UsersIcon}`, viennent de l'application).
+`icone={UsersIcon}`, viennent de l'application). `recharts` 3.8 ou plus récent seulement pour les
+graphiques (`@etic-insa/ui/charts`, voir [Graphiques](#graphiques)).
 `QueryBoundary` accepte tel quel le résultat de `useQuery` (TanStack Query), sans que la
 bibliothèque dépende de TanStack Query : il ne lit que la forme de la requête.
 
@@ -261,7 +262,9 @@ chargement d'une image) et, au besoin, son composant de lien (`lien`, comme pour
 | `QueryErrorBanner`                                                       | Le bandeau d'erreur de `QueryBoundary`, seul (`requete` : `isError`, `error`, `isFetching`, `refetch`), pour une page qui place elle-même ses données ; rien tant que la requête n'a pas échoué. Accepte `titre`, `description`, `className` d'`ErrorBanner`.                                                                                                                                                                                                                                                                                                                                                                               |
 | `Disclosure`, `DisclosureTrigger`                                        | Section repliable à chevron tournant, fermée par défaut : `titre`, `compteur` en pastille, `variante` `lien` (en ligne), `discret` (fantôme estompé) ou `carte` (bloc encadré), `defautOuvert` ou `ouvert` / `onOuvertChange`. `DisclosureTrigger` seul pour un `Collapsible` composé à la main.                                                                                                                                                                                                                                                                                                                                            |
 | `CenteredScreen`, `MessageScreen`                                        | Écran hors de la coquille (connexion, page introuvable, vérification de session) : le `<main>` de la page, contenu centré sur toute la hauteur, fond estompé ; écran qui ne dit qu'une chose (page introuvable, lien expiré) : `icone` en pastille, `titre` (`<h1>`), `description`, `actions`.                                                                                                                                                                                                                                                                                                                                             |
-| `StatTile`, `StatGrid`, `StatusBadge`                                    | Chiffre clé d'un résumé (`href` : toute la tuile mène au détail, avec un chevron ; `lien` du routeur, ou celui du `LienProvider`) ; rangée de tuiles (colonnes de `largeurMin` au moins, 190 px par défaut, une seule sur téléphone) ; badge d'état à pastille. `ton` (type `StatusTon`) : `neutral`, `info`, `success`, `warning`, `destructive` ; il colore aussi `Progress` (8 px avec `size="lg"`), le segment choisi d'un `SegmentedControl` et un `IconToggle` actif.                                                                                                                                                                 |
+| `StatTile`, `StatGrid`, `StatusBadge`                                    | Chiffre clé d'un résumé (`href` : toute la tuile mène au détail, avec un chevron ; `lien` du routeur, ou celui du `LienProvider`) ; rangée de tuiles (colonnes de `largeurMin` au moins, 190 px par défaut, une seule sur téléphone) ; badge d'état à pastille. `ton` (type `StatusTon`) : `neutral`, `info`, `success`, `warning`, `destructive` ; il colore aussi `Progress` (8 px avec `size="lg"`), `ProgressRing`, `VerdictPanel`, le segment choisi d'un `SegmentedControl` et un `IconToggle` actif.                                                                                                                                 |
+| `VerdictPanel`                                                           | Verdict d'une page de supervision, lu avant le détail : `ton` (`success` tout va bien, `warning` à surveiller, `destructive` en panne), `titre` (la phrase qui dit l'état), `detail`, `action` (un bouton, qui passe sous le texte quand la place manque). Carte au liseré du ton ; signe du ton en pastille (coche, triangle, croix, `i`, trait), caché aux lecteurs d'écran, `icone` pour un autre.                                                                                                                                                                                                                                       |
+| `ProgressRing`                                                           | Jauge circulaire d'une ressource qui se remplit (mémoire, disque, quota), le pendant rond de `Progress`, en SVG sans bibliothèque de graphiques : `valeur` de 0 à 100 (bornée ; `null`, piste vide), `ton` de l'arc (l'accent par défaut), `libelle` lu par les lecteurs d'écran (« Mémoire : 45 % »), `children` au centre (le pourcentage), caché à ces lecteurs. Taille par `className` (`size-28` par défaut).                                                                                                                                                                                                                          |
 | `RemovableBadge`, `ExplainedBadge`                                       | Badge de 28 px (`size="lg"`, aussi pour les badges sans croix de la même liste) terminé par une croix « Retirer » (`onRetirer`, `libelleRetirer`, `enCours`, `verrou`) ; seul le premier élément du libellé se coupe, un marqueur qui le suit (cadenas) reste entier et centré ; badge dont l'`explication` s'ouvre au toucher, au clic, au survol et au focus (un `Toggletip`) et se lit après lui (`render` : un autre porteur, `<time>` par exemple).                                                                                                                                                                                    |
 | `Toggletip`                                                              | Explication d'un élément qui n'est pas une action (date, sigle) : bulle sur `Popover`, ouverte au toucher, au clic, au survol et au focus, fermée au toucher ailleurs, à Échap ou quand le focus part ; clic sans effet sur un parent cliquable ; lue après le contenu (`texteLu`) ; dans un badge, la bulle part de son contour. Un bouton qui agit garde son infobulle (`TooltipButton`).                                                                                                                                                                                                                                                 |
 | `SaveBar`                                                                | Pied d'un formulaire de page : « Enregistrer » (soumet le formulaire, ou `onEnregistrer`), occupé mais focalisable pendant `enCours` ; « Annuler » avec `onAnnuler` ; statut annoncé : « Enregistré » (`enregistre`), « Modifications non enregistrées » (`modifie`). `collante` : pied d'un long formulaire, sur une carte opaque alignée sur celles de la page, collé en bas de l'écran tant qu'il y a des modifications (`modifie`) ou un envoi en cours, à sa place sinon ; `masqueeAuRepos` ne l'affiche qu'avec quelque chose à dire. Les deux boutons ne se séparent jamais : au téléphone, le statut passe à la ligne ou se replie. |
@@ -938,6 +941,28 @@ const visibles = postes.filter((p) => correspond(p.nom, p.pole?.nom))
 <Input type="search" {...NO_AUTOFILL} />
 ```
 
+### Graphiques
+
+`@etic-insa/ui/charts` : le [Chart de shadcn](https://ui.shadcn.com/docs/components/base/chart)
+(`ChartContainer`, `ChartTooltip`, `ChartTooltipContent`, `ChartLegend`, `ChartLegendContent`,
+`ChartStyle`, type `ChartConfig`), tel quel, sur [recharts](https://recharts.github.io). Une
+entrée à part, parce que `recharts` (~420 Ko) est une dépendance pair facultative : seule une
+application à graphiques l'installe (`npm i recharts`), et elle peut charger ses graphiques à
+la demande (`React.lazy`). Les composants de recharts (`AreaChart`, `XAxis`…) s'importent de
+`recharts` ; la taille vient de `className` (`aspect-video` par défaut). Une jauge circulaire
+seule n'en a pas besoin : `ProgressRing`, dans l'entrée principale.
+
+```tsx
+const config = { charge: { label: "Charge", color: "var(--primary)" } } satisfies ChartConfig
+
+<ChartContainer config={config} className="h-52 w-full">
+  <AreaChart data={points}>
+    <ChartTooltip content={<ChartTooltipContent />} />
+    <Area dataKey="charge" stroke="var(--color-charge)" fill="var(--color-charge)" />
+  </AreaChart>
+</ChartContainer>
+```
+
 ### Tests des applications
 
 `@etic-insa/ui/test` réunit des outils pour les tests (vitest) des applications ; une entrée à
@@ -977,9 +1002,10 @@ export default defineConfig({
 Les sources sont celles de `ETIC_UI_SOURCES` (chemin de `packages/ui/src`), sinon d'un
 `etic-packages` à côté du dépôt de l'application (depuis un worktree aussi), et seulement si ce
 checkout a ses `node_modules` (`npm ci` à sa racine) ; `ETIC_UI_SOURCES=npm` force les paquets
-installés. Le plugin pose les alias (`@etic-insa/ui`, ses `/styles.css` et `/test`,
-`@etic-ui/…` ; `@etic-insa/auth` avec `auth: true`), une seule copie de React (`dedupe` en
-ajoute : `["@tanstack/react-query"]` pour que l'`AuthProvider` des sources voie le
+installés. Le plugin pose les alias (`@etic-insa/ui`, ses `/styles.css`, `/test` et `/charts`,
+`@etic-ui/…` ; `@etic-insa/auth` avec `auth: true`), une seule copie de React et de recharts
+(le `ChartContainer` des sources partage ses contextes avec les graphiques de l'application ;
+`dedupe` en ajoute : `["@tanstack/react-query"]` pour que l'`AuthProvider` des sources voie le
 `QueryClient` de l'application), l'accès du serveur au checkout, le `@source` de Tailwind, et
 annonce au démarrage ce qu'il sert (branche, commit, modifications). Il n'emploie que Node et
 Vite (`vite`, dépendance pair facultative).
@@ -1176,6 +1202,8 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
 
 - `src/components/etic/` : composants ETIC qui importent ceux de `ui/` et ajoutent
   comportement, composition ou variantes.
+- `src/charts/index.ts` : l'entrée `@etic-insa/ui/charts` (`components/ui/chart.tsx`, sans
+  écart, seul à importer recharts : `charts.test.tsx` le vérifie).
 - `src/index.ts` : tout ce qu'une application peut importer. Un composant non exporté ici
   n'existe pas pour les applications.
 - `src/styles.css` : thème commun (clair et sombre). Au build, `scripts/build-css.mjs` y recopie

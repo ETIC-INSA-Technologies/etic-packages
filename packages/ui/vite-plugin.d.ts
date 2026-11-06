@@ -4,8 +4,8 @@ export interface EticPackagesSourcesOptions {
   /** Sert aussi les sources de `@etic-insa/auth`. Faux par défaut. */
   auth?: boolean
   /**
-   * Paquets à n'avoir qu'en un exemplaire, en plus de `react` et
-   * `react-dom` : `@tanstack/react-query` quand l'`AuthProvider` des
+   * Paquets à n'avoir qu'en un exemplaire, en plus de `react`, `react-dom`
+   * et `recharts` : `@tanstack/react-query` quand l'`AuthProvider` des
    * sources doit voir le `QueryClient` de l'application.
    */
   dedupe?: string[]
@@ -21,7 +21,7 @@ export interface EticPackagesSourcesOptions {
  * `ETIC_UI_SOURCES=npm` force les paquets installés. Build et tests
  * gardent toujours les paquets installés.
  *
- * Alias de `@etic-insa/ui` (et de `/styles.css`, `/test`), `@etic-ui`,
+ * Alias de `@etic-insa/ui` (et de `/styles.css`, `/test`, `/charts`), `@etic-ui`,
  * `@etic-insa/auth` avec `auth` ; `dedupe` ; accès du serveur au checkout ;
  * `@source` des sources ajouté à la feuille CSS qui importe
  * `@etic-insa/ui/styles.css`. Annonce au démarrage ce qui est servi.
