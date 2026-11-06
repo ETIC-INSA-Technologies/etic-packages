@@ -220,7 +220,11 @@ export function ErrorBanner({
         // identifiant) se coupe au lieu d'élargir la colonne et de passer
         // sous « Réessayer ».
         "has-[>svg]:grid-cols-[auto_minmax(0,1fr)] *:data-[slot=alert-description]:wrap-break-word *:data-[slot=alert-title]:wrap-break-word",
-        onReessayer && "has-data-[slot=alert-action]:pr-32",
+        // « Réessayer » (bouton `sm`, 28 px) centré sur la première ligne du
+        // titre, 6 px au-dessus et au-dessous : sans quoi, sous un titre d'une
+        // ligne, il touche le bas du bandeau.
+        onReessayer &&
+          "has-data-[slot=alert-action]:py-2.5 has-data-[slot=alert-action]:pr-32",
         className
       )}
     >
@@ -242,7 +246,7 @@ export function ErrorBanner({
         </AlertDescription>
       ) : null}
       {onReessayer ? (
-        <AlertAction>
+        <AlertAction className="top-1.5">
           <BoutonReessayer onClick={onReessayer} enCours={enCours} />
         </AlertAction>
       ) : null}
