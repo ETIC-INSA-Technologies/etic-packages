@@ -34,7 +34,9 @@ export interface SaveBarProps {
   onEnregistrer?: () => void
   /** Revenir à ce qui est enregistré : affiche « Annuler ». À ne passer que
    *  s'il y a des modifications (`onAnnuler={modifie ? annuler : undefined}`).
-   *  Au clic, le focus passe à « Enregistrer » : « Annuler » disparaît. */
+   *  Au clic, le focus passe à « Enregistrer » : « Annuler » disparaît.
+   *  Avec `masqueeAuRepos`, toute la barre disparaît : c'est à l'application
+   *  de rendre le focus (au formulaire). */
   onAnnuler?: () => void
   /**
    * Formulaire dont les champs ont une valeur par défaut : le bouton

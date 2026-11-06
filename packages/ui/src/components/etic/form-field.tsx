@@ -126,9 +126,8 @@ export interface FormFieldProps extends Omit<
   /**
    * Bouton à droite du contrôle, sur sa ligne : d'ordinaire un
    * `ResetButton`, qui lit le champ (nom accessible, focus au clic). Le
-   * contrôle n'est alors plus étiré par le champ : `Input` et `InputGroup`
-   * restent pleine largeur, un `SelectTrigger` prend `className="w-full"`.
-   * À passer toujours, même quand il n'y a rien à rétablir (`masque`) : la
+   * contrôle prend la place restante de la ligne, dans la limite de sa
+   * largeur maximale (`max-w-24`…). À passer toujours, même quand il n'y a rien à rétablir (`masque`) : la
    * ligne qui l'accueille, ajoutée ou retirée pendant la frappe, ferait
    * perdre le focus au contrôle.
    */
@@ -218,7 +217,8 @@ export function FormField({
         ) : (
           <div
             data-slot="form-field-ligne"
-            className="flex min-w-0 items-center gap-1"
+            // Le contrôle s'étire comme sans action (`*:w-full` du champ).
+            className="flex min-w-0 items-center gap-1 [&>:first-child]:min-w-0 [&>:first-child]:flex-1"
           >
             {controle}
             {action}

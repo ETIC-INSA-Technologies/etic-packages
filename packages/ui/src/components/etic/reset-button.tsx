@@ -116,6 +116,9 @@ export function ResetButton({
 
   return (
     <TooltipButton
+      // D'abord : les attributs calculés ci-dessous (masque, nom, clic)
+      // l'emportent sur ceux de l'appelant.
+      {...props}
       type="button"
       id={idBouton}
       variant={variant}
@@ -139,7 +142,6 @@ export function ResetButton({
         className
       )}
       onClick={surClic}
-      {...props}
     >
       <Undo2Icon />
     </TooltipButton>

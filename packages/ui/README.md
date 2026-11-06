@@ -456,7 +456,8 @@ obligatoire, invalide }`, ou `null` hors d'un `FormField`. `RequiredMark` existe
   `FormSection` regroupe des champs sous un titre (`FieldSet` + `FieldLegend`).
   `action` : un bouton à droite du contrôle, sur sa ligne (un `ResetButton`). À passer
   toujours, masqué au besoin : la ligne ajoutée ou retirée pendant la frappe ferait perdre le
-  focus au contrôle. Le contrôle n'y est plus étiré : un `SelectTrigger` prend `w-full`.
+  focus au contrôle. Le contrôle prend la place restante, dans la limite de sa largeur
+  maximale.
 
 #### Valeurs enregistrées et valeurs par défaut
 

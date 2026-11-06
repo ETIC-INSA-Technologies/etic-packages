@@ -140,6 +140,13 @@ describe("ResetButton", () => {
     expect(screen.getByRole("button", { name: "Suivant" })).toHaveFocus()
   })
 
+  it("masqué, l'emporte sur les attributs de l'appelant", () => {
+    render(<ResetButton valeur="6" masque tabIndex={0} onRetablir={() => {}} />)
+    const bouton = screen.getByRole("button", { hidden: true })
+    expect(bouton).toHaveAttribute("tabindex", "-1")
+    expect(bouton).toHaveAttribute("aria-hidden", "true")
+  })
+
   it("aucun texte caché dans la page pour composer le nom", () => {
     render(<ChampAvecDefaut initiale="7" />)
     expect(screen.queryByText(/Rétablir/, { ignore: false })).toBeNull()
