@@ -86,6 +86,43 @@ describe("PhoneInput", () => {
     expect(screen.getByLabelText("Pays")).toHaveTextContent("+44")
   })
 
+  it("n'accepte que des chiffres, des séparateurs et un « + » en tête", async () => {
+    const user = userEvent.setup()
+    const surChangement = vi.fn()
+    render(<Demo surChangement={surChangement} />)
+    const champ = screen.getByRole("textbox", { name: "Téléphone" })
+
+    await user.type(champ, "a06b.12-34 (56)+78é")
+    expect(champ).toHaveValue("06.12-34 (56)78")
+    expect(surChangement).toHaveBeenLastCalledWith("+33612345678", {
+      valide: true,
+      pays: "FR",
+    })
+
+    await user.clear(champ)
+    await user.paste("Tél : +44 7400 123456")
+    expect(champ).toHaveValue("+44 7400 123456")
+    expect(surChangement).toHaveBeenLastCalledWith("+447400123456", {
+      valide: true,
+      pays: "GB",
+    })
+  })
+
+  it("une lettre écartée laisse le curseur en place", async () => {
+    const user = userEvent.setup()
+    render(<Demo />)
+    const champ = screen.getByRole<HTMLInputElement>("textbox", {
+      name: "Téléphone",
+    })
+    await user.type(champ, "0612")
+    champ.setSelectionRange(2, 2)
+    await user.keyboard("x")
+    expect(champ).toHaveValue("0612")
+    expect(champ.selectionStart).toBe(2)
+    await user.keyboard("9")
+    expect(champ).toHaveValue("06912")
+  })
+
   it("change de pays par la liste, et relit le numéro", async () => {
     const user = userEvent.setup()
     const surChangement = vi.fn()

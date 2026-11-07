@@ -515,7 +515,8 @@ Règle commune aux formulaires de page (profil, paramètres) :
   pays ou l'indicatif) et numéro, lus et validés par
   libphonenumber-js. `onValeurChange(valeur, { valide, pays })` reçoit l'E.164
   (`+33612345678`) dès que la longueur est possible ; un numéro tapé avec « + » choisit le
-  pays. En erreur (`aria-invalid` du numéro), le groupe est traité comme un seul champ :
+  pays. Le champ n'accepte que des chiffres, des séparateurs (espaces, points, tirets,
+  parenthèses) et un « + » en tête : une lettre tapée ou collée est écartée. En erreur (`aria-invalid` du numéro), le groupe est traité comme un seul champ :
   bordure rouge sur le sélecteur de pays comme sur le numéro, un seul halo autour des deux.
   `formaterTelephone(numero, { paysParDefaut = "FR" })` écrit un numéro pour l'affichage
   hors d'un champ (fiche, liste), sans drapeau : national pour le pays par défaut

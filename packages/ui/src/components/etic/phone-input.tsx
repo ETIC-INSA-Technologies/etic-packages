@@ -89,6 +89,17 @@ function lire(texte: string, pays: CountryCode) {
   return parsePhoneNumberFromString(texte, pays)
 }
 
+/** Ce que le champ accepte : des chiffres, les séparateurs des écritures d'un
+ *  numéro (espaces, points, tirets, parenthèses) et un « + » en tête, celui de
+ *  l'indicatif. Le reste (lettres, « + » ailleurs, espaces de tête…) est
+ *  écarté, à la frappe comme au collage. Filtrer un début de texte donne le début du texte filtré :
+ *  c'est ce qui replace le curseur. */
+function filtrer(texte: string) {
+  const garde = texte.replace(/[^\d\s+().-]/g, "").trimStart()
+  const tete = garde.startsWith("+") ? "+" : ""
+  return tete + garde.slice(tete.length).replaceAll("+", "")
+}
+
 function enTexte(valeur: string, pays: CountryCode) {
   const numero = valeur ? lire(valeur, pays) : undefined
   if (!numero) return { texte: valeur, pays }
@@ -124,9 +135,10 @@ export function formaterTelephone(
 /**
  * Numéro de téléphone avec sélecteur de pays (Combobox de shadcn : drapeau et
  * indicatif, recherche sur le nom du pays ou l'indicatif) : lu, validé et mis
- * en forme par libphonenumber-js, rendu en E.164. Le numéro se tape
- * librement ; il est mis en forme en quittant le champ. Un numéro tapé avec
- * son indicatif (« +44… ») choisit le pays.
+ * en forme par libphonenumber-js, rendu en E.164. Le champ n'accepte que des
+ * chiffres, des séparateurs (espaces, points, tirets, parenthèses) et un « + »
+ * en tête ; le numéro est mis en forme en quittant le champ. Un numéro tapé
+ * avec son indicatif (« +44… ») choisit le pays.
  *
  * `className` va à l'enveloppe (`ButtonGroup`), le reste au champ du numéro ;
  * avec `name`, un champ caché soumet la valeur (E.164), pas le texte affiché.
@@ -279,7 +291,23 @@ export function PhoneInput({
             getExampleNumber(etat.pays, exemples)?.formatNational()
           }
           value={etat.texte}
-          onChange={(event) => emettre(event.target.value, etat.pays)}
+          onChange={(event) => {
+            const champ = event.target
+            const brut = champ.value
+            const texte = filtrer(brut)
+            if (texte !== brut) {
+              // Écrit dans le champ avant le rendu, que React trouve alors à
+              // jour : le curseur reste où il était, moins les caractères
+              // écartés avant lui, au lieu de sauter en fin de champ.
+              const curseur = champ.selectionStart
+              champ.value = texte
+              if (curseur !== null) {
+                const position = filtrer(brut.slice(0, curseur)).length
+                champ.setSelectionRange(position, position)
+              }
+            }
+            emettre(texte, etat.pays)
+          }}
           onBlur={(event) => {
             const numero = lire(etat.texte, etat.pays)
             if (numero?.isValid())
