@@ -239,6 +239,29 @@ téléphone, 24 puis 32 px au-delà), espacement vertical régulier entre les bl
 et `largeur` maximale centrée (`md`, `lg`, `xl`, ou `full` par défaut). Les pages ne posent
 pas leurs propres marges.
 
+Une entrée de la navigation porte une pastille avec `badge` (un compteur : éléments à
+traiter ; rien pour `0`, `""` ou sans valeur) : à droite du libellé, lue après lui par les
+lecteurs d'écran (`libelleBadge`, « 3 à traiter » ; le badge seul par défaut) ; barre
+repliée, un point sur l'icône et le compte dans l'infobulle.
+
+`NavTabs` est une barre d'onglets dont chaque onglet est une page (sous-pages de paramètres) :
+`libelle` (nom de la barre), `liens` (`libelle`, `href`, `actif`), `lien` (celui du
+`LienProvider` par défaut). Des liens et non des onglets ARIA (`Tabs`) : un lien mène à
+l'onglet voulu, une garde de saisie retient la navigation. L'actif est souligné et annoncé
+(`aria-current`) ; trop large, la barre défile de côté, sans jamais de barre de défilement
+verticale (le trait de base est une ombre intérieure, rien ne déborde).
+
+```tsx
+<NavTabs
+  libelle="Paramètres"
+  liens={SOUS_PAGES.map(({ chemin, libelle }) => ({
+    libelle,
+    href: chemin,
+    actif: pathname === chemin,
+  }))}
+/>
+```
+
 ### Retours et mise en page
 
 Compositions des primitives shadcn pour les états d'une page et les actions courantes. Elles ne
@@ -254,6 +277,7 @@ chargement d'une image) et, au besoin, son composant de lien (`lien`, comme pour
 | `PageContainer`                                                          | Conteneur de page dans `AppShell` : marges, `largeur` maximale, espacement entre les blocs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `PageHeader`, `DetailHeader`                                             | En-tête de page (`<h1>`, description, actions) ; en-tête de fiche avec fil d'Ariane (`chemin`), badges, méta, actions et menu « Plus d'actions » (`actionsSecondaires` : `onChoisir`, `destructif`, `verrou` affiché sous le libellé, l'entrée `DropdownMenuAction` des autres menus), `compact` quand la fiche répète déjà son nom.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `SectionCard`, `DetailList`, `DetailItem`                                | Carte de section titrée (`<h2>`) ; liste `<dl>` de paires libellé / valeur, « — » pour une valeur absente (`null`, `undefined`, `false`, chaîne vide). `disposition` : `grille` (défaut, autant de colonnes de 14rem que la largeur en permet, quatre au plus : une liste courte laisse de l'air à droite sans tenir dans un coin), `pile` (une seule colonne, libellé au-dessus de la valeur : carte étroite, dialogue, valeurs longues), `ligne` (métadonnées secondaires : « libellé : valeur » en petit et en discret, l'une après l'autre).                                                                                                                                                                                                                                                                             |
+| `SubSection`, `CodeBlock`                                                | Bloc titré dans une carte, un tiroir ou un dialogue : `section` nommée par son `titre` (`<h3>`), `aCote` sur la ligne du titre (un badge) ; donnée technique telle quelle (contexte, trace) : un texte tel quel, toute autre `valeur` en JSON indenté, à chasse fixe, dans un bloc qui défile (`className` borne sa hauteur, `retourLigne` coupe les lignes longues).                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `ErrorBanner`                                                            | `Alert` destructive : message, code, détail technique replié (même circulaire), « Réessayer » (`onReessayer`, occupé pendant `enCours`). Lit toute erreur ayant un `message` (et `code`, `details`) ; voir `ErrorBannerProvider` pour masquer le code.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `ErrorBoundary`                                                          | Filet sous le rendu : message, détail technique, « Réessayer », « Retour à l'accueil » ; `cleReinitialisation` (la route) l'efface. Le focus perdu avec la partie cassée passe sur le message.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `EmptyState`, `Loading`, `SkeletonTable`, `SkeletonCard`, `SkeletonPage` | État vide (`Empty` dans un cadre pointillé, `icone` lucide : `icone={InboxIcon}`) ; attente annoncée (`Spinner`) ; squelettes de tableau, de carte et de fiche, un seul statut « Chargement… » chacun.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -368,6 +392,94 @@ const [conflit, setConflit] = useState(false)
 <QueryBoundary requete={useQuery(...)} vide="Aucun groupe.">
   {(groupes) => <TableGroupes groupes={groupes} />}
 </QueryBoundary>
+```
+
+#### Ligne d'informations et liens externes
+
+`DetailMeta` est la ligne d'informations sous le titre d'une fiche (`meta` de
+`DetailHeader`) : un élément par enfant (un enfant `null` ou `false` ne laisse rien), séparés
+par des points, passant à la ligne quand la place manque ; une rangée ne commence jamais par un
+point. `DetailMetaLink` y est le lien discret, du ton de la ligne et souligné au survol
+(`href`, `lien` du routeur, `externe` : nouvel onglet et flèche sortante). Hors de cette ligne,
+`ExternalLink` mène à une page hébergée ailleurs : nouvel onglet, flèche sortante et « (nouvel
+onglet) » pour les lecteurs d'écran, dans le texte par défaut, `variant` pour un bouton ;
+`DropdownMenuExternalLink` en est l'entrée de menu.
+
+```tsx
+<DetailHeader
+  titre={dossier.nom}
+  meta={
+    <DetailMeta>
+      {dossier.parent ? (
+        <DetailMetaLink href={`/dossiers/${dossier.parent.id}`}>Dossier parent</DetailMetaLink>
+      ) : null}
+      <DetailMetaLink href={dossier.lienPartage} externe>
+        Partage
+      </DetailMetaLink>
+      <span>Créé le {formaterDate(dossier.cree_le)}</span>
+    </DetailMeta>
+  }
+/>
+<ExternalLink href={adresseExport}>Ouvrir l'export</ExternalLink>
+```
+
+#### Tiroir de détail
+
+Un tiroir (`Sheet`) prend une `taille` (`sm` à `xl` : 384 à 576 px au-delà de 640 px, tout
+l'écran en dessous) ; son contenu va dans `SheetHeader`, `SheetBody` (seul à défiler) et
+`SheetFooter`. `DetailSheet` est le tiroir de détail d'une liste, à droite (`lg` par défaut) :
+`element` (`undefined` : il se charge, `null` : `introuvable`, avec `titre`, `message`,
+`description`), `ouvert`, `onOuvertChange`, et `children`, une fonction de l'élément. Fermé, il
+garde ce qu'il affichait le temps de son animation. `useDetailSheet` le pilote par un
+identifiant gardé ailleurs, un paramètre d'URL le plus souvent : `id` (`null` : fermé),
+`elements` chargés, `idElement`, `enChargement`, `onIdChange`. Il rend `ouvert`, `element` (le
+dernier ouvert reste affiché quand un tri ou un filtre le sort de la liste ; un identifiant
+absent de la liste arrivée donne `null`, jamais un lien ignoré en silence), et `ouvrir`,
+`fermer`, `onOuvertChange`, stables.
+
+```tsx
+const [params, setParams] = useSearchParams()
+const definirDocument = useCallback(
+  (id: string | null) =>
+    setParams(
+      (p) => {
+        if (id === null) p.delete("document")
+        else p.set("document", id)
+        return p
+      },
+      { replace: true }
+    ),
+  [setParams]
+)
+const tiroir = useDetailSheet({
+  id: params.get("document"),
+  elements: documents.data?.items,
+  idElement: (document) => String(document.id),
+  enChargement: documents.isPending,
+  onIdChange: definirDocument,
+})
+
+<DataTable table={table} onActiverLigne={tiroir.ouvrir} … />
+<DetailSheet
+  element={tiroir.element}
+  ouvert={tiroir.ouvert}
+  onOuvertChange={tiroir.onOuvertChange}
+  introuvable={{
+    titre: "Document introuvable",
+    message: "Ce document n'est pas dans la page affichée",
+    description: "Retrouvez-le par les filtres de la liste.",
+  }}
+>
+  {(document) => (
+    <>
+      <SheetHeader>
+        <SheetTitle>{document.nom}</SheetTitle>
+      </SheetHeader>
+      <SheetBody>…</SheetBody>
+      <SheetFooter>…</SheetFooter>
+    </>
+  )}
+</DetailSheet>
 ```
 
 #### Affichage des erreurs
@@ -545,6 +657,11 @@ Règle commune aux formulaires de page (profil, paramètres) :
   annoncée aux lecteurs d'écran. `SelectItem` prend une `description` sous son libellé,
   reliée à l'option : la raison d'une option figée (`disabled`), qui reste lisible quand le
   libellé s'estompe ; le libellé passe alors à la ligne plutôt que d'être coupé.
+- `SelectField` : ce `Select` dans son `FormField`, pour une liste courte de choix :
+  `libelle`, `valeur` (`null` : rien de choisi, `placeholder`, « Choisir… » par défaut,
+  s'affiche ; aucune option « Choisir… » cochable ne le remplace), `options` (`valeur`,
+  `libelle`, `desactive`, `description`), `onValeurChange`, et `description`, `erreur`,
+  `obligatoire`, `desactive`, `name`, `vide`, `action` du champ.
 - `FileUploadButton` et `FileDropZone` : bouton, ou zone de glisser-déposer avec bouton, sur
   react-dropzone. Types (`accepter={{ "text/csv": [".csv"] }}`) et taille (`tailleMax`, en
   octets) vérifiés, refus en français : à `onRefuser` pour les deux, et affichés dans la zone
@@ -552,7 +669,9 @@ Règle commune aux formulaires de page (profil, paramètres) :
   rangée `flex-wrap` ; sans refus, rien d'autre que le bouton n'occupe le flux, ce qui le
   laisse dans une barre d'outils ou un `ButtonGroup`). Pendant `enCours`, le bouton reste
   focalisé, indisponible, et l'envoi est annoncé. `FileUploadButton` relaie les props de
-  `Button` (`id`, `aria-*` : il fonctionne dans un `FormField`).
+  `Button` (`id`, `aria-*` : il fonctionne dans un `FormField`). `SelectedFile` prend la
+  place de la zone une fois le fichier choisi : nom, taille et « Changer de fichier »
+  (`onChanger`, `libelleChanger`, `desactive` pendant l'envoi).
 - `SegmentedControl` : choix exclusif en boutons joints (`ToggleGroup`), sans désélection ;
   le segment choisi prend, en plus du fond `bg-muted`, un liseré intérieur, ou la couleur
   du `ton` de son option (celle de l'état que produit le choix). L'`infobulle`
@@ -605,23 +724,26 @@ La famille `DataTable` suit le [guide Data Table de shadcn](https://ui.shadcn.co
 sur [TanStack Table v9](https://tanstack.com/table/latest) : les colonnes se déclarent avec
 l'assistant typé, `useDataTable` crée l'instance, les composants la reçoivent en `table`.
 
-| Composant                  | Rôle                                                                                                                                                       |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `useDataTable`             | instance TanStack : tri, filtre et pagination (côté client, ou serveur avec `triManuel`), colonnes, sélection, dépliage                                    |
-| `DataTable`                | la Table de shadcn ; état vide, lignes fantômes du chargement, bandeau d'erreur (`requete`), clic de ligne, détail déplié                                  |
-| `DataTableColumnHeader`    | en-tête triable : un clic trie par ordre croissant, le suivant inverse le sens                                                                             |
-| `dataTableSelectionColumn` | colonne de cases ; Maj+clic sélectionne une plage ; raison d'une case verrouillée                                                                          |
-| `dataTableExpandColumn`    | colonne du chevron qui déplie une ligne (`aria-expanded`, `aria-controls`)                                                                                 |
-| `dataTableActionsColumn`   | colonne des commandes d'une ligne : en-tête lu mais invisible, commandes à droite                                                                          |
-| `DataTableCellLink`        | titre d'une ligne : vrai lien (`href`, routeur par `lien`) ou bouton                                                                                       |
-| `DataTableRowActions`      | menu « … » d'une ligne                                                                                                                                     |
-| `DropdownMenuAction`       | entrée d'un menu d'actions : `libelle`, `icone`, `destructif`, `description` ; `verrou` grise l'entrée et affiche sa raison sous le libellé                |
-| `DataTableViewOptions`     | bouton « Colonnes » : afficher, masquer, réordonner (glisser-déposer, clavier compris)                                                                     |
-| `DataTableToolbar`         | recherche, filtres (`DataTableSelectFilter`), compteur (`DataTableCount`), commandes                                                                       |
-| `DataTablePagination`      | pagination par décalage (offset/limit, total connu), ou celle du tableau (`table`)                                                                         |
-| `DataTableBulkActions`     | barre d'actions groupées, collante en bas, avec la sélection ; actions moins fréquentes dans « … » (`actionsSecondaires`) ; croix et Échap désélectionnent |
-| `useColumnPrefs`           | colonnes affichées et leur ordre, gardés dans le navigateur par liste et par personne                                                                      |
-| `usePersistedState`        | `useState` gardé dans le navigateur (filtre choisi…), sous la portée `PorteeStockageLocal`                                                                 |
+| Composant                  | Rôle                                                                                                                                                             |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useDataTable`             | instance TanStack : tri, filtre et pagination (côté client, ou serveur avec `triManuel`), colonnes, sélection, dépliage                                          |
+| `DataTable`                | la Table de shadcn ; état vide, lignes fantômes du chargement, bandeau d'erreur (`requete`), clic de ligne, détail déplié                                        |
+| `DataTableColumnHeader`    | en-tête triable : un clic trie par ordre croissant, le suivant inverse le sens                                                                                   |
+| `dataTableSelectionColumn` | colonne de cases ; Maj+clic sélectionne une plage ; raison d'une case verrouillée                                                                                |
+| `dataTableExpandColumn`    | colonne du chevron qui déplie une ligne (`aria-expanded`, `aria-controls`)                                                                                       |
+| `dataTableActionsColumn`   | colonne des commandes d'une ligne : en-tête lu mais invisible, commandes à droite                                                                                |
+| `DataTableCellLink`        | titre d'une ligne : vrai lien (`href`, routeur par `lien`) ou bouton                                                                                             |
+| `DataTableRowActions`      | menu « … » d'une ligne                                                                                                                                           |
+| `DropdownMenuAction`       | entrée d'un menu d'actions : `libelle`, `icone`, `destructif`, `description` ; `verrou` grise l'entrée et affiche sa raison sous le libellé                      |
+| `DataTableViewOptions`     | bouton « Colonnes » : afficher, masquer, réordonner (glisser-déposer, clavier compris) ; absent sans colonne à régler                                            |
+| `DataTableToolbar`         | recherche, filtres (`DataTableSelectFilter`), filtres moins courants derrière « Plus de filtres » (`filtresSecondaires`), compteur (`DataTableCount`), commandes |
+| `DataTablePagination`      | pagination par décalage (offset/limit, total connu), ou celle du tableau (`table`)                                                                               |
+| `DataTableBulkActions`     | barre d'actions groupées, collante en bas, avec la sélection ; actions moins fréquentes dans « … » (`actionsSecondaires`) ; croix et Échap désélectionnent       |
+| `useColumnPrefs`           | colonnes affichées et leur ordre, gardés dans le navigateur par liste et par personne                                                                            |
+| `useServerPagination`      | compteur et pagination d'une page reçue du serveur ; un décalage au-delà du total ramène à la dernière page                                                      |
+| `useServerSorting`         | tri d'une liste triée par le serveur, à étaler dans `useDataTable`                                                                                               |
+| `FilteredEmptyState`       | vide d'une liste filtrée, distinct d'un vide réel : « Réinitialiser les filtres »                                                                                |
+| `usePersistedState`        | `useState` gardé dans le navigateur (filtre choisi…), sous la portée `PorteeStockageLocal`                                                                       |
 
 ```tsx
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
@@ -740,6 +862,51 @@ tableau rendu à la main, `focaliserTableau(cadre)` donne la même cible. `size`
 du `DeleteButton` (`icon-lg` pour la corbeille dans un en-tête de page ; avec `avecTexte`,
 l'en-tête l'agrandit seul). La recherche de `DataTableToolbar` porte `NO_AUTOFILL` ;
 `recherche.attributs` lui ajoute des attributs.
+
+#### Liste paginée et triée par le serveur
+
+`useServerPagination` prend `decalage`, `limite`, `onDecalageChange`, `onLimiteChange`, la
+`requete` de la page (`data` : `{ total, items }`, `isPlaceholderData`), `unite`, `feminin` et
+`limites`, et rend `compteur` (pour `DataTableToolbar`) et `pagination` (pour
+`DataTablePagination`), tous deux `undefined` avant la première page. Un décalage au-delà du
+total (lien vers une page qui n'existe plus, suppression qui vide la dernière) ramène à la
+dernière page ; une page conservée (`keepPreviousData`) n'y compte pas. `useServerSorting({ tri,
+sens, definirTri })` rend `tri`, `onTriChange` et `triManuel`, à étaler dans `useDataTable` :
+les identifiants des colonnes triables sont les clés de tri du serveur, un tri retiré appelle
+`definirTri(null, …)`. `useDebouncedSearch(valeur, onValeurChange)` tient le champ de recherche
+d'une liste dont la recherche vit ailleurs (l'URL) : la saisie, recopiée sans ses espaces de
+bord après une pause de frappe ; `recopierAuDemontage` pour un champ dans un panneau qui se
+ferme. Une liste filtrée qui ne rend rien passe `FilteredEmptyState` (`onReinitialiser`) en
+`vide`, distinct de son vide réel.
+
+`filtresSecondaires` de `DataTableToolbar` range les filtres moins courants, au-delà des trois
+ou quatre de `filtres` : sur ordinateur, dans un panneau ouvert par « Plus de filtres (n) »
+(`filtresSecondairesActifs`) ; sur téléphone, à plat après les autres, repliés avec eux par
+`filtresActifs`. Chacun y porte son libellé visible.
+
+```tsx
+const page = useServerPagination({
+  decalage,
+  limite,
+  onDecalageChange: setDecalage,
+  onLimiteChange: setLimite,
+  requete: documents,
+  unite: { singulier: "document", pluriel: "documents" },
+})
+const table = useDataTable({
+  donnees: documents.data?.items ?? AUCUN,
+  colonnes,
+  idLigne,
+  ...useServerSorting({ tri, sens, definirTri }),
+})
+
+<DataTableToolbar compteur={page.compteur} filtresSecondaires={<FiltreAuteur />} …>
+<DataTable
+  table={table}
+  vide={filtresPoses ? <FilteredEmptyState onReinitialiser={reinitialiser} /> : "Aucun document."}
+/>
+{page.pagination ? <DataTablePagination {...page.pagination} /> : null}
+```
 
 L'en-tête du tableau ne se surligne pas au survol (seules les lignes de données le font). Quand
 le tableau se vide (filtre sans résultat, page suivante en chargement), ses colonnes gardent leur
@@ -910,8 +1077,13 @@ contredirait le bandeau. Sans `enChargement`, `isFetching` en tient lieu.
 `useColumnPrefs` garde, pour chaque liste et chaque personne, les colonnes affichées et leur
 ordre (`localStorage`, format `{ order, visible }`) ; `optionsTableau` s'étale dans
 `useDataTable`. Une colonne apparue depuis l'enregistrement s'ajoute à la fin, affichée si elle
-l'est par défaut ; une colonne non offerte ici (`disponibles` : droit manquant) garde son état et
-sa place ; `fixesEnTete` reste hors préférences. `optionsTableau.colonnesReglables` (une option
+l'est par défaut ; une colonne non offerte ici (`disponibles` : droit manquant, donnée non
+servie, colonne qui ne dirait rien dans la vue) est masquée et sort du panneau, mais garde son
+état et sa place dans les préférences ; `fixesEnTete` reste hors préférences. `affichees`
+impose des colonnes à l'écran (un filtre posé sur leur donnée montre sa colonne), hors du
+panneau le temps de l'imposition, sans toucher à leur préférence. `mobile` : sur téléphone,
+les seules colonnes réglables affichées (celles qui permettent de reconnaître la ligne), le
+panneau « Colonnes », alors sans objet, disparaissant ; les préférences restent intactes. `optionsTableau.colonnesReglables` (une option
 de `useDataTable` et de `DataTableViewOptions`) limite le panneau « Colonnes » aux colonnes des
 préférences : les fixes et les autres n'y sont ni masquables ni déplaçables. `reinitialiser()`
 revient aux valeurs par
@@ -963,16 +1135,23 @@ focus revient).
 Textes chiffrés en français : une valeur absente rend un repli (« — » par défaut, dernier
 argument ou option `repli`), une date illisible est rendue telle quelle.
 
-| Fonction                                                                             | Rôle                                                                                                                                                        |
-| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `compte`, `accorde`, `nombreFr`, `uniteAccordee`, `participe`                        | « 1 234 lignes », « 0 doublon » (0 et 1 au singulier) ; le mot seul, pluriel irrégulier en option ; nombre au format français ; participe accordé en genre. |
-| `formaterOctets`                                                                     | « 512 o », « 1,5 Ko », « 120 Mo » (base 1 024, une décimale sous 100).                                                                                      |
-| `formaterDuree`, `formaterDureeArrondie`, `formaterAnciennete`                       | « 3 j 4 h » ; « 3 j » ; « il y a 3 j 4 h » ou « à l'instant » (`arrondie`, `ilYA: false` pour « 3 j »).                                                     |
-| `formaterDate`, `formaterDateHeure`, `formaterHorodatage`, `formaterDateHeureLongue` | « 05 juillet 2026 » (une date sans heure reste ce jour-là dans tous les fuseaux) ; « 05/07/2026 14:30 » ; à la seconde ; « 05 juillet 2026 à 14:30 ».       |
-| `lireDateIso`, `ecrireDateIso`                                                       | Date sans heure de l'API (`AAAA-MM-JJ`) ↔ `Date` du `DatePicker`, en heure locale ; un 31 février est refusé.                                               |
-| `normaliser`, `correspondance`                                                       | Texte sans accents ni casse ; filtre d'une recherche locale (`correspondance(recherche)(...textes)`, recherche vide : tout passe).                          |
-| `NO_AUTOFILL`                                                                        | Attributs à étaler sur un champ qui n'est pas un identifiant : les gestionnaires de mots de passe s'en écartent.                                            |
-| `useDebouncedValue`, `useDocumentTitle`                                              | Valeur recopiée après un délai sans changement (300 ms par défaut) ; titre de l'onglet le temps que la page est montée.                                     |
+| Fonction                                                                             | Rôle                                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `compte`, `accorde`, `nombreFr`, `uniteAccordee`, `participe`                        | « 1 234 lignes », « 0 doublon » (0 et 1 au singulier) ; le mot seul, pluriel irrégulier en option ; nombre au format français ; participe accordé en genre.                                                                                                                                                                      |
+| `formaterOctets`                                                                     | « 512 o », « 1,5 Ko », « 120 Mo » (base 1 024, une décimale sous 100).                                                                                                                                                                                                                                                           |
+| `formaterNombre`, `formaterMontant`, `formaterPourcentage`                           | « 2,5 », « 1 234 » ; « 1 234,50 € » (`devise` ISO 4217, euros par défaut) ; une fraction en pourcentage, 0,55 → « 55 % » (`decimales` au plus, 0 par défaut). Repli pour une valeur absente ou non finie.                                                                                                                        |
+| `capitaliser`, `initiales`                                                           | Première lettre en capitale (« en attente » → « En attente ») ; initiales d'un nom pour un avatar (« Camille Martin » → « CM »), sinon la première lettre du secours (l'e-mail), sinon « ? ».                                                                                                                                    |
+| `formaterDuree`, `formaterDureeArrondie`, `formaterAnciennete`                       | « 3 j 4 h » ; « 3 j » ; « il y a 3 j 4 h » ou « à l'instant » (`arrondie`, `ilYA: false` pour « 3 j »).                                                                                                                                                                                                                          |
+| `formaterDureePrecise`, `formaterHeure`                                              | Durée à la seconde : « moins d'une seconde », « 23 s », « 1 min 05 s », « 1 h 02 min 05 s » ; heure seule à la seconde, « 14:30:12 », d'un instant en millisecondes (`dataUpdatedAt`) ou d'une date ISO.                                                                                                                         |
+| `formaterDate`, `formaterDateHeure`, `formaterHorodatage`, `formaterDateHeureLongue` | « 05 juillet 2026 » (une date sans heure reste ce jour-là dans tous les fuseaux) ; « 05/07/2026 14:30 » ; à la seconde ; « 05 juillet 2026 à 14:30 ».                                                                                                                                                                            |
+| `lireDateIso`, `ecrireDateIso`                                                       | Date sans heure de l'API (`AAAA-MM-JJ`) ↔ `Date` du `DatePicker`, en heure locale ; un 31 février est refusé.                                                                                                                                                                                                                    |
+| `normaliser`, `correspondance`                                                       | Texte sans accents ni casse ; filtre d'une recherche locale (`correspondance(recherche)(...textes)`, recherche vide : tout passe).                                                                                                                                                                                               |
+| `NO_AUTOFILL`                                                                        | Attributs à étaler sur un champ qui n'est pas un identifiant : les gestionnaires de mots de passe s'en écartent.                                                                                                                                                                                                                 |
+| `useDebouncedValue`, `useDocumentTitle`                                              | Valeur recopiée après un délai sans changement (300 ms par défaut) ; titre de l'onglet le temps que la page est montée.                                                                                                                                                                                                          |
+| `useDebouncedSearch`                                                                 | Champ de recherche dont la valeur vit ailleurs (l'URL), recopiée sans ses espaces de bord après une pause de frappe (voir « Liste paginée et triée par le serveur »).                                                                                                                                                            |
+| `useFreshDialog`                                                                     | Dialogue qui repart d'un formulaire neuf à chaque ouverture : `cle` (sa `key`, nouvelle à chaque `ouvrir()`), `monte` (rien n'est monté avant la première demande), `ouvert`, `onOuvertChange` ; fermé, il reste monté le temps de son animation. `demandesExternes` : un compteur tenu ailleurs, dont chaque incrément l'ouvre. |
+| `useLoadOnOpen`                                                                      | Lecture relancée à chaque ouverture d'un dialogue et oubliée à sa fermeture (`mutate` et `reset`, la forme d'une mutation TanStack) ; rend la relecture, pour « Réessayer ».                                                                                                                                                     |
+| `useSaveByKey`                                                                       | Formulaire de réglages enregistré clé par clé : `enregistrer(envois, envoyer, refusDe)` envoie dans l'ordre ; un refus de saisie reste sous son champ (`refus[cle]`) et les suivantes partent, une panne arrête tout (`panne`) ; `enCours`, `enregistre`, `saisieChangee(cle)`, `oublierTout()`.                                 |
 
 ```tsx
 const [recherche, setRecherche] = useState("")
@@ -1221,7 +1400,10 @@ overflow-y-auto`), en-tête, croix et pied restant visibles ; sans elle, tout le
   - `sheet.tsx` : `SheetHeader` réserve à droite la place de la croix (`pr-12`) quand
     `SheetContent` l'affiche (`showCloseButton`, vrai par défaut), au lieu de laisser un long
     titre passer dessous ; `SheetContent` le lui dit par un contexte. Un `className` de
-    l'application l'emporte.
+    l'application l'emporte ;
+  - `sheet.tsx` : `taille` de `SheetContent` (`sm` à `xl`, tiroir à gauche ou à droite :
+    tout l'écran sous 640 px, puis 384 à 576 px ; sans elle, la largeur de shadcn) et
+    `SheetBody`, la zone qui défile seule entre l'en-tête et le pied, comme `DialogBody`.
 
   Le thème ajoute aussi (`styles.css`, hors composants shadcn) la règle de mouvement réduit.
 

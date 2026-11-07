@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
   accorde,
+  capitaliser,
   compte,
   formaterAnciennete,
   formaterDate,
@@ -9,8 +10,14 @@ import {
   formaterDateHeureLongue,
   formaterDuree,
   formaterDureeArrondie,
+  formaterDureePrecise,
+  formaterHeure,
   formaterHorodatage,
+  formaterMontant,
+  formaterNombre,
   formaterOctets,
+  formaterPourcentage,
+  initiales,
   nombreFr,
   participe,
 } from "@etic-ui/index"
@@ -141,5 +148,63 @@ describe("dates en français", () => {
     const instant = "2026-07-05T14:30:12Z"
     expect(formaterDate(instant)).not.toMatch(/\d:\d/)
     expect(formaterHorodatage(instant)).toMatch(/\d:\d/)
+  })
+})
+
+describe("nombres, montants, pourcentages", () => {
+  it("formaterNombre : à la française, repli sans valeur finie", () => {
+    expect(espaces(formaterNombre(1234.5))).toBe("1 234,5")
+    expect(formaterNombre(null)).toBe("—")
+    expect(formaterNombre(Number.NaN, "")).toBe("")
+  })
+
+  it("formaterMontant : euros par défaut", () => {
+    expect(espaces(formaterMontant(1234.5))).toBe("1 234,50 €")
+    expect(espaces(formaterMontant(3, { devise: "USD" }))).toBe("3,00 $US")
+    expect(formaterMontant(undefined)).toBe("—")
+  })
+
+  it("formaterPourcentage : d'une fraction, arrondi à l'unité par défaut", () => {
+    expect(espaces(formaterPourcentage(0.554))).toBe("55 %")
+    expect(espaces(formaterPourcentage(0.5543, { decimales: 2 }))).toBe(
+      "55,43 %"
+    )
+    expect(formaterPourcentage(null)).toBe("—")
+  })
+})
+
+describe("textes", () => {
+  it("capitaliser", () => {
+    expect(capitaliser("en attente")).toBe("En attente")
+    expect(capitaliser("")).toBe("")
+  })
+
+  it("initiales : deux mots, sinon le secours, sinon « ? »", () => {
+    expect(initiales("Camille Martin")).toBe("CM")
+    expect(initiales("  ada  ")).toBe("A")
+    expect(initiales("Jean Paul Sartre")).toBe("JP")
+    expect(initiales("", "zoe@exemple.org")).toBe("Z")
+    expect(initiales(null)).toBe("?")
+  })
+})
+
+describe("formaterDureePrecise, formaterHeure", () => {
+  it("durée à la seconde", () => {
+    expect(formaterDureePrecise(0.2)).toBe("moins d'une seconde")
+    expect(formaterDureePrecise(23)).toBe("23 s")
+    expect(formaterDureePrecise(65)).toBe("1 min 05 s")
+    expect(formaterDureePrecise(3725)).toBe("1 h 02 min 05 s")
+    expect(formaterDureePrecise(null)).toBe("—")
+  })
+
+  it("heure à la seconde, d'un instant ou d'une date ISO", () => {
+    vi.stubEnv("TZ", "UTC")
+    expect(formaterHeure(Date.UTC(2026, 6, 5, 14, 30, 12))).toBe("14:30:12")
+    expect(formaterHeure("2026-07-05T08:05:00Z")).toBe("08:05:00")
+    expect(formaterHeure(undefined)).toBe("—")
+    expect(formaterHeure("pas une date")).toBe("pas une date")
+    // `dataUpdatedAt` avant la première réponse ; un calcul raté.
+    expect(formaterHeure(0)).toBe("—")
+    expect(formaterHeure(Number.NaN)).toBe("—")
   })
 })

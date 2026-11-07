@@ -44,6 +44,7 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
@@ -64,6 +65,7 @@ import {
 import type { ThemePreference } from "@etic-ui/theme"
 import { TooltipButton } from "@etic-ui/components/etic/tooltip-button"
 import { useLien, type LienComposant } from "@etic-ui/components/etic/lien"
+import { nombreFr } from "@etic-ui/lib/format"
 
 /** @deprecated Nom de la 0.2.0 : utiliser `LienComposant`. */
 export type AppShellLienComposant = LienComposant
@@ -75,6 +77,16 @@ export interface AppShellLien {
   /** Page à l'écran. Calculé par l'application, seule à savoir qu'une fiche
    *  appartient à telle rubrique. */
   actif?: boolean
+  /**
+   * Pastille à droite de l'entrée : un compteur (éléments à traiter…). Rien
+   * pour `0`, `""` ou sans valeur. Barre repliée : un point sur l'icône, le
+   * compte dans l'infobulle.
+   */
+  badge?: number | string | null
+  /** Ce que lisent les lecteurs d'écran après le libellé, et ce que dit
+   *  l'infobulle de la barre repliée : « 3 à traiter ». Le badge seul par
+   *  défaut. */
+  libelleBadge?: string
 }
 
 export interface AppShellSection {
@@ -358,25 +370,57 @@ function Navigation({
           <SidebarGroupContent>
             <SidebarMenu>
               {section.liens.map(
-                ({ libelle, href, icone: Icone, actif }, i) => (
-                  <SidebarMenuItem key={i}>
-                    <SidebarMenuButton
-                      isActive={actif}
-                      tooltip={libelle}
-                      render={
-                        <Lien
-                          href={href}
-                          aria-current={actif ? "page" : undefined}
-                        />
-                      }
-                    >
-                      {Icone ? <Icone /> : null}
-                      {/* Tronqué s'il est trop long : `title` le donne en
-                          entier au survol, barre dépliée. */}
-                      <span title={libelle}>{libelle}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
+                (
+                  { libelle, href, icone: Icone, actif, badge, libelleBadge },
+                  i
+                ) => {
+                  const pastille = texteBadge(badge)
+                  const lu = libelleBadge ?? pastille
+                  return (
+                    <SidebarMenuItem key={i}>
+                      <SidebarMenuButton
+                        isActive={actif}
+                        tooltip={pastille ? `${libelle} (${lu})` : libelle}
+                        // Place de la pastille, à droite du libellé.
+                        className={pastille ? "relative pr-8" : undefined}
+                        render={
+                          <Lien
+                            href={href}
+                            aria-current={actif ? "page" : undefined}
+                          />
+                        }
+                      >
+                        {Icone ? <Icone /> : null}
+                        {pastille ? (
+                          // Barre repliée : la pastille est masquée, un
+                          // point sur l'icône la remplace.
+                          <span
+                            aria-hidden="true"
+                            data-slot="app-shell-badge-point"
+                            className="absolute top-1 right-1 hidden size-2 rounded-full bg-primary group-data-[collapsible=icon]:block"
+                          />
+                        ) : null}
+                        {/* Tronqué s'il est trop long : `title` le donne en
+                            entier au survol, barre dépliée. Dernier enfant
+                            du bouton, que shadcn tronque. */}
+                        <span title={libelle}>
+                          {libelle}
+                          {pastille ? (
+                            <span className="sr-only"> ({lu})</span>
+                          ) : null}
+                        </span>
+                      </SidebarMenuButton>
+                      {pastille ? (
+                        <SidebarMenuBadge
+                          aria-hidden="true"
+                          className="rounded-full bg-primary text-primary-foreground peer-hover/menu-button:text-primary-foreground peer-data-active/menu-button:text-primary-foreground"
+                        >
+                          {pastille}
+                        </SidebarMenuBadge>
+                      ) : null}
+                    </SidebarMenuItem>
+                  )
+                }
               )}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -384,6 +428,17 @@ function Navigation({
       ))}
     </nav>
   )
+}
+
+/** Texte de la pastille d'une entrée, ou `null` sans pastille (0, vide, ou
+ *  un compte qui n'est pas un nombre fini : `NaN` d'un calcul sur une
+ *  donnée absente). */
+function texteBadge(badge: AppShellLien["badge"]): string | null {
+  if (badge === undefined || badge === null || badge === 0 || badge === "")
+    return null
+  if (typeof badge === "number")
+    return Number.isFinite(badge) ? nombreFr(badge) : null
+  return badge
 }
 
 /** Entrée « Thème : Sombre » du menu du compte, qui ouvre Clair / Système /

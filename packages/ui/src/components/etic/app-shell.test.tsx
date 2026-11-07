@@ -428,3 +428,59 @@ describe("ThemeMenu", () => {
     }
   })
 })
+
+describe("AppShell, pastille d'une entrée", () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  const avecBadge = (badge: number | string | null, libelleBadge?: string) =>
+    rendre({
+      sections: [
+        {
+          liens: [
+            {
+              libelle: "Erreurs",
+              href: "/erreurs",
+              icone: UsersIcon,
+              badge,
+              libelleBadge,
+            },
+          ],
+        },
+      ],
+    })
+
+  it("affiche le compte, et le lit après le libellé", () => {
+    simulerLargeur(false)
+    avecBadge(1234, "1 234 à traiter")
+    const lien = screen.getByRole("link", {
+      name: /^Erreurs ?\(1 234 à traiter\)$/,
+    })
+    const pastille = lien.parentElement!.querySelector(
+      '[data-slot="sidebar-menu-badge"]'
+    )
+    expect(pastille).toHaveTextContent("1 234")
+    expect(pastille).toHaveAttribute("aria-hidden", "true")
+    // Barre repliée : un point sur l'icône.
+    expect(
+      lien.querySelector('[data-slot="app-shell-badge-point"]')
+    ).toBeInTheDocument()
+  })
+
+  it("rien pour 0 ou sans valeur", () => {
+    simulerLargeur(false)
+    avecBadge(0)
+    expect(screen.getByRole("link", { name: "Erreurs" })).toBeInTheDocument()
+    expect(
+      document.querySelector('[data-slot="sidebar-menu-badge"]')
+    ).toBeNull()
+  })
+
+  it("rien pour un compte qui n'est pas un nombre fini", () => {
+    simulerLargeur(false)
+    avecBadge(Number.NaN)
+    expect(screen.getByRole("link", { name: "Erreurs" })).toBeInTheDocument()
+    expect(
+      document.querySelector('[data-slot="sidebar-menu-badge"]')
+    ).toBeNull()
+  })
+})

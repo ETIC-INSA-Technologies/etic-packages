@@ -7,6 +7,7 @@ export { MOBILE_MEDIA_QUERY, useIsMobile } from "./hooks/use-mobile"
 export {
   accorde,
   type AncienneteOptions,
+  capitaliser,
   compte,
   formaterAnciennete,
   formaterDate,
@@ -14,8 +15,14 @@ export {
   formaterDateHeureLongue,
   formaterDuree,
   formaterDureeArrondie,
+  formaterDureePrecise,
+  formaterHeure,
   formaterHorodatage,
+  formaterMontant,
+  formaterNombre,
   formaterOctets,
+  formaterPourcentage,
+  initiales,
   nombreFr,
   participe,
   type Unite,
@@ -30,6 +37,13 @@ export {
 } from "./lib/normalize"
 export { NO_AUTOFILL } from "./lib/autofill"
 export { useDebouncedValue } from "./hooks/use-debounced-value"
+export {
+  useDebouncedSearch,
+  type UseDebouncedSearchOptions,
+} from "./hooks/use-debounced-search"
+export { type FreshDialogEtat, useFreshDialog } from "./hooks/use-fresh-dialog"
+export { type LectureAOuverture, useLoadOnOpen } from "./hooks/use-load-on-open"
+export { type SaveByKeyEtat, useSaveByKey } from "./hooks/use-save-by-key"
 export { useDocumentTitle } from "./hooks/use-document-title"
 
 // Composants shadcn (components/ui), tels quels ou presque.
@@ -232,11 +246,13 @@ export {
 export { Separator } from "./components/ui/separator"
 export {
   Sheet,
+  SheetBody,
   SheetClose,
   SheetContent,
   SheetDescription,
   SheetFooter,
   SheetHeader,
+  type SheetTaille,
   SheetTitle,
   SheetTrigger,
 } from "./components/ui/sheet"
@@ -308,6 +324,11 @@ export {
   type AppShellSection,
 } from "./components/etic/app-shell"
 export {
+  NavTabs,
+  type NavTabsLien,
+  type NavTabsProps,
+} from "./components/etic/nav-tabs"
+export {
   type LienComposant,
   LienProvider,
   type LienProviderProps,
@@ -335,6 +356,12 @@ export {
 } from "./components/etic/auth-image"
 export { ButtonLink, type ButtonLinkProps } from "./components/etic/button-link"
 export {
+  DropdownMenuExternalLink,
+  type DropdownMenuExternalLinkProps,
+  ExternalLink,
+  type ExternalLinkProps,
+} from "./components/etic/external-link"
+export {
   CenteredScreen,
   type CenteredScreenProps,
   MessageScreen,
@@ -360,6 +387,16 @@ export {
   type DetailListDisposition,
 } from "./components/etic/detail-list"
 export {
+  DetailSheet,
+  type DetailSheetIntrouvable,
+  type DetailSheetProps,
+} from "./components/etic/detail-sheet"
+export {
+  useDetailSheet,
+  type UseDetailSheetOptions,
+  type UseDetailSheetResultat,
+} from "./components/etic/use-detail-sheet"
+export {
   Disclosure,
   type DisclosureProps,
   type DisclosureTaille,
@@ -375,7 +412,12 @@ export {
   DraftResumeDialog,
   type DraftResumeDialogProps,
 } from "./components/etic/draft-resume-dialog"
-export { EmptyState, type EmptyStateProps } from "./components/etic/empty-state"
+export {
+  EmptyState,
+  type EmptyStateProps,
+  FilteredEmptyState,
+  type FilteredEmptyStateProps,
+} from "./components/etic/empty-state"
 export {
   BoutonReessayer,
   type BoutonReessayerProps,
@@ -417,6 +459,12 @@ export {
   type PageHeaderProps,
 } from "./components/etic/page-header"
 export {
+  DetailMeta,
+  DetailMetaLink,
+  type DetailMetaLinkProps,
+  type DetailMetaProps,
+} from "./components/etic/detail-meta"
+export {
   PageContainer,
   type PageContainerLargeur,
   type PageContainerProps,
@@ -432,6 +480,8 @@ export {
   SectionCard,
   type SectionCardProps,
 } from "./components/etic/section-card"
+export { SubSection, type SubSectionProps } from "./components/etic/sub-section"
+export { CodeBlock, type CodeBlockProps } from "./components/etic/code-block"
 export { StatTile, type StatTileProps } from "./components/etic/stat-tile"
 export {
   ProgressRing,
@@ -508,7 +558,14 @@ export {
   FileUploadButton,
   type FileUploadButtonProps,
   type FileUploadOptions,
+  SelectedFile,
+  type SelectedFileProps,
 } from "./components/etic/file-upload"
+export {
+  SelectField,
+  type SelectFieldOption,
+  type SelectFieldProps,
+} from "./components/etic/select-field"
 export {
   SegmentedControl,
   type SegmentedControlOption,
@@ -604,6 +661,18 @@ export {
   type ColumnPrefsResultat,
   type UseColumnPrefsOptions,
 } from "./hooks/use-column-prefs"
+export {
+  type ServerPageRequete,
+  useServerPagination,
+  type UseServerPaginationOptions,
+  type UseServerPaginationResultat,
+} from "./components/etic/use-server-pagination"
+export {
+  type SensTri,
+  useServerSorting,
+  type UseServerSortingOptions,
+  type UseServerSortingResultat,
+} from "./components/etic/use-server-sorting"
 export type {
   ColumnOrderState,
   ColumnVisibilityState,

@@ -294,6 +294,18 @@ describe("DataTableViewOptions sans useDataTable", () => {
     expect(etat().visibilite).toEqual({ pole: true })
   })
 
+  it("sans colonne à régler, pas de bouton", () => {
+    render(
+      <DataTableViewOptions
+        colonnes={COLONNES_MANUELLES}
+        visibiliteColonnes={{}}
+        onVisibiliteColonnesChange={() => {}}
+        colonnesReglables={[]}
+      />
+    )
+    expect(screen.queryByRole("button", { name: "Colonnes" })).toBeNull()
+  })
+
   it("garde affichée la dernière colonne de données masquable", async () => {
     const user = userEvent.setup()
     function SansNom() {

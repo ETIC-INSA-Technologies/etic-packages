@@ -199,6 +199,17 @@ export interface DataTableToolbarProps<TData extends RowData = RowData> {
    * des résultats, et affiche « Réinitialiser » s'il y en a.
    */
   filtresActifs?: number
+  /**
+   * Filtres moins courants, au-delà des trois ou quatre de `filtres` : sur
+   * ordinateur, dans un panneau ouvert par un bouton « Plus de filtres »,
+   * qui dit combien y sont posés (`filtresSecondairesActifs`) ; sur
+   * téléphone, à plat après les autres (repliés avec eux par `filtresActifs`),
+   * plutôt qu'un panneau dans un panneau. Chacun porte son libellé visible :
+   * dans le panneau, on ne le devine plus à sa place dans la barre.
+   */
+  filtresSecondaires?: ReactNode
+  /** Nombre de filtres posés parmi `filtresSecondaires`. */
+  filtresSecondairesActifs?: number
   /** Retire tous les filtres (bouton « Réinitialiser »). */
   onReinitialiser?: () => void
   /** Compteur « N éléments · a–b affichés » : ses nombres, ou `{ table }`
@@ -217,13 +228,42 @@ export function DataTableToolbar<TData extends RowData = RowData>({
   recherche,
   filtres,
   filtresActifs,
+  filtresSecondaires,
+  filtresSecondairesActifs = 0,
   onReinitialiser,
   compteur,
   children,
   className,
 }: DataTableToolbarProps<TData>) {
   const mobile = useIsMobile()
-  const replier = mobile && filtres != null && filtresActifs !== undefined
+  const aSecondaires = filtresSecondaires != null
+  const replier =
+    mobile && (filtres != null || aSecondaires) && filtresActifs !== undefined
+  const tousLesFiltres =
+    filtres != null || aSecondaires ? (
+      <>
+        {filtres}
+        {!aSecondaires ? null : mobile ? (
+          filtresSecondaires
+        ) : (
+          <Popover>
+            <PopoverTrigger render={<Button variant="outline" />}>
+              <ListFilterIcon data-icon="inline-start" />
+              Plus de filtres
+              {filtresSecondairesActifs > 0
+                ? ` (${filtresSecondairesActifs})`
+                : ""}
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              className="w-80 gap-4 *:data-[slot=select-trigger]:w-full"
+            >
+              {filtresSecondaires}
+            </PopoverContent>
+          </Popover>
+        )}
+      </>
+    ) : null
   const racineRef = useRef<HTMLDivElement>(null)
   const rechercheRef = useRef<HTMLInputElement>(null)
 
@@ -302,11 +342,11 @@ export function DataTableToolbar<TData extends RowData = RowData>({
             align="start"
             className="w-64 *:data-[slot=select-trigger]:w-full"
           >
-            {filtres}
+            {tousLesFiltres}
           </PopoverContent>
         </Popover>
       ) : (
-        filtres
+        tousLesFiltres
       )}
       {filtresActifs && onReinitialiser ? (
         <Button variant="ghost" onClick={reinitialiser}>

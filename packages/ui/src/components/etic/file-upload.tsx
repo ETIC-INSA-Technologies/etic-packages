@@ -293,3 +293,53 @@ export function FileDropZone({
     </div>
   )
 }
+
+export interface SelectedFileProps {
+  /** Le fichier choisi (un `File`, ou son nom et sa taille). */
+  fichier: { name: string; size: number }
+  /** Rend la zone de dépôt, pour en choisir un autre. */
+  onChanger: () => void
+  /** « Changer de fichier » par défaut. */
+  libelleChanger?: string
+  /** Pendant l'envoi : le changement est impossible. */
+  desactive?: boolean
+  className?: string
+}
+
+/**
+ * Le fichier choisi dans une `FileDropZone`, à sa place une fois le choix
+ * fait : son nom, sa taille, et « Changer de fichier ».
+ */
+export function SelectedFile({
+  fichier,
+  onChanger,
+  libelleChanger = "Changer de fichier",
+  desactive = false,
+  className,
+}: SelectedFileProps) {
+  return (
+    <div
+      data-slot="selected-file"
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2",
+        className
+      )}
+    >
+      <span className="min-w-0 break-words">
+        {fichier.name}
+        <span className="text-muted-foreground">
+          {" "}
+          · {formaterTaille(fichier.size)}
+        </span>
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={desactive}
+        onClick={onChanger}
+      >
+        {libelleChanger}
+      </Button>
+    </div>
+  )
+}

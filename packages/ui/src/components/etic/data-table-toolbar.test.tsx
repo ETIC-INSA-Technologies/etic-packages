@@ -151,6 +151,43 @@ describe("DataTableToolbar", () => {
     expect(screen.getByRole("searchbox")).toBeInTheDocument()
   })
 
+  function BarreSecondaires({ actifs = 0 }: { actifs?: number }) {
+    return (
+      <DataTableToolbar
+        filtres={<input aria-label="Type" />}
+        filtresSecondaires={<input aria-label="Auteur" />}
+        filtresSecondairesActifs={actifs}
+        filtresActifs={actifs}
+      />
+    )
+  }
+
+  it("filtres secondaires : derrière « Plus de filtres » sur ordinateur", async () => {
+    simulerLargeur(false)
+    const user = userEvent.setup()
+    render(<BarreSecondaires actifs={1} />)
+    expect(screen.getByRole("textbox", { name: "Type" })).toBeInTheDocument()
+    expect(screen.queryByRole("textbox", { name: "Auteur" })).toBeNull()
+    await user.click(
+      screen.getByRole("button", { name: "Plus de filtres (1)" })
+    )
+    expect(
+      await screen.findByRole("textbox", { name: "Auteur" })
+    ).toBeInTheDocument()
+  })
+
+  it("filtres secondaires : à plat avec les autres sur téléphone", async () => {
+    simulerLargeur(true)
+    const user = userEvent.setup()
+    render(<BarreSecondaires />)
+    expect(screen.queryByRole("button", { name: /Plus de filtres/ })).toBeNull()
+    await user.click(screen.getByRole("button", { name: "Filtres" }))
+    expect(
+      await screen.findByRole("textbox", { name: "Auteur" })
+    ).toBeInTheDocument()
+    expect(screen.getByRole("textbox", { name: "Type" })).toBeInTheDocument()
+  })
+
   it("tient les gestionnaires de mots de passe à l'écart de la recherche, et passe les attributs donnés", () => {
     render(
       <DataTableToolbar

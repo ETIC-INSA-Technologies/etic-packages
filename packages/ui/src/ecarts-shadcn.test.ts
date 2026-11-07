@@ -36,6 +36,7 @@ import {
   SelectItem,
   SelectTrigger,
   Sheet,
+  SheetBody,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -800,5 +801,25 @@ describe("écarts avec shadcn", () => {
     expect(document.getElementById("entete-true")).toHaveClass("pr-12")
     render(tiroir(false))
     expect(document.getElementById("entete-false")).not.toHaveClass("pr-12")
+  })
+
+  it("tiroir : `taille` (tout l'écran sous 640 px) et `SheetBody` qui défile", () => {
+    render(
+      createElement(
+        Sheet,
+        { open: true },
+        createElement(
+          SheetContent,
+          { taille: "lg" },
+          createElement(SheetTitle, null, "Titre"),
+          createElement(SheetBody, null, "Corps")
+        )
+      )
+    )
+    expect(screen.getByRole("dialog")).toHaveClass(
+      "data-[side=right]:w-full",
+      "data-[side=right]:sm:max-w-lg"
+    )
+    expect(screen.getByText("Corps")).toHaveClass("min-h-0", "overflow-y-auto")
   })
 })

@@ -28,13 +28,18 @@ import {
   Badge,
   Button,
   Checkbox,
+  CodeBlock,
   ConfirmDialog,
   CopyButton,
   DeleteButton,
   DetailHeader,
   DetailItem,
   DetailList,
+  DetailMeta,
+  DetailMetaLink,
+  DetailSheet,
   EmptyState,
+  ExternalLink,
   ErrorBanner,
   ErrorBannerProvider,
   ErrorBoundary,
@@ -46,6 +51,7 @@ import {
   Input,
   Label,
   Loading,
+  NavTabs,
   PageHeader,
   Progress,
   ProgressLabel,
@@ -56,8 +62,10 @@ import {
   SaveBar,
   SectionCard,
   Sheet,
+  SheetBody,
   SheetContent,
   SheetDescription,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -68,8 +76,10 @@ import {
   StatGrid,
   StatTile,
   StatusBadge,
+  SubSection,
   TooltipButton,
   Toggletip,
+  useDetailSheet,
   VerdictPanel,
   type QueryBoundaryRequete,
 } from "@etic-ui/index"
@@ -524,6 +534,96 @@ function DemoSlider() {
   )
 }
 
+interface Element {
+  id: number
+  nom: string
+}
+const ELEMENTS: Element[] = [
+  { id: 1, nom: "Bureau" },
+  { id: 2, nom: "Pôle communication" },
+]
+
+function DemoDetailSheet() {
+  const [id, setId] = useState<string | null>(null)
+  const tiroir = useDetailSheet({
+    id,
+    elements: ELEMENTS,
+    idElement: (element) => String(element.id),
+    enChargement: false,
+    onIdChange: setId,
+  })
+  return (
+    <div className="flex flex-wrap gap-2">
+      {ELEMENTS.map((element) => (
+        <Button
+          key={element.id}
+          variant="outline"
+          onClick={() => tiroir.ouvrir(element)}
+        >
+          {element.nom}
+        </Button>
+      ))}
+      <Button variant="outline" onClick={() => setId("99")}>
+        Lien abîmé
+      </Button>
+      <DetailSheet
+        element={tiroir.element}
+        ouvert={tiroir.ouvert}
+        onOuvertChange={tiroir.onOuvertChange}
+        introuvable={{
+          titre: "Élément introuvable",
+          message: "Cet élément n'est pas dans la liste affichée",
+          description: "Retrouvez-le par les filtres de la liste.",
+        }}
+      >
+        {(element) => (
+          <>
+            <SheetHeader>
+              <SheetTitle>{element.nom}</SheetTitle>
+            </SheetHeader>
+            <SheetBody>
+              <DetailList disposition="pile">
+                <DetailItem libelle="Identifiant">{element.id}</DetailItem>
+              </DetailList>
+            </SheetBody>
+          </>
+        )}
+      </DetailSheet>
+    </div>
+  )
+}
+
+const SOUS_PAGES = [
+  { href: "#nav-tabs", libelle: "Généraux" },
+  { href: "#nav-tabs-integrations", libelle: "Intégrations externes" },
+  { href: "#nav-tabs-notifications", libelle: "Notifications" },
+  { href: "#nav-tabs-sauvegardes", libelle: "Sauvegardes et restauration" },
+]
+
+function DemoNavTabs() {
+  const [actif, setActif] = useState(SOUS_PAGES[0].href)
+  return (
+    // Un clic choisit l'onglet sans naviguer : l'atelier n'a pas de routeur.
+    <div
+      onClickCapture={(evenement) => {
+        const lien = (evenement.target as HTMLElement).closest("a")
+        if (!lien) return
+        evenement.preventDefault()
+        setActif(lien.getAttribute("href")!)
+      }}
+    >
+      <NavTabs
+        libelle="Paramètres"
+        lien="a"
+        liens={SOUS_PAGES.map((page) => ({
+          ...page,
+          actif: page.href === actif,
+        }))}
+      />
+    </div>
+  )
+}
+
 export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
   [
     {
@@ -589,7 +689,19 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
             chemin={[{ libelle: "Groupes", href: "#page-header" }]}
             titre="Bureau"
             badges={<StatusBadge ton="success">Actif</StatusBadge>}
-            meta="bureau · créé le 3 septembre 2026"
+            meta={
+              <DetailMeta>
+                <span className="font-mono">bureau</span>
+                <DetailMetaLink href="#section-card">
+                  Pôle parent
+                </DetailMetaLink>
+                <DetailMetaLink href="https://example.org" externe>
+                  Dossier partagé
+                </DetailMetaLink>
+                <span>Créé le 3 septembre 2026</span>
+                <span>Modifié il y a 2 j</span>
+              </DetailMeta>
+            }
             actions={
               <Button variant="outline">
                 <PencilIcon data-icon="inline-start" />
@@ -931,7 +1043,7 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
           <SheetTrigger render={<Button variant="outline" />}>
             Ouvrir le tiroir
           </SheetTrigger>
-          <SheetContent>
+          <SheetContent taille="lg">
             {/* Le titre passe à la ligne avant la croix. */}
             <SheetHeader>
               <SheetTitle>
@@ -941,8 +1053,68 @@ export const RETOURS: { id: string; titre: string; rendu: () => ReactNode }[] =
                 L'en-tête réserve la place de la croix.
               </SheetDescription>
             </SheetHeader>
+            {/* Seul le corps défile : en-tête et pied restent visibles. */}
+            <SheetBody>
+              {Array.from({ length: 12 }, (_, i) => (
+                <SubSection key={i} titre={`Section ${i + 1}`}>
+                  <p className="text-muted-foreground">
+                    Un paragraphe de la section, assez long pour remplir.
+                  </p>
+                </SubSection>
+              ))}
+            </SheetBody>
+            <SheetFooter className="flex-row justify-end border-t">
+              <Button>Valider</Button>
+            </SheetFooter>
           </SheetContent>
         </Sheet>
+      ),
+    },
+    {
+      id: "detail-sheet",
+      titre: "DetailSheet, useDetailSheet",
+      rendu: () => <DemoDetailSheet />,
+    },
+    {
+      id: "nav-tabs",
+      titre: "NavTabs",
+      rendu: () => <DemoNavTabs />,
+    },
+    {
+      id: "blocs",
+      titre: "SubSection, CodeBlock, ExternalLink",
+      rendu: () => (
+        <div className="flex flex-col gap-6">
+          <SubSection
+            titre="Contexte"
+            aCote={<StatusBadge ton="info">Dernière occurrence</StatusBadge>}
+          >
+            <CodeBlock
+              valeur={{ requete: "/groupes/12", statut: 409, essais: 2 }}
+              className="max-h-60"
+            />
+          </SubSection>
+          <SubSection titre="Trace">
+            <CodeBlock
+              retourLigne
+              valeur="Erreur : conflit sur l'élément 12, déjà utilisé par une autre ressource du même pôle."
+            />
+          </SubSection>
+          <p>
+            La procédure est décrite dans la{" "}
+            <ExternalLink href="https://example.org">
+              documentation
+            </ExternalLink>
+            .
+          </p>
+          <ExternalLink
+            href="https://example.org"
+            variant="outline"
+            className="self-start"
+          >
+            Ouvrir l'original
+          </ExternalLink>
+        </div>
       ),
     },
     {

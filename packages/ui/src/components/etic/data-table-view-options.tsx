@@ -197,6 +197,7 @@ function modeleDesColonnes({
  * à la souris, au toucher ou au clavier (poignée : Espace, flèches, Espace).
  * Les colonnes qui ne se masquent pas (`enableHiding: false`) n'y figurent
  * pas et gardent leur place. Le panneau reste ouvert pendant les réglages.
+ * Sans colonne à régler, le bouton n'est pas rendu.
  *
  * Avec `table`, il règle un `DataTable` ; avec `colonnes`, `visibilite` et
  * `ordre`, un tableau rendu à la main, sans instance `useDataTable`.
@@ -289,6 +290,10 @@ export function DataTableViewOptions<TData extends RowData>(
       verrou={colonne.id === derniere ? idVerrou : undefined}
     />
   ))
+
+  // Rien à régler (colonnes toutes fixes, téléphone avec `mobile` de
+  // `useColumnPrefs`) : pas de bouton qui ouvrirait un panneau vide.
+  if (colonnes.length === 0) return null
 
   return (
     <Popover

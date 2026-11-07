@@ -36,6 +36,63 @@ export const accorde = (n: number, singulier: string, pluriel?: string) =>
 export const compte = (n: number, singulier: string, pluriel?: string) =>
   `${nombreFr(n)} ${accorde(n, singulier, pluriel)}`
 
+/** Un nombre fini, ou rien (absent, `NaN`, infini). */
+const fini = (valeur: number | null | undefined): valeur is number =>
+  typeof valeur === "number" && Number.isFinite(valeur)
+
+/** Nombre à la française (« 2,5 », « 1 234 ») ; le repli sans valeur. */
+export function formaterNombre(
+  valeur: number | null | undefined,
+  repli = "—"
+): string {
+  return fini(valeur) ? nombreFr(valeur) : repli
+}
+
+/** Montant : « 1 234,50 € » (euros par défaut, `devise` ISO 4217 sinon). */
+export function formaterMontant(
+  valeur: number | null | undefined,
+  { devise = "EUR", repli = "—" }: { devise?: string; repli?: string } = {}
+): string {
+  if (!fini(valeur)) return repli
+  return valeur.toLocaleString("fr-FR", { style: "currency", currency: devise })
+}
+
+/** Une fraction en pourcentage : 0,55 → « 55 % » ; `decimales` au plus
+ *  (0 par défaut : arrondi à l'unité). */
+export function formaterPourcentage(
+  fraction: number | null | undefined,
+  { decimales = 0, repli = "—" }: { decimales?: number; repli?: string } = {}
+): string {
+  if (!fini(fraction)) return repli
+  return fraction.toLocaleString("fr-FR", {
+    style: "percent",
+    maximumFractionDigits: decimales,
+  })
+}
+
+/** Première lettre en capitale : un libellé servi en minuscules qui ouvre
+ *  une ligne (« en attente » → « En attente »). */
+export function capitaliser(texte: string): string {
+  return texte.charAt(0).toLocaleUpperCase("fr-FR") + texte.slice(1)
+}
+
+/**
+ * Initiales d'un nom affiché, pour un avatar : les deux premiers mots
+ * (« Camille Martin » → « CM »), sinon la première lettre du `secours`
+ * (l'adresse e-mail), sinon « ? ».
+ */
+export function initiales(
+  nom: string | null | undefined,
+  secours?: string | null
+): string {
+  const mots = nom?.trim().split(/\s+/).filter(Boolean) ?? []
+  const lettres = mots
+    .slice(0, 2)
+    .map((mot) => mot[0])
+    .join("")
+  return (lettres || secours?.trim()[0] || "?").toLocaleUpperCase("fr-FR")
+}
+
 // Octets
 
 const UNITES_OCTETS = ["o", "Ko", "Mo", "Go", "To"]
@@ -74,6 +131,24 @@ export function formaterDuree(
   if (h > 0) return `${h} h ${min} min`
   if (min > 0) return `${min} min`
   return `${Math.floor(secondes)} s`
+}
+
+/** Durée à la seconde, pour une opération qui se compte en secondes ou en
+ *  minutes (un traitement, un envoi) : « moins d'une seconde », « 23 s »,
+ *  « 1 min 05 s », « 1 h 02 min 05 s ». */
+export function formaterDureePrecise(
+  secondes: number | null | undefined,
+  repli = "—"
+): string {
+  if (!fini(secondes)) return repli
+  const total = Math.round(secondes)
+  if (total < 1) return "moins d'une seconde"
+  if (total < 60) return `${total} s`
+  const h = Math.floor(total / 3600)
+  const min = Math.floor((total % 3600) / 60)
+  const s = String(total % 60).padStart(2, "0")
+  if (h === 0) return `${min} min ${s} s`
+  return `${h} h ${String(min).padStart(2, "0")} min ${s} s`
 }
 
 /** L'ordre de grandeur d'une durée, sa plus grande unité seulement : « 3 j »,
@@ -160,6 +235,22 @@ export function formaterHorodatage(
   const date = lireInstant(valeur)
   if (!date) return valeur
   return date.toLocaleString("fr-FR")
+}
+
+/** Heure seule, à la seconde : « 14:30:12 ». Accepte un instant en
+ *  millisecondes (`Date.now()`, `dataUpdatedAt` de TanStack Query) comme
+ *  une date ISO. Le repli pour `0` (`dataUpdatedAt` avant la première
+ *  réponse) et pour un nombre non fini. */
+export function formaterHeure(
+  valeur: number | string | null | undefined,
+  repli = "—"
+): string {
+  if (valeur === null || valeur === undefined || valeur === "") return repli
+  if (typeof valeur === "number" && (!fini(valeur) || valeur === 0))
+    return repli
+  const date = new Date(valeur)
+  if (Number.isNaN(date.getTime())) return String(valeur)
+  return date.toLocaleTimeString("fr-FR", { timeStyle: "medium" })
 }
 
 /** Date et heure, mois en lettres, pour une fiche : « 05 juillet 2026 à 14:30 ». */

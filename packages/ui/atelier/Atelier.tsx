@@ -672,7 +672,14 @@ export function Atelier() {
               href: "#couleurs",
               icone: PaletteIcon,
             },
-            { libelle: "DataTable", href: "#data-table", icone: Table2Icon },
+            {
+              libelle: "DataTable",
+              href: "#data-table",
+              icone: Table2Icon,
+              // Démonstration de la pastille d'une entrée.
+              badge: 3,
+              libelleBadge: "3 exemples",
+            },
           ].map((lien) => ({ ...lien, actif: lien.href === section })),
         },
         ...GROUPES.map(({ titre, demos }) => ({

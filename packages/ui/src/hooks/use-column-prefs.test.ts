@@ -1,6 +1,6 @@
 import { createElement, type ReactNode } from "react"
 import { act, renderHook } from "@testing-library/react"
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   PorteeStockageLocal,
@@ -177,7 +177,7 @@ describe("useColumnPrefs", () => {
     expect(result.current.ordre).toEqual(["telephone", "email", "statut"])
   })
 
-  it("laisse à leur place et dans leur état les colonnes indisponibles", () => {
+  it("masque les colonnes indisponibles, qui gardent leur place et leur état", () => {
     localStorage.setItem(
       "anon:membres:personnes",
       JSON.stringify({
@@ -189,10 +189,17 @@ describe("useColumnPrefs", () => {
     const { result } = renderHook(() =>
       useColumnPrefs({ ...OPTIONS, disponibles: ["email", "statut"] })
     )
+    // Affichée dans les préférences, mais masquée ici : TanStack afficherait
+    // une colonne que la visibilité ne cite pas.
     expect(result.current.optionsTableau.visibiliteColonnes).toEqual({
+      telephone: false,
       email: true,
       statut: false,
     })
+    expect(result.current.optionsTableau.colonnesReglables).toEqual([
+      "email",
+      "statut",
+    ])
     expect(result.current.optionsTableau.ordreColonnes).toEqual([
       "email",
       "statut",
@@ -210,6 +217,57 @@ describe("useColumnPrefs", () => {
     // « telephone » garde son état (affiché) et sa place (en tête).
     expect(result.current.visibles.sort()).toEqual(["statut", "telephone"])
     expect(result.current.ordre).toEqual(["telephone", "statut", "email"])
+  })
+
+  it("affichees : impose une colonne sans toucher à sa préférence", () => {
+    const { result } = renderHook(() =>
+      useColumnPrefs({ ...OPTIONS, affichees: ["telephone"] })
+    )
+    const options = () => result.current.optionsTableau
+    expect(options().visibiliteColonnes.telephone).toBe(true)
+    // Hors du panneau le temps de l'imposition.
+    expect(options().colonnesReglables).toEqual(["email", "statut"])
+    // Un geste parti de l'état affiché (panneau d'un tableau rendu à la
+    // main) ne l'enregistre pas comme affichée.
+    act(() =>
+      options().onVisibiliteColonnesChange({
+        ...options().visibiliteColonnes,
+        statut: false,
+      })
+    )
+    expect(result.current.visibles).toEqual(["email"])
+  })
+
+  it("mobile : sur téléphone, seules ces colonnes, et pas de panneau", () => {
+    vi.stubGlobal("matchMedia", (requete: string) => ({
+      matches: requete.includes("width <"),
+      media: requete,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+    try {
+      const { result } = renderHook(() =>
+        useColumnPrefs({ ...OPTIONS, mobile: ["email"] })
+      )
+      expect(result.current.optionsTableau.visibiliteColonnes).toEqual({
+        email: true,
+        statut: false,
+        telephone: false,
+      })
+      expect(result.current.optionsTableau.colonnesReglables).toEqual([])
+      // Les préférences ne changent pas.
+      expect(result.current.visibles).toEqual(["email", "statut"])
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it("mobile : sans effet sur ordinateur", () => {
+    const { result } = renderHook(() =>
+      useColumnPrefs({ ...OPTIONS, mobile: ["email"] })
+    )
+    expect(result.current.optionsTableau.visibiliteColonnes.statut).toBe(true)
+    expect(result.current.optionsTableau.colonnesReglables).toHaveLength(3)
   })
 
   it("revient aux colonnes par défaut", () => {
