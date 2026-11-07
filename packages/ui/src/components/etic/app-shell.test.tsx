@@ -105,7 +105,7 @@ describe("AppShell", () => {
     expect(screen.queryByRole("button", { name: "Ouvrir le menu" })).toBeNull()
   })
 
-  it("logo de la marque : 32 px, la hauteur utile de son bouton", () => {
+  it("logo de la marque : 32 px, ramené à 24 px centré dans la barre repliée", () => {
     simulerLargeur(false)
     rendre({
       application: {
@@ -114,7 +114,11 @@ describe("AppShell", () => {
       },
     })
     // jsdom n'applique pas les styles : la taille se lit aux classes.
-    expect(screen.getByTestId("logo").parentElement).toHaveClass("size-8")
+    expect(screen.getByTestId("logo").parentElement).toHaveClass(
+      "size-8",
+      "group-data-[collapsible=icon]:size-6",
+      "group-data-[collapsible=icon]:mx-1"
+    )
   })
 
   it("se replie en icônes et retrouve ce repli à la visite suivante", async () => {

@@ -322,9 +322,14 @@ function Marque({
           render={<Lien href={application.href ?? "/"} />}
         >
           {/* 32 px, comme le sélecteur d'équipe de shadcn : toute la hauteur
-              utile du bouton (48 px moins ses marges) ; dans la barre
-              repliée, il remplit le bouton de 32 px, donc centré. */}
-          <Logo application={application} className="size-8" />
+              utile du bouton (48 px moins ses marges), le nom à côté faisant
+              contrepoids. Dans la barre repliée, seul parmi des icônes de
+              16 px, il pèserait le double : 24 px, centré dans le bouton de
+              32 px (sans marge intérieure) par 4 px de marge de chaque côté. */}
+          <Logo
+            application={application}
+            className="size-8 group-data-[collapsible=icon]:mx-1 group-data-[collapsible=icon]:size-6"
+          />
           <span className="grid flex-1 text-left leading-tight">
             <span className="truncate font-semibold">{application.nom}</span>
             {application.sousTitre ? (
