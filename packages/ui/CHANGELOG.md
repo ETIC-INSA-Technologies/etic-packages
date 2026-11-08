@@ -1,5 +1,41 @@
 # @etic-insa/ui
 
+## 0.7.0
+
+### Minor Changes
+
+- 54220ec: Composants, hooks et formats venus des applications :
+
+  - Tiroirs : `taille` de `SheetContent` (`sm` à `xl`, tout l'écran sous 640 px) et `SheetBody`,
+    seul à défiler ; `DetailSheet`, tiroir de détail d'une liste (chargement, introuvable,
+    contenu gardé pendant la fermeture), piloté par `useDetailSheet` (identifiant gardé dans
+    l'URL, dernier élément ouvert retenu).
+  - Listes : `useColumnPrefs` masque désormais les colonnes indisponibles (`disponibles`), qui
+    restaient affichées ; options `affichees` (colonnes imposées par la vue) et `mobile` (seules
+    colonnes affichées sur téléphone). `DataTableViewOptions` n'est plus rendu sans colonne à
+    régler. `filtresSecondaires` de `DataTableToolbar` : filtres moins courants derrière « Plus de
+    filtres ». `useServerPagination` (compteur, pagination, retour à la dernière page),
+    `useServerSorting`, `useDebouncedSearch` et `FilteredEmptyState`.
+  - Navigation et en-têtes : `badge` d'une entrée d'`AppShell` (pastille, point sur l'icône barre
+    repliée) ; `NavTabs`, onglets qui sont des liens ; `DetailMeta` et `DetailMetaLink`, ligne
+    d'informations d'une fiche aux points jamais orphelins ; `ExternalLink` et
+    `DropdownMenuExternalLink`, liens vers un nouvel onglet, annoncés.
+  - Formulaires et blocs : `SelectField`, `SelectedFile`, `SubSection`, `CodeBlock`.
+  - Hooks : `useFreshDialog`, `useLoadOnOpen`, `useSaveByKey`.
+  - Formats : `formaterNombre`, `formaterMontant`, `formaterPourcentage`, `formaterDureePrecise`,
+    `formaterHeure`, `capitaliser`, `initiales`.
+
+### Patch Changes
+
+- d674a83: `SaveBar` : le ↶ général (`retablirDefauts`) masqué n'est plus rendu — sa place vide repoussait
+  le statut sur trois lignes au téléphone — et apparaît en fondu ; offert, il garde la barre
+  `masqueeAuRepos` visible au repos, sans que l'application ait à basculer cette option.
+- 04fabf9: `AppShell` : dans la barre latérale repliée, le logo de l'application passe de 32 à 24 px,
+  centré, pour ne plus peser le double des icônes de navigation ; barre dépliée, il garde 32 px.
+- eae1359: `PhoneInput` : le champ du numéro n'accepte plus que des chiffres, des séparateurs (espaces,
+  points, tirets, parenthèses) et un « + » en tête ; une lettre tapée ou collée est écartée, le
+  curseur restant en place.
+
 ## 0.6.0
 
 ### Minor Changes
