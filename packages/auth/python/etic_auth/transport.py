@@ -31,9 +31,13 @@ logger = logging.getLogger(__name__)
 #: Plafond d'un `Retry-After` : ETIC Members ne doit pas pouvoir immobiliser une requête.
 PLAFOND_RETRY_AFTER_SECONDES: Final = 60.0
 
-#: Durée accordée aux nouvelles tentatives d'un appel qui bloque une requête utilisateur.
+#: Durée d'un appel qui bloque une requête utilisateur, tentatives et attentes comprises.
 #: Au-delà, un `502` lisible vaut mieux qu'une requête que le navigateur abandonnera.
 BUDGET_APPEL_INTERACTIF_SECONDES: Final = 8.0
+
+#: Délai plancher d'une tentative lancée en fin de budget : plus court, elle échouerait à coup
+#: sûr sans rien apprendre.
+DELAI_PLANCHER_TENTATIVE_SECONDES: Final = 1.0
 
 #: Connexions inactives gardées ouvertes : l'introspection a lieu à chaque requête, et une
 #: poignée de main TLS par appel coûterait plus que l'appel lui-même.
@@ -153,7 +157,13 @@ class Transport:
         `rejouable=False` pour un appel qui consomme quelque chose dès la première tentative
         (code d'autorisation, jeton de rafraîchissement) : un timeout survenu après
         consommation suivi d'un rejeu ne rendrait qu'un `invalid_grant` trompeur.
-        `budget_secondes` borne la durée totale des nouvelles tentatives, attentes comprises.
+        `budget_secondes` borne l'appel, tentatives et attentes comprises : aucune tentative
+        n'est lancée si l'attente qui la précède dépasserait le budget, et, sauf `timeout`
+        imposé par l'appelant, chaque tentative a pour délai le plus court de
+        `timeout_secondes` et du budget restant (au moins `DELAI_PLANCHER_TENTATIVE_SECONDES`).
+        httpx applique ce délai à chaque attente du transport (connexion, envoi, lecture), pas à
+        leur somme : un serveur très lent déborde un peu, jamais d'un `timeout_secondes` entier.
+        Un dépassement lève toujours `ErreurAmont("timeout", …)`.
         """
         entetes = dict(headers or {})
         if self._config.id_requete is not None and (id_requete := self._config.id_requete()):
@@ -163,6 +173,15 @@ class Transport:
         arret = stop_after_attempt(tentatives)
         if budget_secondes is not None:
             arret = arret | stop_before_delay(budget_secondes)
+        debut = time.monotonic()
+
+        def delai_de_la_tentative() -> dict[str, Any]:
+            if budget_secondes is None or "timeout" in kw:
+                return kw
+            restant = budget_secondes - (time.monotonic() - debut)
+            plancher = DELAI_PLANCHER_TENTATIVE_SECONDES
+            return {**kw, "timeout": min(self._config.timeout_secondes, max(restant, plancher))}
+
         try:
             async for tentative in AsyncRetrying(
                 stop=arret,
@@ -175,7 +194,9 @@ class Transport:
                 reraise=True,
             ):
                 with tentative:
-                    return await self._une_fois(methode, chemin, headers=entetes, **kw)
+                    return await self._une_fois(
+                        methode, chemin, headers=entetes, **delai_de_la_tentative()
+                    )
         except _Reessayable as exc:
             logger.error(
                 "etic_members : appel en échec",
