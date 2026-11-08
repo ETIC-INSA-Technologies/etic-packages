@@ -181,7 +181,38 @@ describe("SaveBar", () => {
     expect(screen.getByRole("button", { name: "Enregistrer" })).toHaveFocus()
   })
 
-  it("retour général aux défauts : icône à l'autre bout, masquée sans écart, focus à Enregistrer", async () => {
+  it("masquée au repos, sauf quand le retour général aux défauts est offert", () => {
+    const { container, rerender } = render(
+      <SaveBar
+        collante
+        masqueeAuRepos
+        desactive
+        retablirDefauts={{ onRetablir() {}, masque: true }}
+      />
+    )
+    const barre = container.firstElementChild!
+    expect(barre).toHaveClass("contents")
+    expect(screen.queryByRole("button")).toBeNull()
+
+    rerender(
+      <SaveBar
+        collante
+        masqueeAuRepos
+        desactive
+        retablirDefauts={{ onRetablir() {} }}
+      />
+    )
+    expect(barre).not.toHaveClass("contents")
+    expect(barre).toHaveClass("bg-card")
+    expect(barre).not.toHaveClass("sticky")
+    expect(
+      screen.getByRole("button", {
+        name: "Rétablir toutes les valeurs par défaut",
+      })
+    ).toBeVisible()
+  })
+
+  it("retour général aux défauts : icône à l'autre bout, absente sans écart, focus à Enregistrer", async () => {
     const user = userEvent.setup()
     function Formulaire() {
       const [auDefaut, setAuDefaut] = useState(false)
@@ -204,9 +235,9 @@ describe("SaveBar", () => {
     expect(screen.getAllByRole("button")[0]).toBe(retablir)
     await user.click(retablir)
     expect(screen.getByRole("button", { name: "Enregistrer" })).toHaveFocus()
-    // Masqué mais en place : rien ne bouge autour.
-    expect(retablir).toHaveClass("invisible")
-    expect(retablir).toBeInTheDocument()
+    // Plus rien à rétablir : il n'est plus rendu, et sa place ne reste pas
+    // vide (« Annuler » et « Enregistrer », alignés à droite, n'ont pas bougé).
+    expect(retablir).not.toBeInTheDocument()
     expect(screen.getAllByRole("button").map((e) => e.textContent)).toEqual([
       "Annuler",
       "Enregistrer",

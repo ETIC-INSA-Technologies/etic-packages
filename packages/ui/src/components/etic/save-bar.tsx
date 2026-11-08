@@ -41,8 +41,9 @@ export interface SaveBarProps {
   /**
    * Formulaire dont les champs ont une valeur par défaut : le bouton
    * général ↶ (`ResetButton`), devant « Annuler », qui remet tous les
-   * champs à leur défaut sans rien enregistrer. `masque` quand aucun champ
-   * ne s'en écarte (il garde sa place). Au clic, le focus passe à
+   * champs à leur défaut sans rien enregistrer. `masque` quand il n'y a rien
+   * à rétablir : il n'est alors pas rendu. Offert, il garde la barre visible
+   * même au repos (`masqueeAuRepos`). Au clic, le focus passe à
    * « Enregistrer », l'étape suivante.
    */
   retablirDefauts?: {
@@ -71,8 +72,15 @@ export function SaveBar({
   className,
 }: SaveBarProps) {
   const refEnregistrer = useRef<HTMLButtonElement>(null)
+  // Le ↶ général offert est quelque chose à dire : la barre ne se cache pas.
+  const retablirOffert = retablirDefauts?.masque ? undefined : retablirDefauts
   const auRepos =
-    collante && masqueeAuRepos && !modifie && !enCours && !enregistre
+    collante &&
+    masqueeAuRepos &&
+    !modifie &&
+    !enCours &&
+    !enregistre &&
+    !retablirOffert
   const enregistrer = (
     <Button
       ref={refEnregistrer}
@@ -104,12 +112,20 @@ export function SaveBar({
       Annuler
     </Button>
   ) : null
-  const retablir = retablirDefauts ? (
+  // Masqué, le ↶ général n'est pas rendu. Celui d'un champ garde sa place
+  // pour ne pas s'effacer sous le curseur pendant la frappe ; celui-ci ne
+  // change pas pendant qu'on le vise, et sa place vide repoussait le statut
+  // sur trois lignes au téléphone. Il apparaît en fondu (`starting:`).
+  const retablir = retablirOffert ? (
     <ResetButton
-      masque={retablirDefauts.masque}
       disabled={enCours}
-      cible={() => refEnregistrer.current}
-      onRetablir={retablirDefauts.onRetablir}
+      className="starting:opacity-0"
+      onRetablir={() => {
+        // Il disparaît d'ordinaire avec l'écart : le focus va d'abord à
+        // « Enregistrer », l'étape suivante, plutôt que sur la page.
+        refEnregistrer.current?.focus()
+        retablirOffert.onRetablir()
+      }}
     />
   ) : null
   // Toujours présent : une zone `status` ajoutée en même temps que son texte

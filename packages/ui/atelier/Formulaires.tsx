@@ -416,6 +416,9 @@ function DemoValeursParDefaut() {
   const [saisie, setSaisie] = useState(enregistre)
   const modifie = JSON.stringify(saisie) !== JSON.stringify(enregistre)
   const auDefaut = JSON.stringify(saisie) === JSON.stringify(DEFAUTS)
+  // Quand seule la saisie s'écarte des défauts, « Annuler » y revient déjà.
+  const enregistreAuDefaut =
+    JSON.stringify(enregistre) === JSON.stringify(DEFAUTS)
   return (
     <form
       className="flex max-w-md flex-col gap-4"
@@ -466,7 +469,7 @@ function DemoValeursParDefaut() {
         onAnnuler={modifie ? () => setSaisie(enregistre) : undefined}
         retablirDefauts={{
           onRetablir: () => setSaisie(DEFAUTS),
-          masque: auDefaut,
+          masque: auDefaut || enregistreAuDefaut,
         }}
       />
     </form>
