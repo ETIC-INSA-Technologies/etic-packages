@@ -625,6 +625,7 @@ export {
 } from "./components/etic/data-table-bulk-actions"
 export {
   DataTablePagination,
+  LIMITES_PAGINATION,
   type DataTablePaginationProps,
   type DataTablePaginationDecalageProps,
   type DataTablePaginationTableProps,
@@ -673,6 +674,11 @@ export {
   type UseServerSortingOptions,
   type UseServerSortingResultat,
 } from "./components/etic/use-server-sorting"
+export {
+  useListUrlState,
+  type UseListUrlStateOptions,
+  type UseListUrlStateResultat,
+} from "./hooks/use-list-url-state"
 export type {
   ColumnOrderState,
   ColumnVisibilityState,

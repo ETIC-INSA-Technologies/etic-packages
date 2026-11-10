@@ -747,6 +747,7 @@ l'assistant typé, `useDataTable` crée l'instance, les composants la reçoivent
 | `useColumnPrefs`           | colonnes affichées et leur ordre, gardés dans le navigateur par liste et par personne                                                                            |
 | `useServerPagination`      | compteur et pagination d'une page reçue du serveur ; un décalage au-delà du total ramène à la dernière page                                                      |
 | `useServerSorting`         | tri d'une liste triée par le serveur, à étaler dans `useDataTable`                                                                                               |
+| `useListUrlState`          | page, taille, tri, recherche et filtres d'une liste gardés dans l'URL : le retour arrière depuis un élément retrouve la liste telle qu'on l'a laissée            |
 | `FilteredEmptyState`       | vide d'une liste filtrée, distinct d'un vide réel : « Réinitialiser les filtres »                                                                                |
 | `usePersistedState`        | `useState` gardé dans le navigateur (filtre choisi…), sous la portée `PorteeStockageLocal`                                                                       |
 
@@ -883,6 +884,38 @@ d'une liste dont la recherche vit ailleurs (l'URL) : la saisie, recopiée sans s
 bord après une pause de frappe ; `recopierAuDemontage` pour un champ dans un panneau qui se
 ferme. Une liste filtrée qui ne rend rien passe `FilteredEmptyState` (`onReinitialiser`) en
 `vide`, distinct de son vide réel.
+
+`useListUrlState({ params, onParamsChange, clesTri, tri, sens })` garde tout cet état dans
+l'URL (`offset`, `limit`, `tri`, `sens`, `recherche`, un paramètre par filtre), sans dépendre du
+routeur : `params` est `useSearchParams()[0]`, `onParamsChange` `(p) => setSearchParams(p, {
+replace: true })`. Ouvrir un élément puis revenir en arrière retrouve la liste filtrée, à la
+même page ; un lien ou un rechargement aussi. Chaque réglage remplace l'entrée d'historique (le
+retour quitte la liste au lieu de défaire les filtres un à un) ; seuls les écarts aux défauts
+sont écrits ; un filtre, la recherche, le tri ou la taille ramènent en première page. Il rend
+`decalage`, `limite`, `tri`, `sens`, `filtre(cle)`, `filtresActifs`, la saisie `recherche` (par
+`useDebouncedSearch`) et leurs setters, stables, qui s'additionnent dans un même geste ;
+`reinitialiserFiltres` garde disposition et paramètres de `vue` (élément ouvert dans un tiroir…).
+
+```tsx
+const [params, setParams] = useSearchParams()
+const liste = useListUrlState({
+  params,
+  onParamsChange: (p) => setParams(p, { replace: true }),
+  clesTri: CLES_TRI, // constante de module
+  tri: "nom",
+  sens: "asc",
+})
+const groupe = liste.filtre("groupe")
+// useServerPagination({ decalage: liste.decalage, limite: liste.limite,
+//   onDecalageChange: liste.definirDecalage, onLimiteChange: liste.definirLimite, … })
+// useDataTable({ …, ...useServerSorting(liste) })
+<DataTableToolbar
+  recherche={{ valeur: liste.recherche, onValeurChange: liste.saisirRecherche }}
+  filtresActifs={liste.filtresActifs}
+  onReinitialiser={liste.reinitialiserFiltres}
+  …
+/>
+```
 
 `filtresSecondaires` de `DataTableToolbar` range les filtres moins courants, au-delà des trois
 ou quatre de `filtres` : sur ordinateur, dans un panneau ouvert par « Plus de filtres (n) »

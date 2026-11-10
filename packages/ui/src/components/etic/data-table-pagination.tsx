@@ -38,8 +38,12 @@ function fenetre(courante: number, nombre: number): (number | "…")[] {
   return sortie
 }
 
+/** Nombres d'éléments par page proposés par défaut. */
+export const LIMITES_PAGINATION: readonly number[] = [10, 25, 50, 100]
+
 interface DataTablePaginationCommun {
-  /** Nombres d'éléments par page proposés. 10, 25, 50 et 100 par défaut. */
+  /** Nombres d'éléments par page proposés (`LIMITES_PAGINATION` par
+   *  défaut). */
   limites?: readonly number[]
   className?: string
 }
@@ -130,7 +134,7 @@ function PaginationParDecalage({
   limite,
   onDecalageChange,
   onLimiteChange,
-  limites = [10, 25, 50, 100],
+  limites = LIMITES_PAGINATION,
   className,
   ramenerAuDela = true,
   changerTaille,
