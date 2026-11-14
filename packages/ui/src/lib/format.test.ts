@@ -158,9 +158,12 @@ describe("nombres, montants, pourcentages", () => {
     expect(formaterNombre(Number.NaN, "")).toBe("")
   })
 
-  it("formaterMontant : euros par défaut", () => {
+  it("formaterMontant : euros par défaut, sans centimes s'il est rond", () => {
     expect(espaces(formaterMontant(1234.5))).toBe("1 234,50 €")
-    expect(espaces(formaterMontant(3, { devise: "USD" }))).toBe("3,00 $US")
+    expect(espaces(formaterMontant(1234))).toBe("1 234 €")
+    expect(espaces(formaterMontant(0.999))).toBe("1 €")
+    expect(espaces(formaterMontant(3, { devise: "USD" }))).toBe("3 $US")
+    expect(espaces(formaterMontant(3.1, { devise: "USD" }))).toBe("3,10 $US")
     expect(formaterMontant(undefined)).toBe("—")
   })
 

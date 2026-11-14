@@ -48,13 +48,18 @@ export function formaterNombre(
   return fini(valeur) ? nombreFr(valeur) : repli
 }
 
-/** Montant : « 1 234,50 € » (euros par défaut, `devise` ISO 4217 sinon). */
+/** Montant : « 1 234 € » s'il est rond, « 1 234,50 € » sinon (euros par
+ *  défaut, `devise` ISO 4217 sinon). */
 export function formaterMontant(
   valeur: number | null | undefined,
   { devise = "EUR", repli = "—" }: { devise?: string; repli?: string } = {}
 ): string {
   if (!fini(valeur)) return repli
-  return valeur.toLocaleString("fr-FR", { style: "currency", currency: devise })
+  return valeur.toLocaleString("fr-FR", {
+    style: "currency",
+    currency: devise,
+    trailingZeroDisplay: "stripIfInteger",
+  })
 }
 
 /** Une fraction en pourcentage : 0,55 → « 55 % » ; `decimales` au plus
