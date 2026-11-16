@@ -62,7 +62,7 @@ l'application.
   doit servir dans les 2 jours, sinon la recréer.
 - **CI de la PR « Versions des paquets »** : ouverte par le jeton du workflow, elle ne
   déclenche pas `ci.yml`. Pour voir ses contrôles, la fermer puis la rouvrir ; de toute façon,
-  la publication relance lint, types et tests avant d'empaqueter.
+  une fois fusionnée, `publication.yml` passe tous les contrôles de `ci.yml` avant d'empaqueter.
 - **Si npmjs.com ne propose ces réglages qu'une fois le paquet créé**, publier la première
   version à la main, depuis un poste connecté au compte npm de l'organisation (double
   authentification) :

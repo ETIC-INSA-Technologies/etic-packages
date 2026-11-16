@@ -1,13 +1,16 @@
 name: CI
 
+# Sur main, c'est publication.yml qui appelle ce workflow (workflow_call) : une seule passe des
+# contrôles par push, dont dépend l'empaquetage des versions à publier.
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
+# Une PR annule sa passe précédente ; appelé par la publication, jamais d'annulation (groupe
+# propre à chaque exécution).
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: true
 
 permissions:
