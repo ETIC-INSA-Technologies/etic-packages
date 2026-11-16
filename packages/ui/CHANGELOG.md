@@ -1,5 +1,32 @@
 # @etic-insa/ui
 
+## 0.9.0
+
+### Minor Changes
+
+- 57ea102: `@etic-insa/ui/test/controles`, nouvelle entrée : `inactif`, `coche`, `appuyer`, `choisir`,
+  `optionsDe`, `valeurAffichee` et `chercher`, pour lire et manipuler les contrôles de la
+  bibliothèque dans les tests. Elle importe `@testing-library/react`, qui devient une dépendance
+  pair facultative ; `@etic-insa/ui/test` (`installMatchMedia`…) ne change pas et n'en a pas
+  besoin.
+- f1da791: `setSearchDelay` (`@etic-insa/ui/test`) règle la pause de frappe par défaut de `SearchSelect`,
+  `useDebouncedValue` et `useDebouncedSearch` (300 ms hors test) : `setSearchDelay(0)` dans la mise
+  en place des tests épargne une attente réelle à chaque recherche simulée. Un `delai` passé
+  explicitement reste respecté ; rien ne change pour une application.
+- 57ea102: `useUnsavedChangesGuard(modifie, resteDansLaPage?)` : retient la fermeture de l'onglet et rend
+  le garde à passer au routeur (`useBlocker`), qui laisse passer une navigation sans changement de
+  chemin. `retablirDefautsMasque`, la règle du `masque` du bouton général ↶ de `SaveBar`.
+- 57ea102: Liens : `creerLienRouteur(Link)` adapte le `Link` d'un routeur (destination dans `to`) au
+  `LienProvider`, sans que la bibliothèque importe de routeur ; sans `href`, un texte inerte.
+  `DataTableCellLink` prend `externe` (nouvel onglet, flèche sortante) et `libelleExterne`
+  (destination dite aux lecteurs d'écran) ; `NOUVEL_ONGLET` et
+  `MarqueExterne` (avec `libelle`, « nouvel onglet » par défaut) sont exportés pour un lien
+  sortant composé à la main.
+- 57ea102: Saisie et affichage : `lireNombre` (nombre saisi à la française, `null` si illisible, « % »
+  final toléré avec `pourcentage`), `UnitInput` (champ chiffré suivi de son unité), `EmptyValue`
+  (« — » d'une valeur absente, lu « non renseigné »), `grouperPar` (regroupement dans l'ordre
+  d'apparition).
+
 ## 0.8.0
 
 ### Minor Changes

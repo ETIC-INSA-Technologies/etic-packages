@@ -1,5 +1,15 @@
 # @etic-insa/auth
 
+## 0.5.0
+
+### Minor Changes
+
+- 57ea102: `erreursChamps` : les champs refusés d'une `ErreurApi` (`details.errors[]` de l'enveloppe
+  commune), en `{ chemin, msg, type }`, pour placer chaque refus sous son champ.
+- 57ea102: `creerQueryClient` : le `QueryClient` commun des applications. Une lecture en échec est
+  retentée une fois, jamais sur un refus 4xx (`lectureARetenter`) ; pas de relecture au retour sur
+  l'onglet ; données fraîches 30 s (`staleTime` en option) ; mutations jamais rejouées.
+
 ## 0.4.1
 
 ### Patch Changes
