@@ -72,5 +72,8 @@ export default defineConfig(({ command }) => ({
     environment: "jsdom",
     setupFiles: ["src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // Par défaut, un worker par thread logique moins un, chacun avec son DOM :
+    // sur un poste de développement, ce pic sature la mémoire. Quatre au plus.
+    maxWorkers: 4,
   },
 }))
