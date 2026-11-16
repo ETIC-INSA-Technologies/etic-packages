@@ -1,5 +1,15 @@
 # @etic-insa/ui
 
+## 0.8.0
+
+### Minor Changes
+
+- 5e76871: `useListUrlState` : page, taille, tri, recherche et filtres d'une liste gardés dans l'URL, sans
+  dépendre du routeur ; le retour arrière depuis un élément retrouve la liste telle qu'on l'a
+  laissée. `LIMITES_PAGINATION`, nombres par page proposés par défaut par `DataTablePagination`.
+- d9e0e4f: `formaterMontant` n'écrit plus de centimes pour un montant rond : « 1 234 € » au lieu de
+  « 1 234,00 € » ; un montant qui a des centimes les garde tous les deux (« 1 234,50 € »).
+
 ## 0.7.0
 
 ### Minor Changes
