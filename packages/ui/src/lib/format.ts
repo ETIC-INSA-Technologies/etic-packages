@@ -48,6 +48,36 @@ export function formaterNombre(
   return fini(valeur) ? nombreFr(valeur) : repli
 }
 
+/** Écriture décimale, signe facultatif : « 12 », « -3.5 », « .5 », « 12. ». */
+const ECRITURE_DECIMALE = /^[+-]?(?:\d+\.?\d*|\.\d+)$/
+
+/**
+ * Nombre saisi à la française, pendant de `formaterNombre` : `null` s'il
+ * n'est pas lisible (texte vide compris, jamais 0 par défaut). Admet la
+ * virgule ou le point décimal et les espaces, insécables compris
+ * (« 1 234,5 », tel que `formaterNombre` l'écrit). Avec `pourcentage`, un
+ * « % » final est toléré ; la valeur reste celle saisie (« 15 % » → 15, et
+ * non 0,15). Seule l'écriture décimale est admise : « 1e3 », « 0x10 » ou
+ * « Infinity », que `Number` accepterait, sont refusés.
+ *
+ * ```ts
+ * lireNombre("1 234,5") // 1234.5
+ * lireNombre("15 %", { pourcentage: true }) // 15
+ * lireNombre("") // null
+ * ```
+ */
+export function lireNombre(
+  texte: string,
+  { pourcentage = false }: { pourcentage?: boolean } = {}
+): number | null {
+  let saisie = texte.replace(/\s/g, "")
+  if (pourcentage) saisie = saisie.replace(/%$/, "")
+  saisie = saisie.replace(",", ".")
+  if (!ECRITURE_DECIMALE.test(saisie)) return null
+  const nombre = Number(saisie)
+  return Number.isFinite(nombre) ? nombre : null
+}
+
 /** Montant : « 1 234 € » s'il est rond, « 1 234,50 € » sinon (euros par
  *  défaut, `devise` ISO 4217 sinon). */
 export function formaterMontant(

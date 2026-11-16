@@ -312,6 +312,33 @@ location.assign(api.url("/auth/login", { suivant: "/" }))
 - Sans `AbortSignal.any` (Safari avant 17.4), le signal de l'appelant et le délai sont combinés
   par des écouteurs, retirés en fin de requête.
 
+#### Refus par champ
+
+`erreursChamps(erreur)` lit les champs refusés d'une `ErreurApi` dans l'enveloppe commune
+(`details.errors = [{ loc, msg, type }]`, servi pour un corps ou des paramètres refusés, 422) : `{ chemin, msg, type }[]`, où `chemin` joint `loc` par des points
+(`body.phases.0.nb_jeh`). Vide pour toute autre erreur ; une entrée mal formée donne des champs
+vides (`""`, `null`) plutôt qu'une exception. Le message à placer sous le champ est `msg`, celui
+du serveur.
+
+```tsx
+const refus = erreursChamps(erreur).find((champ) => champ.chemin === "body.email")
+<FormField libelle="E-mail" erreur={refus?.msg ?? undefined}>…</FormField>
+```
+
+#### Cache des requêtes (react-query)
+
+`creerQueryClient({ staleTime? })` est le `QueryClient` des applications, même politique
+partout : une lecture qui échoue est retentée une fois, jamais sur un refus 4xx
+(`lectureARetenter`, à reprendre dans une requête qui pose son propre `retry`) : rejouer un 401,
+un 403 ou un 404 ne peut pas réussir et retarderait l'affichage de l'erreur ; pas de relecture
+au retour sur l'onglet ; une donnée reste fraîche 30 s (`staleTime`) ; une mutation n'est
+jamais rejouée.
+
+```tsx
+const queryClient = creerQueryClient()
+<QueryClientProvider client={queryClient}>…</QueryClientProvider>
+```
+
 #### Migrer depuis le client d'ETIC Members ou d'ETIC Docs
 
 | Avant                                                                 | Avec `@etic-insa/auth`                                                    |
@@ -327,6 +354,8 @@ location.assign(api.url("/auth/login", { suivant: "/" }))
 | `api.postForm(chemin, formData)` (Members)                            | `api.post(chemin, formData)`                                              |
 | `api.getBlob`, `apiFetchBlob` (Members)                               | `api.lireBlob(chemin, { signal, delaiMax })`                              |
 | 401 : événement `eticdocs:non-authentifie`, `etic-admin:unauthorized` | `surNonAuthentifie` (`signalerNonAuthentifie`, ou celui de l'application) |
+| `new QueryClient({ … })` (Members), `creerQueryClient()` (Docs)       | `creerQueryClient()`                                                      |
+| `erreursChamps` (Docs)                                                | `erreursChamps`                                                           |
 
 Codes qui changent :
 
@@ -336,6 +365,9 @@ Codes qui changent :
 - Docs : sans enveloppe, un 4xx hors table donne `http_<statut>` au lieu d'`internal_error` ;
   l'erreur réseau ne porte plus `details.cause`.
 - Les deux : `delai_depasse` distingue le délai dépassé de la panne réseau.
+- Members, avec `creerQueryClient` : un refus 4xx n'est plus retenté (il l'était une fois),
+  une donnée reste fraîche 30 s au lieu d'être relue à chaque montage
+  (`creerQueryClient({ staleTime: 0 })` pour garder l'ancien comportement).
 
 ## Développer
 

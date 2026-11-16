@@ -49,3 +49,35 @@ export function useLien(lien?: LienComposant): LienComposant {
   const fourni = useContext(ContexteLien)
   return lien ?? fourni
 }
+
+/** Le lien d'un routeur qui prend sa destination dans `to` (le `Link` de
+ *  react-router, de TanStack Router…), le reste comme un `<a>`. */
+export type LienRouteurSource = ComponentType<
+  Omit<ComponentProps<"a">, "href"> & { to: string }
+>
+
+/**
+ * Le lien d'un routeur, adapté aux composants de la bibliothèque, qui
+ * passent `href` comme à un `<a>` : à donner au `LienProvider`. La
+ * bibliothèque n'importe aucun routeur, l'application lui passe le sien.
+ * L'appeler une fois, au niveau du module : le composant rendu doit rester
+ * le même d'un rendu à l'autre.
+ *
+ * Sans `href`, le lien n'a pas de destination : un `<a>` sans adresse
+ * (texte inerte), pas un lien vers l'accueil.
+ *
+ * ```tsx
+ * import { Link } from "react-router-dom"
+ * const LienRouteur = creerLienRouteur(Link)
+ * <LienProvider lien={LienRouteur}>…</LienProvider>
+ * ```
+ */
+export function creerLienRouteur(
+  Lien: LienRouteurSource
+): ComponentType<ComponentProps<"a">> {
+  function LienRouteur({ href, ...props }: ComponentProps<"a">) {
+    if (href === undefined) return <a {...props} />
+    return <Lien to={href} {...props} />
+  }
+  return LienRouteur
+}

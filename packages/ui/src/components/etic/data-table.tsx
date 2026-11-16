@@ -97,6 +97,10 @@ import {
   type DataTableUnite,
 } from "@etic-ui/components/etic/data-table-format"
 import { useLien, type LienComposant } from "@etic-ui/components/etic/lien"
+import {
+  MarqueExterne,
+  NOUVEL_ONGLET,
+} from "@etic-ui/components/etic/external-link"
 import { rendreFocusApresLigne } from "@etic-ui/components/etic/data-table-focus"
 import {
   QueryErrorBanner,
@@ -1670,8 +1674,16 @@ export type DataTableCellLinkProps = DataTableCellLinkCommun &
   Omit<ComponentProps<"a">, "children" | "className"> & {
     href: string
     /** Lien du routeur de l'application ; par défaut, celui du
-     *  `LienProvider`, sinon un `<a>`. */
+     *  `LienProvider`, sinon un `<a>`. Ignoré avec `externe`. */
     lien?: LienComposant
+    /** Page hébergée ailleurs (document partagé…) : un vrai `<a>` ouvert
+     *  dans un nouvel onglet, flèche sortante et « (nouvel onglet) » pour
+     *  les lecteurs d'écran, comme `ExternalLink`. */
+    externe?: boolean
+    /** Avec `externe`, ce que disent les lecteurs d'écran entre parenthèses
+     *  après le titre : « nouvel onglet » par défaut ; à préciser pour dire
+     *  la destination (« ouvrir sur le Drive, nouvel onglet »). */
+    libelleExterne?: string
   }
 
 /** Bouton de cellule : une action sur place (ouvrir la modification…). */
@@ -1679,6 +1691,8 @@ export type DataTableCellButtonProps = DataTableCellLinkCommun &
   Omit<ComponentProps<"button">, "children" | "className"> & {
     href?: never
     lien?: never
+    externe?: never
+    libelleExterne?: never
   }
 
 /** Style du titre d'une ligne : texte en gras, anneau de focus de la
@@ -1692,13 +1706,35 @@ const TITRE_DE_LIGNE =
  * `lien` ou le `LienProvider`), ou un bouton sans `href` (ouvrir la modification). Le clic de
  * ligne (`onActiverLigne`) n'est qu'un raccourci à la souris : ce lien est
  * le chemin du clavier et des lecteurs d'écran, et garde l'ouverture dans un
- * nouvel onglet.
+ * nouvel onglet. `externe` : une page hébergée ailleurs, ouverte dans un
+ * nouvel onglet, et qui le dit.
  */
 export function DataTableCellLink(
   props: DataTableCellLinkProps | DataTableCellButtonProps
 ) {
-  const { lien, ...reste } = props
+  const { lien, externe = false, libelleExterne, ...reste } = props
   const Lien = useLien(lien)
+  if (reste.href !== undefined && externe) {
+    const { className, children, ...lienProps } = reste
+    return (
+      <a
+        data-slot="data-table-cell-link"
+        className={cn(
+          TITRE_DE_LIGNE,
+          "inline-flex items-center gap-1.5",
+          className
+        )}
+        {...lienProps}
+        {...NOUVEL_ONGLET}
+      >
+        {children}
+        <MarqueExterne
+          className="size-3.5 shrink-0 text-muted-foreground"
+          libelle={libelleExterne}
+        />
+      </a>
+    )
+  }
   if (reste.href !== undefined) {
     const { className, ...lienProps } = reste
     return (

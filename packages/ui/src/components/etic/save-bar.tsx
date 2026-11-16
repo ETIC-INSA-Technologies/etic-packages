@@ -198,3 +198,26 @@ export function SaveBar({
     </div>
   )
 }
+
+/**
+ * `masque` du bouton général ↶ (`retablirDefauts` de `SaveBar`) : vrai
+ * quand la saisie vaut déjà tous les défauts, ou quand ce qui est
+ * enregistré les vaut. Seule la saisie s'en écarte alors, et « Annuler » y
+ * revient déjà (voir « Valeurs enregistrées et valeurs par défaut » dans
+ * le README).
+ *
+ * ```tsx
+ * retablirDefauts={{
+ *   onRetablir,
+ *   masque: retablirDefautsMasque(champs, (c) => saisie[c] === defauts[c],
+ *     (c) => enregistre[c] === defauts[c]),
+ * }}
+ * ```
+ */
+export function retablirDefautsMasque<T>(
+  elements: readonly T[],
+  saisieAuDefaut: (element: T) => boolean,
+  enregistreAuDefaut: (element: T) => boolean
+): boolean {
+  return elements.every(saisieAuDefaut) || elements.every(enregistreAuDefaut)
+}

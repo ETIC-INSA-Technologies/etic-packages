@@ -26,6 +26,7 @@ export {
 } from "./composants"
 export { CLE_ME, useAuth, type AuthValeur } from "./context"
 export { lireErreurConnexion, type ErreurConnexion } from "./erreurConnexion"
+export { erreursChamps, type ErreurChamp } from "./erreursChamps"
 export { EVENEMENT_NON_AUTHENTIFIE, signalerNonAuthentifie } from "./evenements"
 export {
   emailDistinct,
@@ -33,4 +34,9 @@ export {
   nomAffichage,
 } from "./nomAffichage"
 export { aPermission, type PorteurDePermissions } from "./permissions"
+export {
+  creerQueryClient,
+  lectureARetenter,
+  type OptionsQueryClient,
+} from "./queryClient"
 export type { EnveloppeErreur, Me, Preferences, Theme } from "./types"

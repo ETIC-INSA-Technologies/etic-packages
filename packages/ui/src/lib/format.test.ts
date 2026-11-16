@@ -18,6 +18,7 @@ import {
   formaterOctets,
   formaterPourcentage,
   initiales,
+  lireNombre,
   nombreFr,
   participe,
 } from "@etic-ui/index"
@@ -173,6 +174,49 @@ describe("nombres, montants, pourcentages", () => {
       "55,43 %"
     )
     expect(formaterPourcentage(null)).toBe("—")
+  })
+
+  it("lireNombre : virgule ou point, espaces, null si illisible", () => {
+    expect(lireNombre("12")).toBe(12)
+    expect(lireNombre(" 2,5 ")).toBe(2.5)
+    expect(lireNombre("2.5")).toBe(2.5)
+    expect(lireNombre("-3,25")).toBe(-3.25)
+    expect(lireNombre(",5")).toBe(0.5)
+    // Relit ce que formaterNombre écrit (espace fine insécable).
+    expect(lireNombre(formaterNombre(1234.5))).toBe(1234.5)
+    expect(lireNombre("1 234")).toBe(1234)
+    for (const illisible of [
+      "",
+      "  ",
+      "abc",
+      "1,2,3",
+      "1e3",
+      "0x10",
+      "Infinity",
+      "12 €",
+      "15 %",
+    ])
+      expect(lireNombre(illisible)).toBeNull()
+  })
+
+  it("lireNombre : cas limites", () => {
+    // Espace insécable U+00A0 littérale, comme dans un texte collé.
+    expect(lireNombre("1 234,5")).toBe(1234.5)
+    expect(lireNombre("+5")).toBe(5)
+    expect(lireNombre("12.")).toBe(12)
+    expect(lireNombre(formaterNombre(-1234.5))).toBe(-1234.5)
+    // Point des milliers à l'anglo-saxonne mêlé à la virgule : ambigu, refusé.
+    expect(lireNombre("1.234,5")).toBeNull()
+    expect(lireNombre("-")).toBeNull()
+    expect(lireNombre(".")).toBeNull()
+  })
+
+  it("lireNombre : un « % » final toléré avec pourcentage, valeur gardée", () => {
+    expect(lireNombre("15 %", { pourcentage: true })).toBe(15)
+    expect(lireNombre("12,5%", { pourcentage: true })).toBe(12.5)
+    expect(lireNombre("15", { pourcentage: true })).toBe(15)
+    expect(lireNombre("%", { pourcentage: true })).toBeNull()
+    expect(lireNombre("%15", { pourcentage: true })).toBeNull()
   })
 })
 

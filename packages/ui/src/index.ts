@@ -23,6 +23,7 @@ export {
   formaterOctets,
   formaterPourcentage,
   initiales,
+  lireNombre,
   nombreFr,
   participe,
   type Unite,
@@ -36,6 +37,7 @@ export {
   normaliserRecherche,
 } from "./lib/normalize"
 export { NO_AUTOFILL } from "./lib/autofill"
+export { type Groupe, grouperPar } from "./lib/grouper"
 export { useDebouncedValue } from "./hooks/use-debounced-value"
 export {
   useDebouncedSearch,
@@ -329,9 +331,11 @@ export {
   type NavTabsProps,
 } from "./components/etic/nav-tabs"
 export {
+  creerLienRouteur,
   type LienComposant,
   LienProvider,
   type LienProviderProps,
+  type LienRouteurSource,
   useLien,
 } from "./components/etic/lien"
 export { ThemeMenu, type ThemeMenuProps } from "./components/etic/theme-menu"
@@ -360,6 +364,8 @@ export {
   type DropdownMenuExternalLinkProps,
   ExternalLink,
   type ExternalLinkProps,
+  MarqueExterne,
+  NOUVEL_ONGLET,
 } from "./components/etic/external-link"
 export {
   CenteredScreen,
@@ -412,6 +418,7 @@ export {
   DraftResumeDialog,
   type DraftResumeDialogProps,
 } from "./components/etic/draft-resume-dialog"
+export { EmptyValue, type EmptyValueProps } from "./components/etic/empty-value"
 export {
   EmptyState,
   type EmptyStateProps,
@@ -510,7 +517,11 @@ export {
   type ExplainedBadgeProps,
 } from "./components/etic/explained-badge"
 export { Toggletip, type ToggletipProps } from "./components/etic/toggletip"
-export { SaveBar, type SaveBarProps } from "./components/etic/save-bar"
+export {
+  retablirDefautsMasque,
+  SaveBar,
+  type SaveBarProps,
+} from "./components/etic/save-bar"
 export {
   ResetButton,
   type ResetButtonProps,
@@ -525,6 +536,11 @@ export {
   type UnsavedChangesDialogProps,
 } from "./components/etic/unsaved-changes"
 export { useUnsavedChangesWarning } from "./components/etic/use-unsaved-changes-warning"
+export {
+  type EmplacementRouteur,
+  type NavigationDemandee,
+  useUnsavedChangesGuard,
+} from "./components/etic/use-unsaved-changes-guard"
 
 // Formulaires (components/etic) : champs, sélecteurs, fichiers, brouillon.
 export {
@@ -585,6 +601,7 @@ export {
   SearchSelect,
   type SearchSelectProps,
 } from "./components/etic/search-select"
+export { UnitInput, type UnitInputProps } from "./components/etic/unit-input"
 
 // Tableau de données (components/etic/data-table*) : TanStack Table v9 et la
 // Table de shadcn, sur le modèle du guide Data Table de shadcn.

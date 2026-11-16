@@ -26,6 +26,7 @@ import {
 } from "@etic-ui/components/ui/input-group"
 import { NativeSelect } from "@etic-ui/components/ui/native-select"
 import { Textarea } from "@etic-ui/components/ui/textarea"
+import { UnitInput } from "@etic-ui/components/etic/unit-input"
 import {
   FormFieldContext,
   type FormFieldContexte,
@@ -68,6 +69,7 @@ const CHAMPS_NATIFS = new Set<unknown>([
   NativeSelect,
   InputGroupInput,
   InputGroupTextarea,
+  UnitInput,
 ])
 
 /** Champ de saisie d'un `InputGroup` (suffixe, bouton…) : c'est lui, et non
@@ -144,12 +146,12 @@ export interface FormFieldProps extends Omit<
  *
  * Un champ obligatoire rend le contrôle requis. Règle : un champ natif ou une
  * primitive shadcn de saisie (Input, Textarea, NativeSelect, champ
- * d'InputGroup) reçoit `required` ; tout autre enfant reçoit `aria-required`.
- * Un composite (DatePicker, PhoneInput, SearchSelect, ou un composant de
- * l'application) lit `useFormField()` et pose lui-même un vrai `required` sur
- * son élément de saisie, en ignorant ce `aria-required` ; un groupe
- * (CheckboxList, SegmentedControl) l'ignore aussi et se dit « obligatoire »
- * dans son nom. Autour d'un `InputGroup`, les attributs vont à son champ.
+ * d'InputGroup, UnitInput) reçoit `required` ; tout autre enfant reçoit
+ * `aria-required`. Un composite (DatePicker, PhoneInput, SearchSelect, ou un
+ * composant de l'application) lit `useFormField()` et pose lui-même un vrai
+ * `required` sur son élément de saisie, en ignorant ce `aria-required` ; un
+ * groupe (CheckboxList, SegmentedControl) l'ignore aussi et se dit
+ * « obligatoire » dans son nom. Autour d'un `InputGroup`, les attributs vont à son champ.
  */
 export function FormField({
   libelle,

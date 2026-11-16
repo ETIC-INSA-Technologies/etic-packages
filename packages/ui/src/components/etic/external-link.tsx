@@ -14,8 +14,16 @@ export const NOUVEL_ONGLET = {
   rel: "noopener noreferrer",
 } as const
 
-/** La flèche sortante, et ce qu'elle dit aux lecteurs d'écran. */
-export function MarqueExterne({ className }: { className?: string }) {
+/** La flèche sortante, et ce qu'elle dit aux lecteurs d'écran, entre
+ *  parenthèses : `libelle`, « nouvel onglet » par défaut (« ouvrir sur le
+ *  Drive, nouvel onglet » pour dire aussi la destination). */
+export function MarqueExterne({
+  className,
+  libelle = "nouvel onglet",
+}: {
+  className?: string
+  libelle?: string
+}) {
   return (
     <>
       <ExternalLinkIcon
@@ -23,7 +31,7 @@ export function MarqueExterne({ className }: { className?: string }) {
         className={className}
         aria-hidden="true"
       />
-      <span className="sr-only"> (nouvel onglet)</span>
+      <span className="sr-only"> ({libelle})</span>
     </>
   )
 }
