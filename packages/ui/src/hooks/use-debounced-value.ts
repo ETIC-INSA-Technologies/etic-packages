@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react"
 
+import { delaiFrappeParDefaut } from "@etic-ui/lib/delai-frappe"
+
 /**
  * La valeur, recopiée après `delai` millisecondes sans changement : une
  * recherche au clavier n'émet pas une requête par frappe, mais une par pause
@@ -12,7 +14,10 @@ import { useEffect, useState } from "react"
  * useQuery({ queryKey: ["membres", rechercheDifferee], … })
  * ```
  */
-export function useDebouncedValue<T>(valeur: T, delai = 300): T {
+export function useDebouncedValue<T>(
+  valeur: T,
+  delai = delaiFrappeParDefaut()
+): T {
   const [differee, setDifferee] = useState(valeur)
   useEffect(() => {
     const minuterie = setTimeout(() => setDifferee(valeur), delai)

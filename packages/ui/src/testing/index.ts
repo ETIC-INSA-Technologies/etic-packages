@@ -1,6 +1,18 @@
 // Outils de test des applications : `@etic-insa/ui/test`. Hors de l'index
 // principal, ils n'entrent jamais dans le bundle d'une application.
 import { MOBILE_MEDIA_QUERY } from "@etic-ui/hooks/use-mobile"
+import { definirDelaiFrappe } from "@etic-ui/lib/delai-frappe"
+
+/**
+ * Pause de frappe par défaut des recherches (`SearchSelect`,
+ * `useDebouncedValue`, `useDebouncedSearch`, recherche des listes) : 300 ms
+ * hors test. `setSearchDelay(0)` dans le fichier de mise en place des tests
+ * épargne une attente réelle à chaque recherche simulée ; un `delai` passé
+ * explicitement reste respecté. Sans argument, rend les 300 ms d'origine.
+ */
+export function setSearchDelay(millisecondes?: number): void {
+  definirDelaiFrappe(millisecondes)
+}
 
 type Ecouteur = (evenement: MediaQueryListEvent) => void
 

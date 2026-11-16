@@ -1250,14 +1250,21 @@ part, qui n'entre pas dans leur bundle. `installMatchMedia()` remplace `window.m
 une doublure pilotable (celui de jsdom n'existe pas, celui de happy-dom suit une fenêtre fixe de
 1 024 px, donc mobile pour la bibliothèque) ; `setMobileViewport(true)` passe en affichage
 mobile, dans un `act()` sur un composant déjà monté. Seule la requête de `useIsMobile` est
-connue ; toute autre ne correspond pas.
+connue ; toute autre ne correspond pas. `setSearchDelay(0)` supprime la pause de frappe par
+défaut (300 ms) de `SearchSelect`, `useDebouncedValue` et `useDebouncedSearch` : une recherche
+simulée n'attend plus réellement ; un `delai` passé explicitement reste respecté.
 
 ```ts
 // src/test/setup.ts de l'application
 import { beforeEach } from "vitest"
-import { installMatchMedia, setMobileViewport } from "@etic-insa/ui/test"
+import {
+  installMatchMedia,
+  setMobileViewport,
+  setSearchDelay,
+} from "@etic-insa/ui/test"
 
 installMatchMedia()
+setSearchDelay(0)
 beforeEach(() => setMobileViewport(false))
 ```
 

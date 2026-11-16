@@ -3,7 +3,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useDebouncedValue } from "@etic-ui/hooks/use-debounced-value"
 
 export interface UseDebouncedSearchOptions {
-  /** Pause de frappe avant la recopie, en millisecondes (300 par défaut). */
+  /** Pause de frappe avant la recopie, en millisecondes (300 par défaut,
+   *  0 en test après `setSearchDelay(0)`). */
   delai?: number
   /**
    * Un champ démonté avant la fin de la pause (panneau refermé) recopie

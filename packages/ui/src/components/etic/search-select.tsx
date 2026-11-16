@@ -10,6 +10,7 @@ import { cn } from "cn"
 import { SearchIcon, XIcon } from "lucide-react"
 
 import { Button } from "@etic-ui/components/ui/button"
+import { delaiFrappeParDefaut } from "@etic-ui/lib/delai-frappe"
 import {
   Combobox,
   ComboboxContent,
@@ -98,7 +99,7 @@ export function SearchSelect<T>({
   idElement,
   rendreOption,
   onErreur,
-  delai = 300,
+  delai = delaiFrappeParDefaut(),
   placeholder = "Rechercher…",
   vide = "Aucun résultat.",
   disabled = false,

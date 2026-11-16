@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SearchSelect, type SearchSelectProps } from "@etic-ui/index"
+import { setSearchDelay } from "@etic-ui/testing"
 
 interface Personne {
   id: string
@@ -57,6 +58,7 @@ beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
 })
 afterEach(() => {
+  setSearchDelay()
   vi.useRealTimers()
 })
 
@@ -90,6 +92,27 @@ describe("SearchSelect", () => {
     expect(screen.queryByRole("option", { name: "Ada Lovelace" })).toBeNull()
     // Anti-rebond : une seule recherche pour les trois frappes.
     expect(rechercher).toHaveBeenCalledTimes(2)
+    expect(rechercher).toHaveBeenLastCalledWith("tur", expect.any(AbortSignal))
+  })
+
+  it("sans `delai`, suit la pause réglée par setSearchDelay", async () => {
+    setSearchDelay(0)
+    const user = utilisateur()
+    const rechercher = chercherDans(PERSONNES)
+    render(
+      <SearchSelect<Personne>
+        aria-label="Membre"
+        libelleElement={(p) => p.nom}
+        idElement={(p) => p.id}
+        rechercher={rechercher}
+        valeur={null}
+        onValeurChange={() => {}}
+      />
+    )
+
+    await user.click(screen.getByRole("combobox", { name: "Membre" }))
+    await user.type(screen.getByRole("combobox"), "tur")
+    await avancer(0)
     expect(rechercher).toHaveBeenLastCalledWith("tur", expect.any(AbortSignal))
   })
 

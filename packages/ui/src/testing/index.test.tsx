@@ -1,8 +1,58 @@
-import { act, render, screen } from "@testing-library/react"
-import { beforeEach, describe, expect, it } from "vitest"
+import { act, render, renderHook, screen } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { MOBILE_MEDIA_QUERY, useIsMobile } from "@etic-ui/index"
-import { installMatchMedia, setMobileViewport } from "@etic-ui/testing"
+import {
+  MOBILE_MEDIA_QUERY,
+  useDebouncedValue,
+  useIsMobile,
+} from "@etic-ui/index"
+import {
+  installMatchMedia,
+  setMobileViewport,
+  setSearchDelay,
+} from "@etic-ui/testing"
+
+describe("pause de frappe des recherches (@etic-insa/ui/test)", () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => {
+    setSearchDelay()
+    vi.useRealTimers()
+  })
+
+  function differee(delai?: number) {
+    return renderHook(({ valeur }) => useDebouncedValue(valeur, delai), {
+      initialProps: { valeur: "a" },
+    })
+  }
+
+  it("règle la pause par défaut, sans attente une fois à 0", () => {
+    setSearchDelay(0)
+    const { result, rerender } = differee()
+    rerender({ valeur: "ab" })
+    act(() => vi.advanceTimersByTime(0))
+    expect(result.current).toBe("ab")
+  })
+
+  it("garde 300 ms par défaut, et respecte un délai explicite", () => {
+    const parDefaut = differee()
+    parDefaut.rerender({ valeur: "ab" })
+    act(() => vi.advanceTimersByTime(299))
+    expect(parDefaut.result.current).toBe("a")
+
+    setSearchDelay(0)
+    const explicite = differee(150)
+    explicite.rerender({ valeur: "ab" })
+    act(() => vi.advanceTimersByTime(149))
+    expect(explicite.result.current).toBe("a")
+    act(() => vi.advanceTimersByTime(1))
+    expect(explicite.result.current).toBe("ab")
+  })
+
+  it("refuse une pause qui n'est pas un nombre de millisecondes", () => {
+    expect(() => setSearchDelay(-1)).toThrow(RangeError)
+    expect(() => setSearchDelay(Number.NaN)).toThrow(RangeError)
+  })
+})
 
 function Affichage() {
   return <p>{useIsMobile() ? "mobile" : "bureau"}</p>
