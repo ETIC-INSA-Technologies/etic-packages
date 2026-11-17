@@ -55,22 +55,14 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "@testing-library/react": "^16",
     "lucide-react": "^1.64.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "recharts": "^3.8.0",
-    "tailwindcss": "^4",
-    "vite": ">=7"
+    "tailwindcss": "^4"
   },
   "peerDependenciesMeta": {
-    "@testing-library/react": {
-      "optional": true
-    },
     "recharts": {
-      "optional": true
-    },
-    "vite": {
       "optional": true
     }
   },

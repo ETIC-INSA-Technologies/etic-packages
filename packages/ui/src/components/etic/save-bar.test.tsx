@@ -106,8 +106,10 @@ describe("SaveBar", () => {
     const groupe = container.querySelector('[data-slot="save-bar-actions"]')
     expect(groupe).toHaveClass("shrink-0")
     expect(groupe?.children).toHaveLength(2)
-    expect(container.firstElementChild).not.toHaveClass("flex-wrap")
-    expect(screen.getByRole("status")).toHaveClass("min-w-0", "flex-1")
+    // Le statut se replie à côté des boutons, puis passe seul sur la ligne du
+    // dessus plutôt que de s'étirer sur trois lignes.
+    expect(container.firstElementChild).toHaveClass("flex-wrap", "justify-end")
+    expect(screen.getByRole("status")).toHaveClass("min-w-40", "flex-1")
     rerender(<SaveBar modifie onAnnuler={() => {}} />)
     expect(
       container.querySelector('[data-slot="save-bar-actions"]')?.children

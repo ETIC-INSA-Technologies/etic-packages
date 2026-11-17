@@ -135,9 +135,12 @@ export function SaveBar({
       role="status"
       className={cn(
         "text-sm text-muted-foreground",
-        // Le statut se replie sur deux lignes plutôt que de séparer les
-        // boutons de la barre.
-        collante && "me-auto min-w-0 flex-1",
+        // Le statut se replie (deux lignes au plus) à côté des boutons ;
+        // plus étroit que 10 rem, il prendrait trois lignes : il passe alors
+        // seul sur la ligne du dessus, les boutons restant ensemble dessous,
+        // à droite. Sans seuil d'écran : seule la place compte (avec le ↶
+        // général, « Annuler » et « Enregistrer », un téléphone).
+        collante && "me-auto min-w-40 flex-1",
         auRepos && "sr-only"
       )}
     >
@@ -154,8 +157,9 @@ export function SaveBar({
     </p>
   )
 
-  // Les deux boutons ne se séparent jamais : au téléphone, c'est le statut
-  // qui passe à la ligne (barre simple) ou se replie (barre collante).
+  // Les boutons ne se séparent jamais : au téléphone, c'est le statut qui
+  // passe à la ligne (barre simple), ou se replie puis passe à la ligne
+  // (barre collante).
   const boutons = auRepos ? null : (
     <div
       data-slot="save-bar-actions"
@@ -176,8 +180,7 @@ export function SaveBar({
       data-collante={collante || undefined}
       data-repos={auRepos || undefined}
       className={cn(
-        "flex items-center gap-3",
-        !collante && "flex-wrap",
+        "flex flex-wrap items-center gap-3",
         // Au repos, la barre ne prend aucune place : seule reste la zone de
         // statut (une zone `status` ajoutée en même temps que son texte
         // n'est pas annoncée).
