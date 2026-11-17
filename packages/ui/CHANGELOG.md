@@ -1,5 +1,40 @@
 # @etic-insa/ui
 
+## 0.10.0
+
+### Minor Changes
+
+- 85b8151: `useListUrlState` rend aussi `pagination` (la page aux noms des options de
+  `useServerPagination` : `useServerPagination({ ...liste.pagination, requete })`) et
+  `selection` (l'URL sans la page ni la vue, qui ne change qu'avec les lignes retenues) ; son
+  option `tiroir` déclare le paramètre du tiroir de détail, rendu en `tiroir: { id, onIdChange }`
+  pour `useDetailSheet`. `creerEtatListeRouteur(useSearchParams)` le branche une fois pour toutes
+  sur le routeur de l'application (le résultat porte alors `params`), sans que la bibliothèque en
+  importe aucun.
+- 85b8151: `setEmptyValue(texte?)` règle une fois, au démarrage de l'application (et dans la mise en place
+  de ses tests), le texte d'une valeur absente, désormais tenu à un seul endroit : celui
+  d'`EmptyValue`, de `DetailItem` et du repli par défaut de tous les formateurs (`formaterDate`,
+  `formaterMontant`…). `getEmptyValue()` le lit. Sans réglage, rien ne change (« — ») ; un `repli`
+  passé à un formateur reste respecté, et `EmptyValue` est toujours lu « non renseigné ».
+
+### Patch Changes
+
+- 8bb852e: `vite` et `@testing-library/react` ne sont plus déclarés en dépendances pairs facultatives : npm
+  marquait `devOptional` dans le lockfile des applications tout l'arbre de ces outils de
+  développement, qui entrait dans `npm audit --omit=dev`, l'audit de ce qui part en production.
+  Rien ne change pour le plugin `@etic-insa/ui/vite` ni pour `@etic-insa/ui/test/controles`, qui
+  emploient ceux de l'application (README, « Outils de développement hors des dépendances
+  pairs »).
+
+  `SaveBar` collante : au téléphone, le statut (« Modifications non enregistrées ») passe seul sur
+  la ligne du dessus quand il ne tient plus en deux lignes à côté des boutons, au lieu de s'étirer
+  sur trois lignes.
+
+- 85b8151: `creerLienRouteur` : sans `href` (ou avec `href=""`), le lien est rendu désactivé
+  (`role="link"`, `aria-disabled="true"`, son `onClick` retiré) au lieu d'un `<a>` muet que rien
+  ne distinguait d'un lien cassé ; toujours sans adresse devinée, ni l'accueil ni la page
+  courante.
+
 ## 0.9.0
 
 ### Minor Changes
