@@ -158,6 +158,17 @@ Un membre qu'ETIC Members ne connaît pas lève `MembreInconnu` (sous-classe d'`
 `502 external_service_unavailable` par défaut, `details.raison = "membre_inconnu"`) : une
 application qui garde une liaison vers ce membre l'attrape pour la déclarer périmée.
 
+Les droits rendus sont les permissions accordées, sans leurs implications : `developper(
+permissions, config.implications)` (`etic_auth`) y ajoute ce qu'elles impliquent, comme pour
+le principal d'une session.
+
+### Appels de l'application à ETIC Members
+
+Un client HTTP propre à l'application (annuaire…) qui appelle aussi ETIC Members rejoue ce
+que rejoue `etic_auth` : `STATUTS_REESSAYABLES` (statuts HTTP rejoués, en plus de tout `5xx`)
+et `CODES_DEFINITIFS` (`error.code` jamais rejoués, même sur un `5xx`), exportés par
+`etic_auth`.
+
 ## Côté navigateur (React)
 
 ```sh

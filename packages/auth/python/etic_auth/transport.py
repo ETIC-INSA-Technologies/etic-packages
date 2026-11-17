@@ -43,8 +43,18 @@ DELAI_PLANCHER_TENTATIVE_SECONDES: Final = 1.0
 #: poignée de main TLS par appel coûterait plus que l'appel lui-même.
 KEEPALIVE_SECONDES: Final = 150.0
 
-_STATUTS_REESSAYABLES: Final = frozenset({408, 425, 429, 500, 502, 503, 504})
-_CODES_DEFINITIFS: Final = frozenset({"server_misconfigured"})
+#: Statuts HTTP rejoués : délai dépassé côté serveur, requête trop précoce, surcharge, panne
+#: transitoire. Tout autre `5xx` l'est aussi ; jamais un autre `4xx`. Publics pour qu'un client
+#: HTTP de l'application qui appelle aussi ETIC Members décide de la même façon.
+STATUTS_REESSAYABLES: Final[frozenset[int]] = frozenset({408, 425, 429, 500, 502, 503, 504})
+
+#: `error.code` d'une erreur d'ETIC Members qui ne guérit pas en la répétant (sa propre
+#: configuration) : jamais rejouée, même sur un statut de `STATUTS_REESSAYABLES` ou un `5xx`.
+CODES_DEFINITIFS: Final[frozenset[str]] = frozenset({"server_misconfigured"})
+
+# Anciens noms privés, gardés pour qui les importait.
+_STATUTS_REESSAYABLES: Final = STATUTS_REESSAYABLES
+_CODES_DEFINITIFS: Final = CODES_DEFINITIFS
 
 _ATTENTE_BASE = wait_exponential_jitter(multiplier=0.5, max=8.0, jitter=0.5)
 
@@ -218,9 +228,9 @@ class Transport:
         status = reponse.status_code
         code_amont = _code_enveloppe(reponse) if status >= 400 else None
         # Une erreur de configuration d'ETIC Members ne guérit pas en la répétant.
-        if code_amont in _CODES_DEFINITIFS:
+        if code_amont in CODES_DEFINITIFS:
             raise ErreurAmont(code_amont, f"{status} sur {chemin}", status)
-        if status in _STATUTS_REESSAYABLES or status >= 500:
+        if status in STATUTS_REESSAYABLES or status >= 500:
             raise _Reessayable(
                 ErreurAmont(code_amont or f"http_{status}", f"{status} sur {chemin}", status),
                 retry_after=_retry_after(reponse),

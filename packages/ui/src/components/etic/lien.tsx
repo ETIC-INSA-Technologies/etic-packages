@@ -63,8 +63,12 @@ export type LienRouteurSource = ComponentType<
  * L'appeler une fois, au niveau du module : le composant rendu doit rester
  * le même d'un rendu à l'autre.
  *
- * Sans `href`, le lien n'a pas de destination : un `<a>` sans adresse
- * (texte inerte), pas un lien vers l'accueil.
+ * Sans `href` (ou avec `href=""`), le lien n'a pas de destination : il est
+ * rendu **désactivé**, jamais vers une adresse devinée (l'accueil, la page
+ * courante). C'est un `<a>` sans adresse, hors de la tabulation, annoncé
+ * « lien, indisponible » aux lecteurs d'écran (`role="link"`,
+ * `aria-disabled="true"`), stylable par `aria-disabled:` ; un `onClick`
+ * n'y est pas branché.
  *
  * ```tsx
  * import { Link } from "react-router-dom"
@@ -75,9 +79,10 @@ export type LienRouteurSource = ComponentType<
 export function creerLienRouteur(
   Lien: LienRouteurSource
 ): ComponentType<ComponentProps<"a">> {
-  function LienRouteur({ href, ...props }: ComponentProps<"a">) {
-    if (href === undefined) return <a {...props} />
-    return <Lien to={href} {...props} />
+  function LienRouteur({ href, onClick, ...props }: ComponentProps<"a">) {
+    if (href === undefined || href === "")
+      return <a {...props} role="link" aria-disabled="true" />
+    return <Lien to={href} onClick={onClick} {...props} />
   }
   return LienRouteur
 }

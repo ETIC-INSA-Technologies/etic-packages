@@ -222,8 +222,11 @@ Le composant de lien du routeur se donne une fois, autour de l'application :
 au niveau du module (un composant écrit en ligne serait nouveau à chaque rendu, et React
 remonterait tous les liens). `creerLienRouteur(Link)` le fabrique à partir du `Link` d'un
 routeur qui prend sa destination dans `to` (react-router, TanStack Router), sans que la
-bibliothèque en importe aucun : `const LienRouteur = creerLienRouteur(Link)`. Sans `href`, il
-rend un `<a>` sans adresse (texte inerte), pas un lien vers l'accueil. `AppShell`, `DetailHeader`, `ButtonLink` et
+bibliothèque en importe aucun : `const LienRouteur = creerLienRouteur(Link)`. Sans `href` (ou
+avec `href=""`), il rend un lien désactivé, jamais une adresse devinée (l'accueil, la page
+courante) : un `<a>` sans adresse, hors de la tabulation, annoncé indisponible (`role="link"`,
+`aria-disabled="true"`, stylable par `aria-disabled:`), sans son `onClick`. `AppShell`,
+`DetailHeader`, `ButtonLink` et
 `DataTableCellLink` le prennent alors par défaut, sans `lien={…}` à chaque appel ; leur
 prop `lien` reste prioritaire. Téléchargement ou adresse externe : `lien="a"` (un vrai
 `<a>`, rechargement complet). Sans fournisseur ni prop, un `<a>`. `useLien(lien?)` rend le
@@ -279,7 +282,7 @@ chargement d'une image) et, au besoin, son composant de lien (`lien`, comme pour
 | `UnsavedChangesDialog`, `useUnsavedChangesWarning`, `useUnsavedChangesGuard` | Garde « modifications non enregistrées », sans routeur : `useUnsavedChangesWarning(modifie)` (booléen, ou fonction lue au moment de quitter) retient la fermeture de l'onglet ; le dialogue confirme une navigation retenue par l'application (`blocage` : `state`, `proceed`, `reset`, la forme du `useBlocker` de react-router). `useUnsavedChangesGuard(modifie, resteDansLaPage?)` fait les deux : il retient la fermeture de l'onglet et rend le garde à passer au routeur (`useBlocker`), qui laisse passer une navigation sans changement de chemin (paramètres d'URL, tiroir) ; stable, il lit `modifie` au moment de naviguer.                                                                                                                                                                                                                                                                       |
 | `PageContainer`                                                              | Conteneur de page dans `AppShell` : marges, `largeur` maximale, espacement entre les blocs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `PageHeader`, `DetailHeader`                                                 | En-tête de page (`<h1>`, description, actions) ; en-tête de fiche avec fil d'Ariane (`chemin`), badges, méta, actions et menu « Plus d'actions » (`actionsSecondaires` : `onChoisir`, `destructif`, `verrou` affiché sous le libellé, l'entrée `DropdownMenuAction` des autres menus), `compact` quand la fiche répète déjà son nom.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `SectionCard`, `DetailList`, `DetailItem`                                    | Carte de section titrée (`<h2>`) ; liste `<dl>` de paires libellé / valeur, « — » pour une valeur absente (`null`, `undefined`, `false`, chaîne vide). `disposition` : `grille` (défaut, autant de colonnes de 14rem que la largeur en permet, quatre au plus : une liste courte laisse de l'air à droite sans tenir dans un coin), `pile` (une seule colonne, libellé au-dessus de la valeur : carte étroite, dialogue, valeurs longues), `ligne` (métadonnées secondaires : « libellé : valeur » en petit et en discret, l'une après l'autre).                                                                                                                                                                                                                                                                                                                                                              |
+| `SectionCard`, `DetailList`, `DetailItem`                                    | Carte de section titrée (`<h2>`) ; liste `<dl>` de paires libellé / valeur, `EmptyValue` pour une valeur absente (`null`, `undefined`, `false`, chaîne vide). `disposition` : `grille` (défaut, autant de colonnes de 14rem que la largeur en permet, quatre au plus : une liste courte laisse de l'air à droite sans tenir dans un coin), `pile` (une seule colonne, libellé au-dessus de la valeur : carte étroite, dialogue, valeurs longues), `ligne` (métadonnées secondaires : « libellé : valeur » en petit et en discret, l'une après l'autre).                                                                                                                                                                                                                                                                                                                                                       |
 | `SubSection`, `CodeBlock`                                                    | Bloc titré dans une carte, un tiroir ou un dialogue : `section` nommée par son `titre` (`<h3>`), `aCote` sur la ligne du titre (un badge) ; donnée technique telle quelle (contexte, trace) : un texte tel quel, toute autre `valeur` en JSON indenté, à chasse fixe, dans un bloc qui défile (`className` borne sa hauteur, `retourLigne` coupe les lignes longues).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `ErrorBanner`                                                                | `Alert` destructive : message, code, détail technique replié (même circulaire), « Réessayer » (`onReessayer`, occupé pendant `enCours`). Lit toute erreur ayant un `message` (et `code`, `details`) ; voir `ErrorBannerProvider` pour masquer le code.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `ErrorBoundary`                                                              | Filet sous le rendu : message, détail technique, « Réessayer », « Retour à l'accueil » ; `cleReinitialisation` (la route) l'efface. Le focus perdu avec la partie cassée passe sur le message.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
@@ -752,7 +755,7 @@ l'assistant typé, `useDataTable` crée l'instance, les composants la reçoivent
 | `dataTableExpandColumn`    | colonne du chevron qui déplie une ligne (`aria-expanded`, `aria-controls`)                                                                                                              |
 | `dataTableActionsColumn`   | colonne des commandes d'une ligne : en-tête lu mais invisible, commandes à droite                                                                                                       |
 | `DataTableCellLink`        | titre d'une ligne : vrai lien (`href`, routeur par `lien`) ou bouton ; `externe` : page hébergée ailleurs, nouvel onglet et flèche sortante (`libelleExterne` pour dire la destination) |
-| `EmptyValue`               | valeur absente d'une cellule : « — » gris, lu « non renseigné » (`libelle`) par les lecteurs d'écran                                                                                    |
+| `EmptyValue`               | valeur absente d'une cellule : « — » gris (ou le texte de `setEmptyValue`), lu « non renseigné » (`libelle`) par les lecteurs d'écran                                                   |
 | `DataTableRowActions`      | menu « … » d'une ligne                                                                                                                                                                  |
 | `DropdownMenuAction`       | entrée d'un menu d'actions : `libelle`, `icone`, `destructif`, `description` ; `verrou` grise l'entrée et affiche sa raison sous le libellé                                             |
 | `DataTableViewOptions`     | bouton « Colonnes » : afficher, masquer, réordonner (glisser-déposer, clavier compris) ; absent sans colonne à régler                                                                   |
@@ -910,6 +913,17 @@ sont écrits ; un filtre, la recherche, le tri ou la taille ramènent en premiè
 `decalage`, `limite`, `tri`, `sens`, `filtre(cle)`, `filtresActifs`, la saisie `recherche` (par
 `useDebouncedSearch`) et leurs setters, stables, qui s'additionnent dans un même geste ;
 `reinitialiserFiltres` garde disposition et paramètres de `vue` (élément ouvert dans un tiroir…).
+Il rend aussi `pagination`, la page aux noms des options de `useServerPagination`
+(`decalage`, `limite`, `limites`, `onDecalageChange`, `onLimiteChange`), et `selection`, l'URL
+sans la page ni la vue : elle ne change qu'avec les lignes retenues (filtres, recherche, tri),
+clé d'une sélection de lignes à remettre à zéro. L'option `tiroir: "document"` déclare le
+paramètre du tiroir de détail (`?document=12`), gardé comme la `vue` : `tiroir` rend alors
+`{ id, onIdChange }`, à étaler dans `useDetailSheet`.
+
+`creerEtatListeRouteur(useSearchParams)`, appelé une fois au niveau du module, rend un hook
+branché sur le routeur (react-router, ou tout `useSearchParams` de même forme) : les mêmes
+options moins `params` et `onParamsChange`, le même résultat plus `params`. La bibliothèque
+n'importe aucun routeur.
 
 ```tsx
 const [params, setParams] = useSearchParams()
@@ -921,8 +935,7 @@ const liste = useListUrlState({
   sens: "asc",
 })
 const groupe = liste.filtre("groupe")
-// useServerPagination({ decalage: liste.decalage, limite: liste.limite,
-//   onDecalageChange: liste.definirDecalage, onLimiteChange: liste.definirLimite, … })
+// useServerPagination({ ...liste.pagination, requete, unite })
 // useDataTable({ …, ...useServerSorting(liste) })
 <DataTableToolbar
   recherche={{ valeur: liste.recherche, onValeurChange: liste.saisirRecherche }}
@@ -1185,8 +1198,15 @@ focus revient).
 
 ### Utilitaires et hooks
 
-Textes chiffrés en français : une valeur absente rend un repli (« — » par défaut, dernier
-argument ou option `repli`), une date illisible est rendue telle quelle.
+Textes chiffrés en français : une valeur absente rend un repli (dernier argument ou option
+`repli`, sinon le texte de `setEmptyValue`, « — » sans réglage), une date illisible est rendue
+telle quelle.
+
+`setEmptyValue(texte?)` règle une fois, au démarrage de l'application (et dans la mise en
+place de ses tests), le texte d'une valeur absente : celui d'`EmptyValue`, de `DetailItem` et
+du repli de tous les formateurs. `setEmptyValue("-")` pour un trait d'union ; sans argument,
+« — » ; un texte vide est refusé. `getEmptyValue()` le lit. Les composants déjà rendus ne sont
+pas redessinés.
 
 | Fonction                                                                             | Rôle                                                                                                                                                                                                                                                                                                                             |
 | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

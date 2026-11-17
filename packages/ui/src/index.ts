@@ -30,6 +30,7 @@ export {
   uniteAccordee,
 } from "./lib/format"
 export { ecrireDateIso, lireDateIso } from "./lib/dates"
+export { getEmptyValue, setEmptyValue } from "./lib/valeur-absente"
 export {
   comparerFr,
   correspondance,
@@ -692,9 +693,15 @@ export {
   type UseServerSortingResultat,
 } from "./components/etic/use-server-sorting"
 export {
+  creerEtatListeRouteur,
+  type ListUrlPagination,
+  type ListUrlTiroir,
   useListUrlState,
   type UseListUrlStateOptions,
   type UseListUrlStateResultat,
+  type UseListUrlStateRouteurOptions,
+  type UseListUrlStateRouteurResultat,
+  type UseSearchParamsRouteur,
 } from "./hooks/use-list-url-state"
 export type {
   ColumnOrderState,

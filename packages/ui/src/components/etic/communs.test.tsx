@@ -1,14 +1,21 @@
 import { act, render, renderHook, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { createRef, forwardRef, type ComponentProps } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
   creerLienRouteur,
   DataTableCellLink,
+  DetailItem,
+  DetailList,
   EmptyValue,
+  formaterDate,
+  formaterMontant,
   FormField,
+  getEmptyValue,
   LienProvider,
   retablirDefautsMasque,
+  setEmptyValue,
   UnitInput,
   useUnsavedChangesGuard,
 } from "@etic-ui/index"
@@ -29,6 +36,46 @@ describe("EmptyValue", () => {
   it("prend un autre libellé", () => {
     render(<EmptyValue libelle="aucun auteur" />)
     expect(screen.getByText("aucun auteur")).toHaveClass("sr-only")
+  })
+})
+
+describe("setEmptyValue", () => {
+  afterEach(() => setEmptyValue())
+
+  it("règle à un seul endroit EmptyValue, DetailItem et les replis", () => {
+    setEmptyValue("-")
+    expect(getEmptyValue()).toBe("-")
+    render(
+      <>
+        <p data-testid="cellule">
+          <EmptyValue />
+        </p>
+        <DetailList>
+          <DetailItem libelle="Auteur">{null}</DetailItem>
+        </DetailList>
+      </>
+    )
+    const cellule = screen.getByTestId("cellule")
+    expect(cellule.querySelector('[aria-hidden="true"]')).toHaveTextContent(
+      /^-$/
+    )
+    expect(cellule.querySelector(".sr-only")).toHaveTextContent("non renseigné")
+    expect(
+      screen.getByText("Non renseigné").previousElementSibling
+    ).toHaveTextContent(/^-$/)
+    expect(formaterDate(null)).toBe("-")
+    expect(formaterMontant(undefined)).toBe("-")
+    // Un repli explicite reste respecté.
+    expect(formaterDate(null, "jamais")).toBe("jamais")
+  })
+
+  it("sans argument, rend « — » ; refuse un texte invisible", () => {
+    setEmptyValue("-")
+    setEmptyValue()
+    expect(getEmptyValue()).toBe("—")
+    expect(formaterMontant(null)).toBe("—")
+    expect(() => setEmptyValue(" ")).toThrow(RangeError)
+    expect(getEmptyValue()).toBe("—")
   })
 })
 
@@ -80,11 +127,37 @@ describe("creerLienRouteur", () => {
     expect(lien).toHaveAttribute("data-routeur")
   })
 
-  it("sans href, un texte inerte et non un lien vers l'accueil", () => {
-    render(<LienRouteur>Inerte</LienRouteur>)
-    const element = screen.getByText("Inerte")
-    expect(element).not.toHaveAttribute("href")
-    expect(element).not.toHaveAttribute("data-routeur")
+  it("sans href, un lien désactivé, jamais vers une adresse devinée", async () => {
+    const onClick = vi.fn()
+    render(
+      <>
+        <LienRouteur onClick={onClick} className="classe">
+          Sans adresse
+        </LienRouteur>
+        <LienRouteur href="">Adresse vide</LienRouteur>
+      </>
+    )
+    for (const nom of ["Sans adresse", "Adresse vide"]) {
+      const lien = screen.getByRole("link", { name: nom })
+      expect(lien).toHaveAttribute("aria-disabled", "true")
+      expect(lien).not.toHaveAttribute("href")
+      expect(lien).not.toHaveAttribute("data-routeur")
+      expect(lien).not.toHaveAttribute("tabindex")
+    }
+    const sansAdresse = screen.getByRole("link", { name: "Sans adresse" })
+    expect(sansAdresse).toHaveClass("classe")
+    await userEvent.click(sansAdresse)
+    expect(onClick).not.toHaveBeenCalled()
+  })
+
+  it("un role ou aria-disabled passés ne rendent pas actif un lien sans adresse", () => {
+    render(
+      <LienRouteur role="button" aria-disabled="false">
+        Forcé
+      </LienRouteur>
+    )
+    const lien = screen.getByRole("link", { name: "Forcé" })
+    expect(lien).toHaveAttribute("aria-disabled", "true")
   })
 
   it("transmet ref, className et les autres attributs au Link", () => {

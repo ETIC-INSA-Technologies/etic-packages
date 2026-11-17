@@ -1,8 +1,14 @@
 import { act, renderHook } from "@testing-library/react"
 import { useState } from "react"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, expectTypeOf, it, vi } from "vitest"
 
-import { useListUrlState, type UseListUrlStateOptions } from "@etic-ui/index"
+import {
+  creerEtatListeRouteur,
+  useDetailSheet,
+  useListUrlState,
+  type UseListUrlStateOptions,
+  type UseSearchParamsRouteur,
+} from "@etic-ui/index"
 
 const CLES_TRI = ["nom", "date"] as const
 type Cle = (typeof CLES_TRI)[number]
@@ -141,5 +147,128 @@ describe("useListUrlState", () => {
     }
     act(() => result.current.liste.definirDecalage(25))
     expect(ecritures).toEqual(["offset=25"])
+  })
+
+  it("rend la page prête pour useServerPagination", () => {
+    const limites = [10, 20] as const
+    const { result } = rendre("offset=20&limit=20", { limite: 10, limites })
+    const { pagination } = result.current.liste
+    expect(pagination).toMatchObject({ decalage: 20, limite: 20, limites })
+    expect(pagination.onDecalageChange).toBe(
+      result.current.liste.definirDecalage
+    )
+    act(() => pagination.onLimiteChange(10))
+    expect(result.current.url).toBe("")
+    expect(result.current.liste.pagination.limite).toBe(10)
+  })
+
+  it("selection : filtres, recherche et tri, sans la page ni la vue", () => {
+    const { result } = rendre(
+      "groupe=ca&tri=date&sens=desc&offset=50&limit=50&membre=3&recherche=x",
+      { vue: ["membre"] }
+    )
+    const avant = result.current.liste.selection
+    expect(Object.fromEntries(new URLSearchParams(avant))).toEqual({
+      groupe: "ca",
+      tri: "date",
+      sens: "desc",
+      recherche: "x",
+    })
+    act(() => {
+      result.current.liste.definirDecalage(100)
+      result.current.liste.definirVue("membre", "4")
+    })
+    expect(result.current.liste.selection).toBe(avant)
+    act(() => result.current.liste.definirFiltre("groupe", "bureau"))
+    expect(result.current.liste.selection).not.toBe(avant)
+  })
+})
+
+describe("useListUrlState, tiroir", () => {
+  it("absent sans l'option", () => {
+    const { result } = rendre("document=3")
+    expect(result.current.liste.tiroir).toBeUndefined()
+    expect(result.current.liste.filtresActifs).toBe(1)
+  })
+
+  it("ouvre et ferme en gardant la page ; survit à la réinitialisation", () => {
+    const { result } = renderHook(() => {
+      const [params, setParams] = useState(
+        () => new URLSearchParams("offset=25&groupe=ca")
+      )
+      const liste = useListUrlState({
+        params,
+        onParamsChange: setParams,
+        clesTri: CLES_TRI,
+        tri: "nom",
+        sens: "asc",
+        tiroir: "document",
+      })
+      const detail = useDetailSheet({
+        ...liste.tiroir,
+        elements: [{ id: "3" }],
+        idElement: (element) => element.id,
+        enChargement: false,
+      })
+      return { liste, detail, url: params.toString() }
+    })
+    expect(result.current.liste.tiroir.id).toBeNull()
+    expect(result.current.detail.ouvert).toBe(false)
+
+    act(() => result.current.liste.tiroir.onIdChange("3"))
+    expect(result.current.url).toBe("offset=25&groupe=ca&document=3")
+    expect(result.current.liste.tiroir.id).toBe("3")
+    expect(result.current.detail.element).toEqual({ id: "3" })
+    // Le tiroir n'est ni un filtre ni dans la sélection.
+    expect(result.current.liste.filtresActifs).toBe(1)
+    expect(result.current.liste.selection).toBe("groupe=ca")
+
+    act(() => result.current.liste.reinitialiserFiltres())
+    expect(result.current.url).toBe("document=3")
+    act(() => result.current.detail.fermer())
+    expect(result.current.url).toBe("")
+  })
+})
+
+describe("creerEtatListeRouteur", () => {
+  it("accepte le useSearchParams de react-router (signature recopiée)", () => {
+    type Init = string | URLSearchParams | Record<string, string>
+    type UseSearchParamsReactRouter = (
+      defaultInit?: Init
+    ) => [
+      URLSearchParams,
+      (
+        nextInit?: Init | ((prev: URLSearchParams) => Init),
+        navigateOpts?: { replace?: boolean; state?: unknown }
+      ) => void,
+    ]
+    expectTypeOf<UseSearchParamsReactRouter>().toExtend<UseSearchParamsRouteur>()
+  })
+
+  it("lit et écrit l'URL par le useSearchParams du routeur, sans historique", () => {
+    const options: unknown[] = []
+    function useSearchParams() {
+      const [params, setParams] = useState(
+        () => new URLSearchParams("groupe=ca")
+      )
+      return [
+        params,
+        (suivants: URLSearchParams, option: { replace: true }) => {
+          options.push(option)
+          setParams(suivants)
+        },
+      ] as const
+    }
+    const useListe = creerEtatListeRouteur(useSearchParams)
+    const { result } = renderHook(() =>
+      useListe({ clesTri: CLES_TRI, tri: "nom", sens: "asc" })
+    )
+    expect(result.current.filtre("groupe")).toBe("ca")
+    act(() => result.current.definirTri("date", "desc"))
+    expect(result.current.params.toString()).toBe(
+      "groupe=ca&tri=date&sens=desc"
+    )
+    expect(result.current.tri).toBe("date")
+    expect(options).toEqual([{ replace: true }])
   })
 })

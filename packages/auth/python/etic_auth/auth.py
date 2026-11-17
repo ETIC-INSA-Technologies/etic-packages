@@ -100,7 +100,13 @@ class OkOut(BaseModel):
 def developper(
     permissions: frozenset[str], implications: Mapping[str, frozenset[str]]
 ) -> frozenset[str]:
-    """Ajoute à `permissions` tout ce qu'elles impliquent, récursivement."""
+    """Ajoute à `permissions` tout ce qu'elles impliquent, récursivement.
+
+    `implications` associe une permission à celles qu'elle implique (`ConfigSSO.implications`).
+    C'est l'expansion qu'applique `AuthEtic` au principal : une application qui calcule des
+    droits hors de la session (carte CRM, droits d'un autre membre) l'appelle pour obtenir les
+    mêmes. Les cycles sont tolérés.
+    """
     resultat = set(permissions)
     a_voir = list(permissions)
     while a_voir:

@@ -1,11 +1,13 @@
 /**
  * Textes chiffrés en français, communs à la suite : accords, nombres, octets,
- * durées et dates. Chaque formateur rend un repli (« — » par défaut) pour une
- * valeur absente, et rend telle quelle une date illisible (une valeur
- * inattendue de l'API reste visible au lieu de « Invalid Date »).
+ * durées et dates. Chaque formateur rend un repli pour une valeur absente :
+ * celui de `setEmptyValue` (« — » sans réglage). Une date illisible est rendue
+ * telle quelle (une valeur inattendue de l'API reste visible au lieu de
+ * « Invalid Date »).
  */
 
 import { lireDateIso } from "@etic-ui/lib/dates"
+import { getEmptyValue } from "@etic-ui/lib/valeur-absente"
 
 // Accords et nombres
 
@@ -43,7 +45,7 @@ const fini = (valeur: number | null | undefined): valeur is number =>
 /** Nombre à la française (« 2,5 », « 1 234 ») ; le repli sans valeur. */
 export function formaterNombre(
   valeur: number | null | undefined,
-  repli = "—"
+  repli = getEmptyValue()
 ): string {
   return fini(valeur) ? nombreFr(valeur) : repli
 }
@@ -82,7 +84,10 @@ export function lireNombre(
  *  défaut, `devise` ISO 4217 sinon). */
 export function formaterMontant(
   valeur: number | null | undefined,
-  { devise = "EUR", repli = "—" }: { devise?: string; repli?: string } = {}
+  {
+    devise = "EUR",
+    repli = getEmptyValue(),
+  }: { devise?: string; repli?: string } = {}
 ): string {
   if (!fini(valeur)) return repli
   return valeur.toLocaleString("fr-FR", {
@@ -96,7 +101,10 @@ export function formaterMontant(
  *  (0 par défaut : arrondi à l'unité). */
 export function formaterPourcentage(
   fraction: number | null | undefined,
-  { decimales = 0, repli = "—" }: { decimales?: number; repli?: string } = {}
+  {
+    decimales = 0,
+    repli = getEmptyValue(),
+  }: { decimales?: number; repli?: string } = {}
 ): string {
   if (!fini(fraction)) return repli
   return fraction.toLocaleString("fr-FR", {
@@ -136,7 +144,7 @@ const UNITES_OCTETS = ["o", "Ko", "Mo", "Go", "To"]
  *  « 120 Mo » (une décimale sous 100). */
 export function formaterOctets(
   octets: number | null | undefined,
-  repli = "—"
+  repli = getEmptyValue()
 ): string {
   if (octets === null || octets === undefined) return repli
   if (octets === 0) return "0 o"
@@ -156,7 +164,7 @@ export function formaterOctets(
  *  « 2 h 15 min », « 15 min », « 42 s ». */
 export function formaterDuree(
   secondes: number | null | undefined,
-  repli = "—"
+  repli = getEmptyValue()
 ): string {
   if (secondes === null || secondes === undefined) return repli
   const j = Math.floor(secondes / 86400)
@@ -173,7 +181,7 @@ export function formaterDuree(
  *  « 1 min 05 s », « 1 h 02 min 05 s ». */
 export function formaterDureePrecise(
   secondes: number | null | undefined,
-  repli = "—"
+  repli = getEmptyValue()
 ): string {
   if (!fini(secondes)) return repli
   const total = Math.round(secondes)
@@ -201,7 +209,7 @@ export interface AncienneteOptions {
   arrondie?: boolean
   /** Précédée de « il y a » (par défaut) ; `false` pour « 3 j » seul. */
   ilYA?: boolean
-  /** Texte d'une valeur absente. */
+  /** Texte d'une valeur absente (`getEmptyValue()` par défaut). */
   repli?: string
 }
 
@@ -209,7 +217,11 @@ export interface AncienneteOptions {
  *  la minute (instant à venir compris). */
 export function formaterAnciennete(
   valeur: string | null | undefined,
-  { arrondie = false, ilYA = true, repli = "—" }: AncienneteOptions = {}
+  {
+    arrondie = false,
+    ilYA = true,
+    repli = getEmptyValue(),
+  }: AncienneteOptions = {}
 ): string {
   if (!valeur) return repli
   const instant = new Date(valeur).getTime()
@@ -234,7 +246,7 @@ function lireInstant(valeur: string): Date | null {
  *  minuit UTC, ce serait la veille à l'ouest de Greenwich. */
 export function formaterDate(
   valeur: string | null | undefined,
-  repli = "—"
+  repli = getEmptyValue()
 ): string {
   if (!valeur) return repli
   const date = lireDateIso(valeur) ?? lireInstant(valeur)
@@ -249,7 +261,7 @@ export function formaterDate(
 /** Date et heure compactes, en chiffres : « 05/07/2026 14:30 ». */
 export function formaterDateHeure(
   valeur: string | null | undefined,
-  repli = "—"
+  repli = getEmptyValue()
 ): string {
   if (!valeur) return repli
   const date = lireInstant(valeur)
@@ -264,7 +276,7 @@ export function formaterDateHeure(
  *  exact compte (journal, événements). */
 export function formaterHorodatage(
   valeur: string | null | undefined,
-  repli = "—"
+  repli = getEmptyValue()
 ): string {
   if (!valeur) return repli
   const date = lireInstant(valeur)
@@ -278,7 +290,7 @@ export function formaterHorodatage(
  *  réponse) et pour un nombre non fini. */
 export function formaterHeure(
   valeur: number | string | null | undefined,
-  repli = "—"
+  repli = getEmptyValue()
 ): string {
   if (valeur === null || valeur === undefined || valeur === "") return repli
   if (typeof valeur === "number" && (!fini(valeur) || valeur === 0))
@@ -291,7 +303,7 @@ export function formaterHeure(
 /** Date et heure, mois en lettres, pour une fiche : « 05 juillet 2026 à 14:30 ». */
 export function formaterDateHeureLongue(
   valeur: string | null | undefined,
-  repli = "—"
+  repli = getEmptyValue()
 ): string {
   if (!valeur) return repli
   const date = lireInstant(valeur)

@@ -1,6 +1,8 @@
 import { useCallback, useLayoutEffect, useMemo, useRef } from "react"
 
 import { LIMITES_PAGINATION } from "@etic-ui/components/etic/data-table-pagination"
+import type { UseDetailSheetOptions } from "@etic-ui/components/etic/use-detail-sheet"
+import type { UseServerPaginationOptions } from "@etic-ui/components/etic/use-server-pagination"
 import type { SensTri } from "@etic-ui/components/etic/use-server-sorting"
 import { useDebouncedSearch } from "@etic-ui/hooks/use-debounced-search"
 
@@ -8,10 +10,16 @@ import { useDebouncedSearch } from "@etic-ui/hooks/use-debounced-search"
  *  réinitialisation des filtres les garde. */
 const CLES_DISPOSITION = new Set(["offset", "limit", "tri", "sens"])
 
+/** Paramètres d'URL de la page (rang et taille), hors de la `selection`. */
+const CLES_PAGE = ["offset", "limit"]
+
 /** Paramètre de la recherche libre. */
 const RECHERCHE = "recherche"
 
-export interface UseListUrlStateOptions<K extends string> {
+export interface UseListUrlStateOptions<
+  K extends string,
+  T extends string | undefined = undefined,
+> {
   /** Paramètres de l'URL courante (`useSearchParams()[0]` de react-router). */
   params: URLSearchParams
   /**
@@ -33,9 +41,32 @@ export interface UseListUrlStateOptions<K extends string> {
   /** Paramètres de vue (élément ouvert dans un tiroir…) : ni filtres ni
    *  disposition, une réinitialisation des filtres les garde. */
   vue?: readonly string[]
+  /**
+   * Paramètre du tiroir de détail de la liste (`"document"` pour
+   * `?document=12`) : un paramètre de `vue`, rendu prêt pour
+   * `useDetailSheet` dans `tiroir`.
+   */
+  tiroir?: T
 }
 
-export interface UseListUrlStateResultat<K extends string> {
+/** La page de l'URL, aux noms des options de `useServerPagination`. */
+export type ListUrlPagination = Required<
+  Pick<
+    UseServerPaginationOptions,
+    "decalage" | "limite" | "onDecalageChange" | "onLimiteChange" | "limites"
+  >
+>
+
+/** Le tiroir de l'URL, aux noms des options de `useDetailSheet`. */
+export type ListUrlTiroir = Pick<
+  UseDetailSheetOptions<unknown>,
+  "id" | "onIdChange"
+>
+
+export interface UseListUrlStateResultat<
+  K extends string,
+  T extends string | undefined = undefined,
+> {
   /** Rang du premier élément de la page (`offset`). */
   decalage: number
   /** Nombre d'éléments par page (`limit`). */
@@ -61,6 +92,26 @@ export interface UseListUrlStateResultat<K extends string> {
   definirVue: (cle: string, valeur: string | null) => void
   /** Retire les filtres et la recherche, garde la disposition et la vue. */
   reinitialiserFiltres: () => void
+  /**
+   * La page, à étaler dans `useServerPagination` avec la requête :
+   * `useServerPagination({ ...liste.pagination, requete })`. Objet stable
+   * tant que la page ne change pas.
+   */
+  pagination: ListUrlPagination
+  /**
+   * Les paramètres de l'URL sans la page (`offset`, `limit`) ni la vue
+   * (tiroir compris) : filtres, recherche et tri, en texte. Change quand les
+   * lignes retenues changent, pas quand on tourne la page ou ouvre un
+   * élément : la clé d'une sélection de lignes ou d'une annonce à remettre à
+   * zéro.
+   */
+  selection: string
+  /**
+   * Avec l'option `tiroir` : l'élément ouvert (`id`, `null` tiroir fermé) et
+   * son setter, qui garde la page, à étaler dans `useDetailSheet`.
+   * `undefined` sans l'option.
+   */
+  tiroir: T extends string ? ListUrlTiroir : undefined
 }
 
 /**
@@ -90,18 +141,17 @@ export interface UseListUrlStateResultat<K extends string> {
  *   clesTri: CLES_TRI, tri: "nom", sens: "asc",
  * })
  * const table = useDataTable({ …, ...useServerSorting(liste) })
- * const page = useServerPagination({
- *   decalage: liste.decalage, limite: liste.limite,
- *   onDecalageChange: liste.definirDecalage,
- *   onLimiteChange: liste.definirLimite, requete,
- * })
+ * const page = useServerPagination({ ...liste.pagination, requete })
  * <DataTableToolbar
  *   recherche={{ valeur: liste.recherche, onValeurChange: liste.saisirRecherche }}
  *   filtresActifs={liste.filtresActifs}
  *   onReinitialiser={liste.reinitialiserFiltres} … />
  * ```
  */
-export function useListUrlState<K extends string>({
+export function useListUrlState<
+  K extends string,
+  T extends string | undefined = undefined,
+>({
   params,
   onParamsChange,
   clesTri,
@@ -110,9 +160,12 @@ export function useListUrlState<K extends string>({
   limite: limiteDefaut = 25,
   limites = LIMITES_PAGINATION,
   vue = [],
-}: UseListUrlStateOptions<K>): UseListUrlStateResultat<K> {
+  tiroir: cleTiroir,
+}: UseListUrlStateOptions<K, T>): UseListUrlStateResultat<K, T> {
   // Clé de dépendance : `vue` est souvent écrite en ligne.
-  const clesVue = vue.join("\n")
+  const clesVue = (cleTiroir === undefined ? vue : [...vue, cleTiroir]).join(
+    "\n"
+  )
 
   const triLu = params.get("tri")
   const sensLu = params.get("sens")
@@ -233,6 +286,39 @@ export function useListUrlState<K extends string>({
     return cles.size + (recherche.trim() ? 1 : 0)
   }, [params, clesVue, recherche])
 
+  const pagination = useMemo(
+    () => ({
+      decalage,
+      limite,
+      limites,
+      onDecalageChange: definirDecalage,
+      onLimiteChange: definirLimite,
+    }),
+    [decalage, limite, limites, definirDecalage, definirLimite]
+  )
+
+  const selection = useMemo(() => {
+    const retenue = new URLSearchParams(params)
+    for (const cle of [...CLES_PAGE, ...clesVue.split("\n")])
+      if (cle) retenue.delete(cle)
+    return retenue.toString()
+  }, [params, clesVue])
+
+  const idTiroir = cleTiroir === undefined ? null : params.get(cleTiroir)
+  const definirTiroir = useCallback(
+    (valeur: string | null) => {
+      if (cleTiroir !== undefined) definirVue(cleTiroir, valeur)
+    },
+    [definirVue, cleTiroir]
+  )
+  const tiroir = useMemo(
+    () =>
+      cleTiroir === undefined
+        ? undefined
+        : { id: idTiroir, onIdChange: definirTiroir },
+    [cleTiroir, idTiroir, definirTiroir]
+  ) as UseListUrlStateResultat<K, T>["tiroir"]
+
   return {
     decalage,
     limite,
@@ -248,5 +334,61 @@ export function useListUrlState<K extends string>({
     definirFiltre,
     definirVue,
     reinitialiserFiltres,
+    pagination,
+    selection,
+    tiroir,
+  }
+}
+
+/**
+ * Le `useSearchParams` d'un routeur : les paramètres de l'URL courante et
+ * leur setter, qui accepte `{ replace: true }` (celui de react-router).
+ */
+export type UseSearchParamsRouteur = () => readonly [
+  URLSearchParams,
+  (params: URLSearchParams, options: { replace: true }) => void,
+]
+
+/** Les options de `useListUrlState` sans l'URL, que fournit le routeur. */
+export type UseListUrlStateRouteurOptions<
+  K extends string,
+  T extends string | undefined = undefined,
+> = Omit<UseListUrlStateOptions<K, T>, "params" | "onParamsChange">
+
+/** Ce que rend `useListUrlState`, et les paramètres de l'URL lus. */
+export type UseListUrlStateRouteurResultat<
+  K extends string,
+  T extends string | undefined = undefined,
+> = UseListUrlStateResultat<K, T> & { params: URLSearchParams }
+
+/**
+ * `useListUrlState` branché une fois pour toutes sur le routeur de
+ * l'application, sans que la bibliothèque en importe aucun : il lit l'URL
+ * par `useSearchParams` et l'écrit sans nouvelle entrée d'historique. Le
+ * hook rendu prend les mêmes options, moins `params` et `onParamsChange`, et
+ * rend en plus `params`. L'appeler une fois, au niveau du module.
+ *
+ * ```tsx
+ * import { useSearchParams } from "react-router-dom"
+ * export const useListeUrl = creerEtatListeRouteur(useSearchParams)
+ *
+ * const liste = useListeUrl({ clesTri: CLES_TRI, tri: "nom", sens: "asc",
+ *   tiroir: "document" })
+ * ```
+ */
+export function creerEtatListeRouteur(useSearchParams: UseSearchParamsRouteur) {
+  return function useListUrlStateRouteur<
+    K extends string,
+    T extends string | undefined = undefined,
+  >(
+    options: UseListUrlStateRouteurOptions<K, T>
+  ): UseListUrlStateRouteurResultat<K, T> {
+    const [params, setParams] = useSearchParams()
+    const liste = useListUrlState<K, T>({
+      ...options,
+      params,
+      onParamsChange: (suivants) => setParams(suivants, { replace: true }),
+    })
+    return { ...liste, params }
   }
 }

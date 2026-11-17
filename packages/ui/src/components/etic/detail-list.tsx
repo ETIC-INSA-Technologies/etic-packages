@@ -6,6 +6,8 @@ import {
 } from "react"
 import { cn } from "cn"
 
+import { EmptyValue } from "@etic-ui/components/etic/empty-value"
+
 /** Mise en page des paires d'une `DetailList` :
  *  - `grille` : libellé au-dessus de la valeur, une colonne sur téléphone,
  *    au-delà autant que la largeur en permet, quatre au plus (deux paires sur
@@ -58,7 +60,8 @@ export function DetailList({
 export interface DetailItemProps {
   libelle: ReactNode
   /** La valeur ; absente (`null`, `undefined`, `false`, chaîne vide), elle
-   *  s'affiche « — », en discret. `false` couvre le motif `{cond && x}`. */
+   *  s'affiche en `EmptyValue` (« — », ou le texte de `setEmptyValue`).
+   *  `false` couvre le motif `{cond && x}`. */
   children?: ReactNode
   className?: string
 }
@@ -84,14 +87,7 @@ export function DetailItem({ libelle, children, className }: DetailItemProps) {
         {enLigne ? " : " : null}
       </dt>
       <dd className={cn("break-words", enLigne ? "inline" : "text-sm")}>
-        {vide ? (
-          <span className="text-muted-foreground">
-            <span aria-hidden>—</span>
-            <span className="sr-only">Non renseigné</span>
-          </span>
-        ) : (
-          children
-        )}
+        {vide ? <EmptyValue libelle="Non renseigné" /> : children}
       </dd>
     </div>
   )
