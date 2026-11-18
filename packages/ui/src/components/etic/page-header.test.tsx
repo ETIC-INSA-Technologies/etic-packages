@@ -102,6 +102,16 @@ describe("DetailHeader", () => {
     expect(screen.getByRole("button", { name: "Modifier" })).toBeInTheDocument()
   })
 
+  it("en mode compact aussi, replie un titre long avant de faire passer les actions dessous", () => {
+    rendre({ compact: true, actions: <button>Modifier</button> })
+    expect(
+      screen.getByRole("navigation", { name: "Fil d’Ariane" })
+    ).toHaveClass("min-w-0", "grow", "basis-80", "min-h-9")
+    expect(screen.getByRole("navigation").parentElement).toHaveClass(
+      "items-start"
+    )
+  })
+
   it("sans chemin, pas de fil d'Ariane", () => {
     rendre({ chemin: [] })
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument()

@@ -105,6 +105,12 @@ const ECHELLES: Record<TailleActions, string> = {
   lg: "[--bouton-hauteur:2.25rem] [--bouton-icone:2.25rem]",
 }
 
+/** Hauteur d'un bouton d'action, selon `ECHELLES`. */
+const HAUTEUR_MIN: Record<TailleActions, string> = {
+  default: "min-h-8",
+  lg: "min-h-9",
+}
+
 /** Étape du fil d'Ariane, de la plus générale à la plus proche. */
 export interface DetailHeaderEtape {
   libelle: string
@@ -197,11 +203,19 @@ export function DetailHeader({
       <div
         data-slot="detail-header"
         className={cn(
-          "flex flex-wrap items-center justify-between gap-x-4 gap-y-2",
+          "flex flex-wrap items-start justify-between gap-x-4 gap-y-2",
           className
         )}
       >
-        <Breadcrumb className="min-w-0">
+        {/* Même règle de largeur que `BLOC_TITRE`. Au moins la hauteur d'un
+            bouton d'action, fil centré dedans : sur une ligne, il reste aligné
+            sur les boutons ; replié, les actions restent en haut. */}
+        <Breadcrumb
+          className={cn(
+            "flex min-w-0 grow basis-80 items-center",
+            HAUTEUR_MIN[tailleActions]
+          )}
+        >
           <BreadcrumbList>
             {etapes}
             <BreadcrumbItem>
