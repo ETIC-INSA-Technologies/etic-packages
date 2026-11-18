@@ -58,7 +58,7 @@ export function PageHeader({
         className
       )}
     >
-      <div className="flex min-w-0 flex-col gap-1">
+      <div className={BLOC_TITRE}>
         <h1 className="font-heading text-2xl font-semibold tracking-tight">
           {titre}
         </h1>
@@ -70,6 +70,14 @@ export function PageHeader({
     </div>
   )
 }
+
+/**
+ * Bloc du titre d'un en-tête : il prend la place que laissent les actions,
+ * avec un plancher de 20 rem. Tant que ce plancher et les actions tiennent
+ * sur la ligne, un titre long se replie et les actions restent en haut à
+ * droite ; en deçà (téléphone, colonne étroite), les actions passent dessous.
+ */
+const BLOC_TITRE = "flex min-w-0 grow basis-80 flex-col gap-1"
 
 function Actions({
   taille,
@@ -229,7 +237,7 @@ export function DetailHeader({
         </Breadcrumb>
       ) : null}
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-        <div className="flex min-w-0 flex-col gap-1">
+        <div className={BLOC_TITRE}>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-heading text-2xl font-semibold tracking-tight break-words">
               {titre}

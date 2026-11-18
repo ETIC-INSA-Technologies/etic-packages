@@ -45,9 +45,29 @@ describe("PageHeader", () => {
     expect(screen.getByText("Les groupes de droits.")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Créer" })).toBeInTheDocument()
   })
+
+  // jsdom n'applique pas Tailwind : on vérifie les classes de la règle.
+  it("replie un titre long avant de faire passer les actions dessous", () => {
+    render(<PageHeader titre="Groupes" actions={<button>Créer</button>} />)
+    expect(screen.getByRole("heading", { level: 1 }).parentElement).toHaveClass(
+      "min-w-0",
+      "grow",
+      "basis-80"
+    )
+  })
 })
 
 describe("DetailHeader", () => {
+  it("replie un titre long avant de faire passer les actions dessous", () => {
+    rendre({ actions: <button>Modifier</button> })
+    const titre = screen.getByRole("heading", { level: 1 })
+    expect(titre.parentElement?.parentElement).toHaveClass(
+      "min-w-0",
+      "grow",
+      "basis-80"
+    )
+  })
+
   it("affiche un fil d'Ariane qui ramène à la liste, par le lien du routeur", () => {
     rendre()
     const fil = screen.getByRole("navigation", { name: "Fil d’Ariane" })
