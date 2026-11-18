@@ -1,5 +1,11 @@
 # @etic-insa/ui
 
+## 0.11.1
+
+### Patch Changes
+
+- d06cd46: `DetailHeader` en mode `compact` : un titre long se replie lui aussi et les actions restent en haut à droite, comme sans `compact`. Les actions passaient sous le titre, à gauche.
+
 ## 0.11.0
 
 ### Minor Changes
