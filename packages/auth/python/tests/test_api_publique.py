@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import etic_auth
-from etic_auth import CODES_DEFINITIFS, STATUTS_REESSAYABLES, developper
+from etic_auth import CODES_DEFINITIFS, STATUTS_REESSAYABLES, developper, reessayable
 from etic_auth import transport as module_transport
 
 
@@ -29,6 +29,21 @@ def test_regles_de_rejeu_publiques() -> None:
     assert module_transport._CODES_DEFINITIFS is CODES_DEFINITIFS
 
 
+def test_reessayable() -> None:
+    assert reessayable(503, None)
+    assert reessayable(503, "external_service_unavailable")
+    assert reessayable(429, "rate_limited")
+    # Sans enveloppe, un 4xx vient d'un intermédiaire, pas d'ETIC Members.
+    assert reessayable(404, None)
+    assert reessayable(401, None)
+    assert not reessayable(404, "not_found")
+    assert not reessayable(400, "invalid_grant")
+    assert not reessayable(500, "server_misconfigured")
+    # Une réponse sans erreur n'a jamais d'enveloppe : elle ne se rejoue pas pour autant.
+    assert not reessayable(200, None)
+    assert not reessayable(302, None)
+
+
 def test_all_exporte() -> None:
-    for nom in ("developper", "STATUTS_REESSAYABLES", "CODES_DEFINITIFS"):
+    for nom in ("developper", "STATUTS_REESSAYABLES", "CODES_DEFINITIFS", "reessayable"):
         assert nom in etic_auth.__all__

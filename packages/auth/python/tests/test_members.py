@@ -157,6 +157,88 @@ async def test_404_hors_authz_reste_generique(faux: FauxMembers) -> None:
     assert erreur.value.details["raison"] == "service_indisponible"
 
 
+def _routeur(statut: int) -> httpx.Response:
+    """Réponse d'un intermédiaire (routeur pendant un redéploiement) : pas d'enveloppe."""
+    return httpx.Response(statut, text=f"{statut} page not found", headers={"Retry-After": "0"})
+
+
+async def test_introspection_rejouee_sur_404_sans_enveloppe() -> None:
+    reponses = iter([_routeur(404), httpx.Response(200, json={"active": False})])
+    config = config_test(nouvelles_tentatives=2)
+    client = ClientMembers(
+        config, Transport(config, transport_http=httpx.MockTransport(lambda _r: next(reponses)))
+    )
+    assert (await client.introspecter("jeton")).active is False
+
+
+@pytest.mark.parametrize("statut", [401, 403, 404])
+async def test_4xx_sans_enveloppe_injoignable(
+    statut: int, caplog: pytest.LogCaptureFixture
+) -> None:
+    config = config_test(nouvelles_tentatives=1)
+    appels: list[httpx.Request] = []
+
+    def routeur(request: httpx.Request) -> httpx.Response:
+        appels.append(request)
+        return _routeur(statut)
+
+    client = ClientMembers(config, Transport(config, transport_http=httpx.MockTransport(routeur)))
+
+    with pytest.raises(ErreurAuth) as erreur:
+        await client.introspecter("jeton")
+    assert erreur.value.details["raison"] == "service_indisponible"
+    assert len(appels) == 2
+    messages = [r.getMessage() for r in caplog.records]
+    assert "etic_members : injoignable" in messages
+    assert "etic_members : requête refusée" not in messages
+    assert not any(r.levelname == "CRITICAL" for r in caplog.records)
+
+
+def _client_routeur(statut: int, appels: list[str], **reglages: object) -> ClientMembers:
+    def routeur(request: httpx.Request) -> httpx.Response:
+        appels.append(request.url.path)
+        return _routeur(statut)
+
+    config = config_test(**reglages)
+    return ClientMembers(config, Transport(config, transport_http=httpx.MockTransport(routeur)))
+
+
+async def test_401_sans_enveloppe_sur_profil_ne_deconnecte_pas() -> None:
+    with pytest.raises(ErreurAuth) as erreur:
+        await _client_routeur(401, []).profil("jeton")
+    assert (erreur.value.code, erreur.value.http_status) == ("external_service_unavailable", 502)
+    assert erreur.value.details["raison"] == "service_indisponible"
+
+
+async def test_404_sans_enveloppe_sur_authz_n_est_pas_un_membre_inconnu() -> None:
+    with pytest.raises(ErreurAuth) as erreur:
+        await _client_routeur(404, []).droits_membre("m1")
+    assert not isinstance(erreur.value, MembreInconnu)
+    assert erreur.value.details["raison"] == "service_indisponible"
+
+
+async def test_echange_jamais_rejoue_sur_404_sans_enveloppe() -> None:
+    appels: list[str] = []
+    with pytest.raises(ErreurAuth) as erreur:
+        await _client_routeur(404, appels, nouvelles_tentatives=3).echanger_code(
+            "code", code_verifier="v" * 43
+        )
+    assert erreur.value.http_status == 502
+    assert "action" not in erreur.value.details
+    assert appels == [TOKEN]
+
+
+async def test_404_d_etic_members_jamais_rejoue(
+    faux: FauxMembers, caplog: pytest.LogCaptureFixture
+) -> None:
+    faux.pannes[INTROSPECT] = (404, {"error": {"code": "not_found", "message": "x"}})
+
+    with pytest.raises(ErreurAuth):
+        await _client(faux, nouvelles_tentatives=3).introspecter("jeton")
+    assert faux.compter(INTROSPECT) == 1
+    assert "etic_members : requête refusée" in [r.getMessage() for r in caplog.records]
+
+
 def test_aucun_secret_dans_les_repr() -> None:
     texte = repr(config_test())
     assert "secret-app-de-test" not in texte

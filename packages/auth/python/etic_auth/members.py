@@ -172,12 +172,16 @@ def traduire_erreur(erreur: ErreurAmont, *, contexte: Contexte, nom_application:
     | `403 member_disabled` à l'échange ou sur `/me` | 403 `account_disabled` |
     | autre `403` (application révoquée, scope absent) | 502 + journal `critical` |
     | `404` sur `/authz/permissions` (membre inconnu) | `MembreInconnu`, 502 |
-    | timeout, réseau, `429`, `5xx`, autre `404` | 502 |
+    | timeout, réseau, réponse sans enveloppe, `429`, `5xx`, autre `404` | 502 |
+
+    Les statuts des lignes précédentes s'entendent avec l'enveloppe d'erreur d'ETIC Members.
 
     Un défaut de configuration ne renvoie pas l'utilisateur vers la connexion : il y bouclerait
     pour un problème qui n'est pas le sien.
     """
     statut = erreur.status
+    # Le statut d'une réponse sans enveloppe (un intermédiaire) ne dit rien du contrat.
+    statut_members = None if erreur.hors_members else statut
     code = erreur.code.lower()
 
     def configuration(raison: str) -> ErreurAuth:
@@ -194,7 +198,7 @@ def traduire_erreur(erreur: ErreurAmont, *, contexte: Contexte, nom_application:
     if code == "server_misconfigured":
         logger.critical("ETIC Members mal configuré", extra={"contexte": contexte})
         return service_indisponible(MESSAGE_SERVICE_INDISPONIBLE, raison=code, statut_amont=statut)
-    if statut == 400:
+    if statut_members == 400:
         if code == "invalid_grant" and contexte in ("token", "refresh"):
             return non_authentifie(MESSAGE_INVALID_GRANT, raison=code, reconnecter=True)
         logger.error(
@@ -204,13 +208,13 @@ def traduire_erreur(erreur: ErreurAmont, *, contexte: Contexte, nom_application:
         return service_indisponible(
             MESSAGE_SERVICE_INDISPONIBLE, raison="requete_hors_contrat", statut_amont=statut
         )
-    if statut == 401:
+    if statut_members == 401:
         if contexte == "profil":
             # L'introspection vient de passer avec les mêmes identifiants d'application :
             # c'est le jeton du membre qui est refusé, dans les 30 s de son cache.
             return non_authentifie(MESSAGE_SESSION_EXPIREE, raison="jeton_refuse", reconnecter=True)
         return configuration("identifiants_application_refuses")
-    if statut == 403:
+    if statut_members == 403:
         if code == "member_disabled" and contexte in ("token", "profil"):
             return ErreurAuth(
                 CODE_COMPTE_DESACTIVE,
@@ -219,7 +223,7 @@ def traduire_erreur(erreur: ErreurAmont, *, contexte: Contexte, nom_application:
                 details={"raison": code},
             )
         return configuration(code if code == "application_revoked" else "application_refusee")
-    if statut == 404 and contexte == "authz":
+    if statut_members == 404 and contexte == "authz":
         return MembreInconnu(MESSAGE_MEMBRE_INCONNU, statut_amont=statut)
     return service_indisponible(
         MESSAGE_SERVICE_INDISPONIBLE, raison="service_indisponible", statut_amont=statut

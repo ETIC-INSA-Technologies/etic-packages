@@ -165,8 +165,11 @@ le principal d'une session.
 ### Appels de l'application à ETIC Members
 
 Un client HTTP propre à l'application (annuaire…) qui appelle aussi ETIC Members rejoue ce
-que rejoue `etic_auth` : `STATUTS_REESSAYABLES` (statuts HTTP rejoués, en plus de tout `5xx`)
-et `CODES_DEFINITIFS` (`error.code` jamais rejoués, même sur un `5xx`), exportés par
+que rejoue `etic_auth` : `reessayable(statut, code)` le dit d'une réponse d'erreur, d'après
+son statut et l'`error.code` de son enveloppe (`None` sans enveloppe). Sont rejoués
+`STATUTS_REESSAYABLES`, tout `5xx` et tout `4xx` sans enveloppe (un intermédiaire, comme le
+routeur qui répond `404` pendant un redéploiement d'ETIC Members), jamais `CODES_DEFINITIFS`
+(`error.code` d'une erreur de configuration, même sur un `5xx`). Les trois sont exportés par
 `etic_auth`.
 
 ## Côté navigateur (React)

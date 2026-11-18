@@ -8,7 +8,7 @@ from .config import ConfigSSO, lire_cle_chiffrement
 from .erreurs import ErreurAuth, MembreInconnu, gestionnaire_erreur_auth
 from .members import ClientMembers, DroitsMembre, Preferences, Theme
 from .session import StockageMemoire, StockageSessions
-from .transport import CODES_DEFINITIFS, STATUTS_REESSAYABLES
+from .transport import CODES_DEFINITIFS, STATUTS_REESSAYABLES, reessayable
 
 __all__ = [
     "CODES_DEFINITIFS",
@@ -28,4 +28,5 @@ __all__ = [
     "developper",
     "gestionnaire_erreur_auth",
     "lire_cle_chiffrement",
+    "reessayable",
 ]

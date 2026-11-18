@@ -1,9 +1,10 @@
 """Appels HTTP vers ETIC Members : timeout toujours posé, nouvelles tentatives bornées.
 
-On rejoue ce qui a une chance d'aboutir (timeout, erreur réseau, `429`, `5xx`), avec backoff
-exponentiel et jitter, en respectant `Retry-After`. Jamais un `4xx` : une erreur de contrat ne
-guérit pas en la répétant. Rien n'est journalisé du corps des réponses ni des en-têtes : ils
-portent des jetons, le secret d'application, des données personnelles.
+On rejoue ce qui a une chance d'aboutir (timeout, erreur réseau, `429`, `5xx`, réponse sans
+l'enveloppe d'erreur d'ETIC Members), avec backoff exponentiel et jitter, en respectant
+`Retry-After`. Jamais un autre `4xx` : une erreur de contrat ne guérit pas en la répétant.
+Rien n'est journalisé du corps des réponses ni des en-têtes : ils portent des jetons, le secret
+d'application, des données personnelles.
 """
 
 from __future__ import annotations
@@ -44,8 +45,9 @@ DELAI_PLANCHER_TENTATIVE_SECONDES: Final = 1.0
 KEEPALIVE_SECONDES: Final = 150.0
 
 #: Statuts HTTP rejoués : délai dépassé côté serveur, requête trop précoce, surcharge, panne
-#: transitoire. Tout autre `5xx` l'est aussi ; jamais un autre `4xx`. Publics pour qu'un client
-#: HTTP de l'application qui appelle aussi ETIC Members décide de la même façon.
+#: transitoire. Tout autre `5xx` l'est aussi, et un `4xx` sans enveloppe (`reessayable`).
+#: Publics pour qu'un client HTTP de l'application qui appelle aussi ETIC Members décide de la
+#: même façon.
 STATUTS_REESSAYABLES: Final[frozenset[int]] = frozenset({408, 425, 429, 500, 502, 503, 504})
 
 #: `error.code` d'une erreur d'ETIC Members qui ne guérit pas en la répétant (sa propre
@@ -65,13 +67,37 @@ class ErreurAmont(Exception):
     `code` est l'`error.code` de l'enveloppe d'ETIC Members quand elle est là (`invalid_grant`,
     `member_disabled`…), sinon un code de transport (`timeout`, `network_error`, `http_503`) :
     c'est sur lui, et non sur le seul statut, que l'appelant décide.
+
+    `hors_members` : l'échec ne vient pas d'ETIC Members — délai, réseau, ou réponse sans son
+    enveloppe d'erreur, donc d'un intermédiaire (le routeur répond `404` pendant un
+    redéploiement). Son statut ne dit alors rien du contrat.
     """
 
-    def __init__(self, code: str, message: str, status: int | None = None) -> None:
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        status: int | None = None,
+        *,
+        hors_members: bool = False,
+    ) -> None:
         super().__init__(f"etic_members: {code} — {message}")
         self.code = code
         self.message = message
         self.status = status
+        self.hors_members = hors_members
+
+
+def reessayable(status: int, code_amont: str | None) -> bool:
+    """Une réponse d'ETIC Members mérite-t-elle une nouvelle tentative ? Jamais sous `400`.
+
+    `code_amont` est l'`error.code` de son enveloppe, `None` sans enveloppe. ETIC Members
+    enveloppe toutes ses erreurs : un `4xx` sans enveloppe vient d'un intermédiaire et se rejoue
+    comme une panne ; un `4xx` d'ETIC Members, jamais.
+    """
+    if status < 400 or code_amont in CODES_DEFINITIFS:
+        return False
+    return status in STATUTS_REESSAYABLES or status >= 500 or code_amont is None
 
 
 class _Reessayable(Exception):
@@ -209,7 +235,9 @@ class Transport:
                     )
         except _Reessayable as exc:
             logger.error(
-                "etic_members : appel en échec",
+                "etic_members : injoignable"
+                if exc.cause.hors_members
+                else "etic_members : appel en échec",
                 extra={"chemin": chemin, "code": exc.cause.code, "status": exc.cause.status},
             )
             raise exc.cause from exc
@@ -219,29 +247,34 @@ class Transport:
         try:
             reponse = await self._client_courant().request(methode, chemin, **kw)
         except httpx.TimeoutException as exc:
-            raise _Reessayable(ErreurAmont("timeout", f"délai dépassé sur {chemin}")) from exc
+            raise _Reessayable(
+                ErreurAmont("timeout", f"délai dépassé sur {chemin}", hors_members=True)
+            ) from exc
         except httpx.HTTPError as exc:
             raise _Reessayable(
-                ErreurAmont("network_error", f"{type(exc).__name__} sur {chemin}")
+                ErreurAmont(
+                    "network_error", f"{type(exc).__name__} sur {chemin}", hors_members=True
+                )
             ) from exc
 
         status = reponse.status_code
-        code_amont = _code_enveloppe(reponse) if status >= 400 else None
-        # Une erreur de configuration d'ETIC Members ne guérit pas en la répétant.
-        if code_amont in CODES_DEFINITIFS:
-            raise ErreurAmont(code_amont, f"{status} sur {chemin}", status)
-        if status in STATUTS_REESSAYABLES or status >= 500:
-            raise _Reessayable(
-                ErreurAmont(code_amont or f"http_{status}", f"{status} sur {chemin}", status),
-                retry_after=_retry_after(reponse),
-            )
         if status >= 400:
-            code = code_amont or f"http_{status}"
-            logger.warning(
-                "etic_members : requête refusée",
-                extra={"chemin": chemin, "status": status, "code": code},
+            code_amont = _code_enveloppe(reponse)
+            erreur = ErreurAmont(
+                code_amont or f"http_{status}",
+                f"{status} sur {chemin}",
+                status,
+                hors_members=code_amont is None,
             )
-            raise ErreurAmont(code, f"{status} sur {chemin}", status)
+            if reessayable(status, code_amont):
+                raise _Reessayable(erreur, retry_after=_retry_after(reponse))
+            # Une erreur de configuration d'ETIC Members n'est pas un refus de la requête.
+            if code_amont not in CODES_DEFINITIFS:
+                logger.warning(
+                    "etic_members : requête refusée",
+                    extra={"chemin": chemin, "status": status, "code": erreur.code},
+                )
+            raise erreur
         if not reponse.content:
             return None
         try:
