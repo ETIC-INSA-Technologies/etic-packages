@@ -1,5 +1,24 @@
 # @etic-insa/ui
 
+## 0.11.0
+
+### Minor Changes
+
+- 01d6cf5: `StatTile` : en ton `success`, seule la pastille est verte, la valeur garde la couleur du texte.
+  Les tons `info`, `warning` et `destructive` colorent toujours la valeur : une rangée où tout va
+  bien reste sobre, et un écart s'y voit.
+
+### Patch Changes
+
+- 6a0d2b8: `ErrorBanner` : l'icône et « Réessayer » sont centrés verticalement sur le message, quel que soit
+  son nombre de lignes ; le bouton prend sa place dans la ligne au lieu d'une marge réservée, et la
+  description ou le détail déplié s'ouvrent dessous sans les déplacer.
+- c1cab9d: Infobulle : elle ne clignote plus quand le curseur reste immobile près du bord de son
+  déclencheur. La bulle ne glisse plus vers sa place à l'ouverture (elle passait sous le curseur)
+  et sa flèche, qui dépassait jusque sur le déclencheur, laisse passer le pointeur. Le fondu et le
+  zoom restent ; vaut aussi pour `Toggletip`.
+- 6d960b9: `PageHeader` et `DetailHeader` : avec un titre long, les actions restent en haut à droite et c'est le titre qui se replie, tant qu'il lui reste 20 rem ; en deçà, les actions passent dessous comme avant.
+
 ## 0.10.0
 
 ### Minor Changes
