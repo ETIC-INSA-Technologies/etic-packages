@@ -220,16 +220,18 @@ export function ErrorBanner({
         // identifiant) se coupe au lieu d'élargir la colonne et de passer
         // sous « Réessayer ».
         "has-[>svg]:grid-cols-[auto_minmax(0,1fr)] *:data-[slot=alert-description]:wrap-break-word *:data-[slot=alert-title]:wrap-break-word",
-        // « Réessayer » (bouton `sm`, 28 px) centré sur la première ligne du
-        // titre, 6 px au-dessus et au-dessous : sans quoi, sous un titre d'une
-        // ligne, il touche le bas du bandeau.
+        // « Réessayer » dans le flux, en troisième colonne de la ligne du
+        // titre : le texte s'arrête avant lui, sans marge réservée.
         onReessayer &&
-          "has-data-[slot=alert-action]:py-2.5 has-data-[slot=alert-action]:pr-32",
+          "has-data-[slot=alert-action]:pr-2.5 has-[>svg]:grid-cols-[auto_minmax(0,1fr)_auto]",
         className
       )}
     >
-      <CircleAlertIcon />
-      <AlertTitle>
+      {/* L'icône, le titre et « Réessayer » centrés sur la ligne du titre,
+          quel que soit son nombre de lignes ; la description et le détail
+          déplié s'ouvrent dessous sans les déplacer. */}
+      <CircleAlertIcon className="row-span-1! translate-y-0! self-center" />
+      <AlertTitle className="self-center">
         {titre ?? (
           <>
             {code ? <span className="font-mono">{code}&nbsp;: </span> : null}
@@ -238,7 +240,7 @@ export function ErrorBanner({
         )}
       </AlertTitle>
       {description || !estVide(detailAffiche) ? (
-        <AlertDescription>
+        <AlertDescription className="col-start-2">
           {description}
           {!estVide(detailAffiche) ? (
             <DetailTechnique detail={detailAffiche} />
@@ -246,7 +248,7 @@ export function ErrorBanner({
         </AlertDescription>
       ) : null}
       {onReessayer ? (
-        <AlertAction className="top-1.5">
+        <AlertAction className="static col-start-3 row-start-1 self-center">
           <BoutonReessayer onClick={onReessayer} enCours={enCours} />
         </AlertAction>
       ) : null}

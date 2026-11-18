@@ -86,10 +86,29 @@ describe("ErrorBanner", () => {
   })
 
   it("borne la colonne du texte : une chaîne sans espace se coupe", () => {
-    render(<ErrorBanner erreur={"x".repeat(300)} onReessayer={() => {}} />)
+    const { rerender } = render(<ErrorBanner erreur={"x".repeat(300)} />)
     const alerte = screen.getByRole("alert")
     expect(alerte).toHaveClass("has-[>svg]:grid-cols-[auto_minmax(0,1fr)]")
     expect(alerte).not.toHaveClass("has-[>svg]:grid-cols-[auto_1fr]")
+    // « Réessayer » en troisième colonne, la colonne du texte toujours bornée.
+    rerender(<ErrorBanner erreur={"x".repeat(300)} onReessayer={() => {}} />)
+    expect(alerte).toHaveClass("has-[>svg]:grid-cols-[auto_minmax(0,1fr)_auto]")
+  })
+
+  it("garde l'icône et « Réessayer » sur la ligne du titre, la description dessous", () => {
+    render(
+      <ErrorBanner erreur="Échec" description="Phrase" onReessayer={() => {}} />
+    )
+    const alerte = screen.getByRole("alert")
+    const action = alerte.querySelector("[data-slot=alert-action]")
+    expect(action).toHaveClass("static", "row-start-1", "self-center")
+    expect(alerte.querySelector("svg")).toHaveClass(
+      "row-span-1!",
+      "self-center"
+    )
+    expect(alerte.querySelector("[data-slot=alert-description]")).toHaveClass(
+      "col-start-2"
+    )
   })
 })
 
