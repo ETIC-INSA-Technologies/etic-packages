@@ -75,5 +75,12 @@ export default defineConfig(({ command }) => ({
     // Par défaut, un worker par thread logique moins un, chacun avec son DOM :
     // sur un poste de développement, ce pic sature la mémoire. Quatre au plus.
     maxWorkers: 4,
+    // Un worker garde ses modules et son DOM d'un fichier à l'autre au lieu
+    // de tout réévaluer (presque tous les fichiers importent l'index) : la
+    // suite passe de ~40 s à ~10 s. src/test/setup.ts remet l'état global à
+    // zéro au début de chaque fichier ; un test qui en ajoute un nouveau
+    // (stockage, global, état de module) le remet à zéro là aussi. Vérifier
+    // l'indépendance des fichiers : `npx vitest run --sequence.shuffle.files`.
+    isolate: false,
   },
 }))
