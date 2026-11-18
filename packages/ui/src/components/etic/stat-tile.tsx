@@ -17,8 +17,11 @@ export interface StatTileProps {
   valeur: ReactNode
   /** Contexte sous la valeur : « il y a 9 jours », « sur 120 ». */
   indication?: ReactNode
-  /** Quand l'état compte, une pastille et la valeur en couleur ; « neutral »
-   *  (par défaut) pour un simple chiffre. */
+  /** Quand l'état compte, une pastille de sa couleur ; « neutral » (par
+   *  défaut) pour un simple chiffre, sans pastille. La valeur ne prend la
+   *  couleur que hors de l'état normal (`info`, `warning`, `destructive`) :
+   *  en `success`, la pastille suffit, pour qu'une rangée où tout va bien
+   *  reste sobre et qu'un écart s'y voie. */
   ton?: StatusTon
   /** Page du détail : toute la tuile devient un lien, avec un chevron. */
   href?: string
@@ -72,7 +75,7 @@ export function StatTile({
           data-ton={ton}
           className={cn(
             "flex items-center gap-2 text-2xl font-semibold tabular-nums group-data-[size=sm]/card:text-2xl",
-            TONS[ton].texte
+            ton !== "success" && TONS[ton].texte
           )}
         >
           {ton !== "neutral" ? (

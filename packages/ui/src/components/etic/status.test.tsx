@@ -105,6 +105,14 @@ describe("StatTile", () => {
     expect(screen.getByText("Sauvegardes")).toBeInTheDocument()
   })
 
+  it("en success, garde la pastille verte mais pas la valeur", () => {
+    render(<StatTile libelle="Sauvegardes" valeur="À jour" ton="success" />)
+    const valeur = screen.getByText("À jour").parentElement!
+    expect(valeur).toHaveAttribute("data-ton", "success")
+    expect(valeur).not.toHaveClass("text-success")
+    expect(valeur.querySelector("[aria-hidden]")).toHaveClass("bg-success")
+  })
+
   it("est neutre par défaut, sans pastille", () => {
     render(<StatTile libelle="Fichiers" valeur={12} />)
     const valeur = screen.getByText("12").parentElement!
