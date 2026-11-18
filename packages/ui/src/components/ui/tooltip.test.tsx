@@ -155,3 +155,21 @@ describe("TooltipTrigger : ouverture au focus", () => {
     expect(infobulle()).toBeNull()
   })
 })
+
+describe("TooltipContent : pas de clignotement au survol", () => {
+  // jsdom ne place rien : on vérifie ce qui empêche la bulle de passer sous
+  // un curseur immobile posé sur le bord du déclencheur.
+  it("ne glisse pas vers sa place, et sa flèche laisse passer le pointeur", async () => {
+    const user = userEvent.setup()
+    render(
+      <TooltipProvider>
+        <TooltipButton infobulle="Copier">Copier</TooltipButton>
+      </TooltipProvider>
+    )
+    await user.hover(screen.getByRole("button", { name: "Copier" }))
+    const bulle = await trouverInfobulle()
+    expect(bulle.className).not.toMatch(/slide-in/)
+    const fleche = bulle.lastElementChild as HTMLElement
+    expect(fleche.className).toMatch(/\bpointer-events-none\b/)
+  })
+})
