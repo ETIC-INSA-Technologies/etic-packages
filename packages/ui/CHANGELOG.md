@@ -1,5 +1,11 @@
 # @etic-insa/ui
 
+## 0.11.1
+
+### Patch Changes
+
+- 6d960b9: `PageHeader` et `DetailHeader` : avec un titre long, les actions restent en haut à droite et c'est le titre qui se replie, tant qu'il lui reste 20 rem ; en deçà, les actions passent dessous comme avant.
+
 ## 0.11.0
 
 ### Minor Changes
