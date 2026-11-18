@@ -1,7 +1,12 @@
 name: CI
 
 # Sur main, c'est publication.yml qui appelle ce workflow (workflow_call) : une seule passe des
-# contrôles par push, dont dépend l'empaquetage des versions à publier.
+# contrôles par push, dont dépend la publication des versions.
+#
+# La PR « Versions des paquets » n'est pas contrôlée : elle ne change que des numéros, des
+# CHANGELOG et des changesets supprimés, n'est ouverte ou mise à jour qu'une fois les contrôles
+# du commit de main verts, et sa fusion les repasse avant de publier. Un run de CI qu'elle
+# déclenche (« en attente d'approbation ») n'a pas à être approuvé : ses jobs ne feraient rien.
 on:
   pull_request:
   workflow_dispatch:
@@ -19,14 +24,11 @@ permissions:
 jobs:
   verifier:
     name: Lint, types, tests, build
+    if: github.head_ref != 'changeset-release/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
+      - uses: ./.github/actions/installer-node
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
@@ -39,6 +41,7 @@ jobs:
 
   python:
     name: Python — etic-insa-auth
+    if: github.head_ref != 'changeset-release/main'
     runs-on: ubuntu-latest
     defaults:
       run:

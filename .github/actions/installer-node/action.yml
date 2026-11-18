@@ -1,0 +1,22 @@
+name: Installer les dépendances Node
+description: >
+  node_modules mis en cache (clé : version de Node et package-lock.json) ; `npm ci` ne tourne
+  que si le cache manque. Réservé aux jobs sans droit sensible : un job qui détient un jeton
+  d'écriture ou de publication installe lui-même, sans cache, avec `npm ci --ignore-scripts`.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+    - id: cache
+      uses: actions/cache@v6
+      with:
+        path: |
+          node_modules
+          packages/*/node_modules
+        key: node-modules-${{ runner.os }}-${{ hashFiles('.nvmrc', 'package-lock.json') }}
+    - if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm ci
